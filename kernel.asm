@@ -4,13 +4,15 @@
 ;Start Program
         SEG.U vars
         ORG $80
-temp ds 1
+P0VPos ds 1
+P0HPos ds 1
 Label1 .byte 3
+P0Height ds 1
 
         SEG
         ORG $F000
 
-PATTERN           = $80 ; storage Location (1st byte in RAM)    
+;PATTERN           = $80 ; storage Location (1st byte in RAM)    
 Reset
         ldx #0
         txa
@@ -26,8 +28,14 @@ Clear
         stx COLUPF
         ldx #%00000001
         stx CTRLPF
-        ldx #66
+        ldx #133
         stx COLUP0
+        ldx #100
+        stx P0VPos
+        ldx #4
+        stx P0HPos
+        ldx #9
+        stx P0Height
         
         
        
@@ -68,36 +76,40 @@ Top8Lines
         cpx #184
         bne Top8Lines
 
-
-MiddleLines
-        dex                                             ; 2
         ldy #0                                          ; 2
         sty PF1                                         ; 3
         sty PF2                                         ; 3
         ldy #%00010000                                  ; 2
         sty PF0                                         ; 3
-        cpx #8                                        ; 2
-        bne Sprite                                      ; 3
-        ldy 4                                           ; 2
-HorizontalMove
-        ;dey
-        ;bne HorizontalMove
-        ;ldy #%11111111
-        ;sty GRP0
-        ;sta RESP0
-Sprite 
-        ldy #0
-        sty GRP0
+MiddleLines
+        dex                                             ; 2
+        cpx P0VPos
+        bne SkipDraw
+        ldy P0HPos                      ;Horizontal Delay
+HorizontalDelay
+        dey                             ;Horizontal Delay
+        bne HorizontalDelay             ;Horizontal Delay
+        sta RESP0
+        ldy P0Height                    ;Sprite Drawing
+DrawSprite
+        dey
+        lda P0Sprite,y
+        sta GRP0
         sta WSYNC
-        ;ldy #%00001000
+        bne DrawSprite
         ;sty HMP0
         ;sta HMOVE
+        txa
+        sbc P0Height
+        tax
+SkipDraw
+        sta WSYNC
         cpx #8
         bne MiddleLines
 
 
+
 Bottom8Lines
-        
         sta WSYNC
         ldy #%11111111
         sty PF0
@@ -115,6 +127,7 @@ Bottom8Lines
         sty PF1
         sty PF2
 ; 30 scanlines of overscan...
+
         ldx #0
 Overscan
         sta WSYNC
@@ -122,7 +135,26 @@ Overscan
         cpx #30
         bne Overscan
 
+MoveP0
+        ldy P0VPos
+        dey 
+        cpy #16
+        bne ZeroVPos
+        ldy #184
+ZeroVPos
+        sty P0VPos
+
         jmp StartOfFrame
+
+P0Sprite .byte  00000000
+         .byte  10010001
+         .byte  11111111
+         .byte  10010001
+         .byte  11111111
+         .byte  10010001
+         .byte  11111111
+         .byte  10010001
+         
 
 ;-------------------------------------------------------------------------------
         ORG $FFFA
@@ -131,3 +163,6 @@ InterruptVectors
     .word Reset          ; RESET
     .word Reset          ; IRQ
 END
+
+
+
