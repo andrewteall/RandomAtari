@@ -137,7 +137,17 @@ Overscan
 
 MoveP0
         ldy P0VPos
-        dey 
+        lda #0
+        sta SWACNT
+        lda SWCHA
+        cmp #%11101111
+        bne SkipUp
+        iny 
+SkipUp
+        cmp #%11011111
+        bne SkipDown
+        dey
+SkipDown
         cpy #16
         bne ZeroVPos
         ldy #184
