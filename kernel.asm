@@ -6,13 +6,14 @@
         ORG $80
 P0VPos ds 1
 P0HPos ds 1
-Label1 .byte 3
 P0Height ds 1
 
         SEG
         ORG $F000
 
-;PATTERN           = $80 ; storage Location (1st byte in RAM)    
+;PATTERN           = $80 ; storage Location (1st byte in RAM)
+P0XSTARTPOS        = #3
+P0YSTARTPOS        = #100    
 Reset
         ldx #0
         txa
@@ -30,9 +31,9 @@ Clear
         stx CTRLPF
         ldx #133
         stx COLUP0
-        ldx #100
+        ldx P0YSTARTPOS
         stx P0VPos
-        ldx #4
+        ldx P0XSTARTPOS
         stx P0HPos
         ldx #9
         stx P0Height
@@ -150,20 +151,43 @@ SkipUp
 SkipDown
         cpy #16
         bne ZeroVPos
-        ldy #184
+        ldy #183
 ZeroVPos
+        cpy #184
+        bne MaxVPos
+        ldy #17
+MaxVPos
         sty P0VPos
+
+        ldy P0HPos
+        cmp #%10111111
+        bne SkipRight
+        dey
+SkipRight
+        cmp #%01111111
+        bne SkipLeft
+        iny
+SkipLeft
+        cpy #5
+        bne ZeroHPos
+        ldy #6
+ZeroHPos
+        cpy #6
+        bne MaxHPos
+        ldy #5
+MaxHPos
+        sty P0HPos
 
         jmp StartOfFrame
 
-P0Sprite .byte  00000000
-         .byte  10010001
-         .byte  11111111
-         .byte  10010001
-         .byte  11111111
-         .byte  10010001
-         .byte  11111111
-         .byte  10010001
+P0Sprite .byte  #%00000000
+         .byte  #%10011001
+         .byte  #%11111111
+         .byte  #%10011001
+         .byte  #%11111111
+         .byte  #%10011001
+         .byte  #%11111111
+         .byte  #%10011001
          
 
 ;-------------------------------------------------------------------------------
@@ -173,6 +197,3 @@ InterruptVectors
     .word Reset          ; RESET
     .word Reset          ; IRQ
 END
-
-
-
