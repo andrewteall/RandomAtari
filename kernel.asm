@@ -23,17 +23,19 @@ Clear
         pha
         bne Clear
 
-        ldx #0
+        ldx #$AE
         stx COLUBK         ; set the background color
-        ldx #100
+        ldx #$F4
         stx COLUPF
         ldx #%00000001
         stx CTRLPF
         ldx #133
         stx COLUP0
-        ldx P0YSTARTPOS
+        ldx #P0YSTARTPOS
+        ;ldx #100
         stx P0VPos
-        ldx P0XSTARTPOS
+        ldx #P0XSTARTPOS
+        #ldx #3
         stx P0HPos
         ldx #9
         stx P0Height
@@ -66,17 +68,18 @@ VerticalBLank
 
 --------------------------------------------------------------------
 ; 192 scanlines of picture...
-        ldx #192                ; this counts our scanline number
-        ldy #%11111111
-        sty PF0
-        sty PF1
-        sty PF2
+        ldx #192                                        ; 2 this counts our scanline number
+        ldy #%11111111                                  ; 2
+        sty PF0                                         ; 3
+        sty PF1                                         ; 3        
+        sty PF2                                         ; 3
+        lda #$AE                                        ; 2
+        sta COLUBK         ; set the background color   ; 2
 Top8Lines
-        dex
-        sta WSYNC
-        cpx #184
-        bne Top8Lines
-
+        dex                                             ; 2
+        sta WSYNC                                       ; 2
+        cpx #184                                        ; 2
+        bne Top8Lines                                   ; 2/3
         ldy #0                                          ; 2
         sty PF1                                         ; 3
         sty PF2                                         ; 3
@@ -84,40 +87,45 @@ Top8Lines
         sty PF0                                         ; 3
 MiddleLines
         dex                                             ; 2
-        cpx P0VPos
-        bne SkipDraw
-        ldy P0HPos                      ;Horizontal Delay
+        cpx P0VPos                                      ; 3
+        bne SkipDraw                                    ; 2/3
+        ldy P0HPos                ;Horizontal Delay     ; 2
 HorizontalDelay
-        dey                             ;Horizontal Delay
-        bne HorizontalDelay             ;Horizontal Delay
-        sta RESP0
-        ldy P0Height                    ;Sprite Drawing
+        dey                       ;Horizontal Delay     ; 2
+        bne HorizontalDelay       ;Horizontal Delay     ; 2/3
+        sta RESP0                                       ; 3
+        ldy P0Height              ;Sprite Drawing       ; 3
 DrawSprite
-        dey
-        lda P0Sprite,y
-        sta GRP0
-        sta WSYNC
-        bne DrawSprite
-        ;sty HMP0
-        ;sta HMOVE
-        txa
-        sbc P0Height
-        tax
+        dey                                             ; 2
+        lda P0Sprite,y                                  ; 4/5
+        sta GRP0                                        ; 3
+        sta WSYNC                                       ; 3
+        bne DrawSprite                                  ; 2/3
+        ;sty HMP0                                       ; 3
+        ;sta HMOVE                                      ; 3
+        txa                                             ; 2
+        sbc P0Height                                    ; 3
+        tax                                             ; 2
 SkipDraw
-        sta WSYNC
-        cpx #8
-        bne MiddleLines
+        cpx #110                                        ; 2
+        bne CHBGColor                                   ; 2/3
+        ldy #$9E                                        ; 2
+        sty COLUBK                                      ; 3
+CHBGColor
+        sta WSYNC                                       ; 3
+        cpx #24                                         ; 2
+        bne MiddleLines                                 ; 2/3
 
 
 
 Bottom8Lines
-        sta WSYNC
-        ldy #%11111111
-        sty PF0
-        sty PF1
-        sty PF2
-        dex
-        bne Bottom8Lines
+        sta WSYNC                                       ; 3
+        ldy #%11111111                                  ; 2
+        sty PF0                                         ; 3
+        sty PF1                                         ; 3
+        sty PF2                                         ; 3
+        dex                                             ; 2
+        bne Bottom8Lines                                ; 2/3
 
 ;-------------------------------------------------------------------------------
 
@@ -127,14 +135,6 @@ Bottom8Lines
         sty PF0
         sty PF1
         sty PF2
-; 30 scanlines of overscan...
-
-        ldx #0
-Overscan
-        sta WSYNC
-        inx
-        cpx #30
-        bne Overscan
 
 MoveP0
         ldy P0VPos
@@ -151,32 +151,42 @@ SkipUp
 SkipDown
         cpy #16
         bne ZeroVPos
-        ldy #183
-ZeroVPos
-        cpy #184
-        bne MaxVPos
+        ;ldy #183
         ldy #17
+ZeroVPos
+        cpy #165
+        bne MaxVPos
+        ldy #150
 MaxVPos
         sty P0VPos
 
         ldy P0HPos
         cmp #%10111111
-        bne SkipRight
-        dey
-SkipRight
-        cmp #%01111111
         bne SkipLeft
-        iny
+        dey
 SkipLeft
-        cpy #5
+        cmp #%01111111
+        bne SkipRight
+        iny
+SkipRight
+        cpy #1
         bne ZeroHPos
-        ldy #6
+        ldy #10
 ZeroHPos
-        cpy #6
+        cpy #10
         bne MaxHPos
-        ldy #5
+        ldy #1
 MaxHPos
         sty P0HPos
+
+; 30 scanlines of overscan...
+        ldx #0
+Overscan
+        sta WSYNC
+        inx
+        cpx #29
+        bne Overscan
+
 
         jmp StartOfFrame
 
