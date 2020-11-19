@@ -7,12 +7,14 @@
 P0VPos ds 1
 P0HPos ds 1
 P0Height ds 1
+CoarseCounter ds 1
+FineCounter ds 1
 
         SEG
         ORG $F000
 
 ;PATTERN           = $80 ; storage Location (1st byte in RAM)
-P0XSTARTPOS        = #3
+P0XSTARTPOS        = #50
 P0YSTARTPOS        = #100    
 Reset
         ldx #0
@@ -31,16 +33,17 @@ Clear
         stx CTRLPF
         ldx #133
         stx COLUP0
+        
         ldx #P0YSTARTPOS
         ;ldx #100
         stx P0VPos
+        
         ldx #P0XSTARTPOS
-        #ldx #3
+        ;ldx #3
         stx P0HPos
+        
         ldx #9
         stx P0Height
-        
-        
        
 StartOfFrame
         ; Start of vertical blank processing
@@ -81,28 +84,50 @@ Top8Lines
         cpx #184                                        ; 2
         bne Top8Lines                                   ; 2/3
 
+; Setup Middle PlayField
         ldy #0                                          ; 2
         sty PF1                                         ; 3
         sty PF2                                         ; 3
         ldy #%00010000                                  ; 2
         sty PF0                                         ; 3
+; End Setup Middle PlayField
+; x = linenumber
+; y = 16
+; a = 0
+
+
 MiddleLines
         cpx P0VPos                                      ; 3
         bne SkipDraw                                    ; 2/3
-        ldy P0HPos                ;Horizontal Delay     ; 2
+
+        pha
+        lda P0HPos
+        inc CoarseCounter
+        sec
+        sbc #%11110000
+        bcs Divide15
+        adc #15
+        sta FineCounter
+        pla
+        tay
+        ;ldy P0HPos                ;Horizontal Delay     ; 2
 HorizontalDelay
         dey                       ;Horizontal Delay     ; 2
         bne HorizontalDelay       ;Horizontal Delay     ; 2/3
+        lda FineCounter
+        sta HMP0
         sta RESP0                                       ; 3                     ==
         ldy P0Height              ;Sprite Drawing       ; 3
 DrawSprite
         dey                                             ; 2
         lda P0Sprite,y                                  ; 4/5
         sta GRP0                                        ; 3
-        sta WSYNC                                       ; 3
+        ;lda FineCounter
+        ;sta HMP0
+        sta WSYNC  
+        sta HMOVE       
+        sta HMCLR                              ; 3        
         bne DrawSprite                                  ; 2/3
-        ;sty HMP0                                       ; 3
-        ;sta HMOVE                                      ; 3
         txa                                             ; 2
         sbc P0Height                                    ; 3
         tax                                             ; 2
@@ -189,6 +214,12 @@ Overscan
 
 
         jmp StartOfFrame
+
+
+Divide15 
+        
+        rts
+
 
 P0Sprite .byte  #%00000000
          .byte  #%10011001
