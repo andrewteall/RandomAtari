@@ -80,20 +80,20 @@ Top8Lines
         sta WSYNC                                       ; 2
         cpx #184                                        ; 2
         bne Top8Lines                                   ; 2/3
+
         ldy #0                                          ; 2
         sty PF1                                         ; 3
         sty PF2                                         ; 3
         ldy #%00010000                                  ; 2
         sty PF0                                         ; 3
 MiddleLines
-        dex                                             ; 2
         cpx P0VPos                                      ; 3
         bne SkipDraw                                    ; 2/3
         ldy P0HPos                ;Horizontal Delay     ; 2
 HorizontalDelay
         dey                       ;Horizontal Delay     ; 2
         bne HorizontalDelay       ;Horizontal Delay     ; 2/3
-        sta RESP0                                       ; 3
+        sta RESP0                                       ; 3                     ==
         ldy P0Height              ;Sprite Drawing       ; 3
 DrawSprite
         dey                                             ; 2
@@ -112,8 +112,9 @@ SkipDraw
         ldy #$9E                                        ; 2
         sty COLUBK                                      ; 3
 CHBGColor
+        dex                                             ; 2
         sta WSYNC                                       ; 3
-        cpx #24                                         ; 2
+        cpx #8                                         ; 2
         bne MiddleLines                                 ; 2/3
 
 
@@ -149,14 +150,13 @@ SkipUp
         bne SkipDown
         dey
 SkipDown
-        cpy #16
+        cpy #17
         bne ZeroVPos
-        ;ldy #183
-        ldy #17
+        ldy #18
 ZeroVPos
-        cpy #165
+        cpy #184
         bne MaxVPos
-        ldy #150
+        ldy #183
 MaxVPos
         sty P0VPos
 
@@ -171,11 +171,11 @@ SkipLeft
 SkipRight
         cpy #1
         bne ZeroHPos
-        ldy #10
+        ldy #2
 ZeroHPos
         cpy #10
         bne MaxHPos
-        ldy #1
+        ldy #9
 MaxHPos
         sty P0HPos
 
