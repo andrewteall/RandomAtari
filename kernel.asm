@@ -100,33 +100,41 @@ MiddleLines
         cpx P0VPos                                      ; 3
         bne SkipDraw                                    ; 2/3
 
-        pha
+        
         lda P0HPos
+Divide15 
         inc CoarseCounter
         sec
-        sbc #%11110000
+        sbc #15
         bcs Divide15
         adc #15
+        eor    #$07
+        asl
+        asl
+        asl
+        asl
+        ;eor %10000000
         sta FineCounter
-        pla
-        tay
+
         ;ldy P0HPos                ;Horizontal Delay     ; 2
+        ldy CoarseCounter               ;Horizontal Delay     ; 2
 HorizontalDelay
         dey                       ;Horizontal Delay     ; 2
-        bne HorizontalDelay       ;Horizontal Delay     ; 2/3
+        ;bne HorizontalDelay       ;Horizontal Delay     ; 2/3
+        sta RESP0                                       ; 3 
         lda FineCounter
         sta HMP0
-        sta RESP0                                       ; 3                     ==
+        sta WSYNC 
+        sta HMOVE 
+
         ldy P0Height              ;Sprite Drawing       ; 3
 DrawSprite
         dey                                             ; 2
         lda P0Sprite,y                                  ; 4/5
         sta GRP0                                        ; 3
-        ;lda FineCounter
-        ;sta HMP0
         sta WSYNC  
-        sta HMOVE       
-        sta HMCLR                              ; 3        
+        ;sta HMOVE       
+        ;sta HMCLR                              ; 3        
         bne DrawSprite                                  ; 2/3
         txa                                             ; 2
         sbc P0Height                                    ; 3
@@ -216,9 +224,9 @@ Overscan
         jmp StartOfFrame
 
 
-Divide15 
+;Divide15 
         
-        rts
+;        rts
 
 
 P0Sprite .byte  #%00000000
