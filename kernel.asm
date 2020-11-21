@@ -81,7 +81,6 @@ VerticalBLank
 Top8Lines
         dex                                             ; 2
         sta WSYNC                                       ; 2
-
         cpx #184                                        ; 2
         bne Top8Lines                                   ; 2/3
 
@@ -96,8 +95,9 @@ Top8Lines
 ; y = 16
 ; a = 0
 
-        lda #0
-        sta CoarseCounter
+;;;;;;;;;;;; Calculate Horizontal Sprite Position ;;;;;;;;;;;;;;;;;;;;;
+        lda #0                                          ; 2
+        sta CoarseCounter                               ; 3 Reset Course Positioning to 0
         lda P0HPos                                      ;2    
 Divide15 
         inc CoarseCounter
@@ -114,6 +114,7 @@ Divide15
         asl
         sta FineCounter
         sta HMP0
+;;;;;;;;;;;; End Calculate Horizontal Sprite Position ;;;;;;;;;;;;;;;;;
 
 MiddleLines
         cpx P0VPos                                      ; 3
@@ -202,17 +203,19 @@ MaxVPos
         bne SkipLeft
         dey
 SkipLeft
+
         cmp #%01111111
         bne SkipRight
         iny
 SkipRight
-;        cpy #0
-;        bne ZeroHPos
-;        ldy #1
-;ZeroHPos
-;        cpy #40
-;        bne MaxHPos
-;        ldy #39
+
+        cpy #19
+        bne ZeroHPos
+        ldy #20
+ZeroHPos
+        cpy #$A5
+        bne MaxHPos
+        ldy #$A4
 MaxHPos
         sty P0HPos
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
