@@ -81,10 +81,11 @@ VerticalBLank
 Top8Lines
         dex                                             ; 2
         sta WSYNC                                       ; 2
+
         cpx #184                                        ; 2
         bne Top8Lines                                   ; 2/3
 
-; Setup Middle PlayField
+; Setup Middle PlayField                                ; Makes Sprite Shift at Topmost Row
         ldy #0                                          ; 2
         sty PF1                                         ; 3
         sty PF2                                         ; 3
@@ -95,59 +96,62 @@ Top8Lines
 ; y = 16
 ; a = 0
 
-
-MiddleLines
-        cpx P0VPos                                      ; 3
-        bne SkipDraw                                    ; 2/3
-
-        
-        lda P0HPos
+        lda #0
+        sta CoarseCounter
+        lda P0HPos                                      ;2    
 Divide15 
         inc CoarseCounter
         sec
         sbc #15
         bcs Divide15
         adc #15
-        eor    #$07
-        asl
-        asl
-        asl
-        asl
-        ;eor %10000000
-        sta FineCounter
+        dec CoarseCounter
 
-        ;ldy P0HPos                ;Horizontal Delay     ; 2
-        ldy CoarseCounter               ;Horizontal Delay     ; 2
-HorizontalDelay
-        dey                       ;Horizontal Delay     ; 2
-        ;bne HorizontalDelay       ;Horizontal Delay     ; 2/3
-        sta RESP0                                       ; 3 
-        lda FineCounter
+        eor #$07
+        asl
+        asl
+        asl
+        asl
+        sta FineCounter
         sta HMP0
+
+MiddleLines
+        cpx P0VPos                                      ; 3
+        bne SkipDraw                                    ; 2/3 Draw Sprite or Not
+
+;;;;;;;;;;;;;;;;; Horizontal Sprite Position ;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldy CoarseCounter          ;Horizontal Delay     ; 2
+HorizontalDelay
+        dey                        ;Horizontal Delay     ; 2
+        bne HorizontalDelay        ;Horizontal Delay     ; 2/3
+        ldy
+        sta HMP0
+        sta RESP0                                        ; 3         
         sta WSYNC 
         sta HMOVE 
-
+;;;;;;;;;;;;;;;;; End Horizontal Sprite Position ;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;; Drawing Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldy P0Height              ;Sprite Drawing       ; 3
 DrawSprite
         dey                                             ; 2
         lda P0Sprite,y                                  ; 4/5
         sta GRP0                                        ; 3
-        sta WSYNC  
-        ;sta HMOVE       
-        ;sta HMCLR                              ; 3        
+        sta WSYNC      
         bne DrawSprite                                  ; 2/3
+
         txa                                             ; 2
         sbc P0Height                                    ; 3
         tax                                             ; 2
+;;;;;;;;;;;;;;;;; End Drawing Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
 SkipDraw
-        cpx #110                                        ; 2
-        bne CHBGColor                                   ; 2/3
-        ldy #$9E                                        ; 2
-        sty COLUBK                                      ; 3
+        ;cpx #110                                        ; 2
+        ;bne CHBGColor                                   ; 2/3
+        ;ldy #$9E                                        ; 2
+        ;sty COLUBK                                      ; 3
 CHBGColor
         dex                                             ; 2
         sta WSYNC                                       ; 3
-        cpx #8                                         ; 2
+        cpx #8                                          ; 2
         bne MiddleLines                                 ; 2/3
 
 
@@ -202,15 +206,17 @@ SkipLeft
         bne SkipRight
         iny
 SkipRight
-        cpy #1
-        bne ZeroHPos
-        ldy #2
-ZeroHPos
-        cpy #10
-        bne MaxHPos
-        ldy #9
+;        cpy #0
+;        bne ZeroHPos
+;        ldy #1
+;ZeroHPos
+;        cpy #40
+;        bne MaxHPos
+;        ldy #39
 MaxHPos
         sty P0HPos
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ 
 
 ; 30 scanlines of overscan...
         ldx #0
@@ -222,11 +228,6 @@ Overscan
 
 
         jmp StartOfFrame
-
-
-;Divide15 
-        
-;        rts
 
 
 P0Sprite .byte  #%00000000
