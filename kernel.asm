@@ -44,6 +44,9 @@ Clear
         
         ldx #9
         stx P0Height
+
+        lda #0          ; Make Controllers Input
+        sta SWACNT
        
 StartOfFrame
         ; Start of vertical blank processing
@@ -94,26 +97,26 @@ Top8Lines
 ; x = linenumber
 ; y = 16
 ; a = 0
-
+        ;dex
+        ;dex
 ;;;;;;;;;;;; Calculate Horizontal Sprite Position ;;;;;;;;;;;;;;;;;;;;;
         lda #0                                          ; 2
         sta CoarseCounter                               ; 3 Reset Course Positioning to 0
-        lda P0HPos                                      ;2    
+        lda P0HPos                                      ; 2    
 Divide15 
-        inc CoarseCounter
-        sec
-        sbc #15
-        bcs Divide15
-        adc #15
-        dec CoarseCounter
-
-        eor #$07
-        asl
-        asl
-        asl
-        asl
-        sta FineCounter
-        sta HMP0
+        inc CoarseCounter                               ; 2
+        sec                                             ; 2
+        sbc #15                                         ; 2
+        bcs Divide15                                    ; 2/3
+        adc #15                                         ; 2
+        dec CoarseCounter                               ; 5
+        eor #$07                                        ; 2
+        asl                                             ; 2
+        asl                                             ; 2
+        asl                                             ; 2
+        asl                                             ; 2
+        sta FineCounter                                 ; 3
+        sta HMP0                                        ; 3
 ;;;;;;;;;;;; End Calculate Horizontal Sprite Position ;;;;;;;;;;;;;;;;;
 
 MiddleLines
@@ -121,18 +124,19 @@ MiddleLines
         bne SkipDraw                                    ; 2/3 Draw Sprite or Not
 
 ;;;;;;;;;;;;;;;;; Horizontal Sprite Position ;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ldy CoarseCounter          ;Horizontal Delay     ; 2
+        ldy CoarseCounter                               ; 2 Horizontal Delay
 HorizontalDelay
-        dey                        ;Horizontal Delay     ; 2
-        bne HorizontalDelay        ;Horizontal Delay     ; 2/3
-        ldy
+        dey                                             ; 2 Horizontal Delay
+        bne HorizontalDelay                             ; 2/3 Horizontal Delay
+        
         sta HMP0
-        sta RESP0                                        ; 3         
+        sta RESP0                                       ; 3         
         sta WSYNC 
         sta HMOVE 
 ;;;;;;;;;;;;;;;;; End Horizontal Sprite Position ;;;;;;;;;;;;;;;;;;;;;;
+
 ;;;;;;;;;;;;;;;;; Drawing Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ldy P0Height              ;Sprite Drawing       ; 3
+        ldy P0Height                                    ; 3
 DrawSprite
         dey                                             ; 2
         lda P0Sprite,y                                  ; 4/5
@@ -145,16 +149,15 @@ DrawSprite
         tax                                             ; 2
 ;;;;;;;;;;;;;;;;; End Drawing Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
 SkipDraw
-        ;cpx #110                                        ; 2
-        ;bne CHBGColor                                   ; 2/3
-        ;ldy #$9E                                        ; 2
-        ;sty COLUBK                                      ; 3
+        cpx #110                                        ; 2
+        bne CHBGColor                                   ; 2/3
+        ldy #$9E                                        ; 2
+        sty COLUBK                                      ; 3
 CHBGColor
         dex                                             ; 2
         sta WSYNC                                       ; 3
         cpx #8                                          ; 2
         bne MiddleLines                                 ; 2/3
-
 
 
 Bottom8Lines
@@ -175,16 +178,20 @@ Bottom8Lines
         sty PF1
         sty PF2
 
+;;;;;;;;;;;;;;;;; Game Logic  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MoveP0
         ldy P0VPos
-        lda #0
-        sta SWACNT
-        lda SWCHA
-        cmp #%11101111
+        lda SWCHA                     
+        eor #%11111111
+        and #%00010000                         
+        cmp #%00010000    
         bne SkipUp
         iny 
 SkipUp
-        cmp #%11011111
+        lda SWCHA  
+        eor #%11111111
+        and #%00100000                         
+        cmp #%00100000   
         bne SkipDown
         dey
 SkipDown
@@ -199,13 +206,23 @@ MaxVPos
         sty P0VPos
 
         ldy P0HPos
-        cmp #%10111111
+        lda SWCHA  
+        eor #%11111111
+        and #%01000000                         
+        cmp #%01000000   
         bne SkipLeft
+        lda #%00000000
+        sta REFP0
         dey
 SkipLeft
 
-        cmp #%01111111
+        lda SWCHA  
+        eor #%11111111
+        and #%10000000                         
+        cmp #%10000000   
         bne SkipRight
+        lda #%00001000
+        sta REFP0
         iny
 SkipRight
 
@@ -234,13 +251,13 @@ Overscan
 
 
 P0Sprite .byte  #%00000000
-         .byte  #%10011001
+         .byte  #%01101100
+         .byte  #%00100100
+         .byte  #%11111111
          .byte  #%11111111
          .byte  #%10011001
-         .byte  #%11111111
          .byte  #%10011001
          .byte  #%11111111
-         .byte  #%10011001
          
 
 ;-------------------------------------------------------------------------------
