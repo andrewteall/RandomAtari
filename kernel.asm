@@ -94,11 +94,7 @@ Top8Lines
         ldy #%00010000                                  ; 2
         sty PF0                                         ; 3
 ; End Setup Middle PlayField
-; x = linenumber
-; y = 16
-; a = 0
-        ;dex
-        ;dex
+
 ;;;;;;;;;;;; Calculate Horizontal Sprite Position ;;;;;;;;;;;;;;;;;;;;;
         lda #0                                          ; 2
         sta CoarseCounter                               ; 3 Reset Course Positioning to 0
@@ -243,7 +239,7 @@ MaxHPos
 Overscan
         sta WSYNC
         inx
-        cpx #29
+        cpx #7
         bne Overscan
 
 
