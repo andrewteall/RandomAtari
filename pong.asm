@@ -119,7 +119,6 @@ VerticalBLank
         ldx #0                                          ; 2 this counts our scanline number ; scanline 38               
 ViewableScreenStart
 ;;;;;;;;;;;;;;;;; Determine if we draw P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;
-
         lda P0VPos                                      ; 3   Load the Vertical Y Coordinate into the Accumulator
         clc                                             ; 2   We do nothing to set the carry so no need to clear
         adc P0Offset                                    ; 3   Add the P0 Offset to the Vertical Y Coordinate
@@ -130,68 +129,36 @@ ViewableScreenStart
 ;;;;;;;;;;;;;;;;; Drawing P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 P0Draw 
         ldy P0Offset                                    ; 3                   
-        lda (P0SpritePtr),y                             ; 5             24
-        sta GRP0                                        ; 3             27
-        inc P0Offset                                    ; 5             32
+        lda (P0SpritePtr),y                             ; 5             
+        sta GRP0                                        ; 3             
+        inc P0Offset                                    ; 5             
         
-        lda P0Height                                    ; 3             35
-        cmp P0Offset                                    ; 3             38
-        bne SkipResetOffset                             ; 2/3           41
+        lda P0Height                                    ; 3             
+        cmp P0Offset                                    ; 3             
+        bne SkipResetOffset                             ; 2/3           
         lda #0                                          ; 2   Reset the offset to zero when we're done drawing the Sprite
-        sta P0Offset                                    ; 3
+        sta P0Offset                                    ; 3             
 SkipResetOffset        
 ;;;;;;;;;;;;;;;;; End Drawing P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
 SkipP0Draw
 
 ;;;;;;;;;;;;;;;;; Determine if we draw Ball ;;;;;;;;;;;;;;;;;;;;;;;;;
-        cpx BlVPos                                      ; 3                                                
-        bne SkipBLDrawTst                                  ; 2/3 Draw Ball or Not  
+        cpx BlVPos                                      ; 3             
+        bne SkipBLDraw                                  ; 2/3 Draw Ball or Not  
 ;;;;;;;;;;;;;;;;; Horizontal Ball Position ;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #%00000010                                  ; 2 turn on the ball 
         sta ENABL                                       ; 3 turn on the ball
         sec
-        bcs BallEnabledTst
-SkipBLDrawTst
-        lda #%00000000                                  ; 2 disable ball
-        sta ENABL                                       ; 3 disable ball
-BallEnabledTst
-
-        lda BLHDir                                      ; 2 Load ball direction and speed
-        sta HMBL                                        ; 3 set ball direction and speed
-        and #%10000000                                  ; 2
-        cmp #%10000000                                  ; 2 65
-
-        bne SkipBLLeft                                  ; 2/3
-        inc BlHPos                                      ; 5
-        clc                                             ; 2
-        bcc SkipBLRight                                 ; 2/3
-SkipBLLeft
-        dec BlHPos                                      ; 5
-SkipBLRight
-        sta WSYNC                                       ; 3
-        sta HMOVE                                       ; 3
-        sec
-        bcs SkipBLSync
+        bcs BallEnabled
+SkipBLDraw
+        lda #%00000000                                  ; 2 disable ball        
+        sta ENABL                                       ; 3 disable ball        
+BallEnabled
 
 ;;;;;;;;;;;;;;;; End Horizontal Sprite Position ;;;;;;;;;;;;;;;;;;;;;;     
-SkipBLDraw
+        inx                                             ; 2 increment line counter
+        cpx #192
         sta WSYNC                                       ; 3 move to next line
-SkipBLSync
-        inx                                             ; 2 increment our line counter        
-        cpx BlVPos                                      ; 3                                                     
-        bne DisableBall                                 ; 2/3 Draw Sprite or Not
-
-        lda #%00000010                                  ; 2 turn on the ball 
-        sta ENABL                                       ; 3 turn on the ball
-        sec
-        bcs BallEnabled
-
-DisableBall     
-        lda #%00000000                                  ; 2 disable ball
-        sta ENABL                                       ; 3 disable ball
-
-BallEnabled
-        cpx #192                                        ; 2 Are we at the end of the visible scalines?
         bne ViewableScreenStart                         ; 2/3 No? Draw next scanline
         
 ;-------------------------------------------------------------------------------
@@ -253,11 +220,25 @@ MinHBPos
 ; 30 scanlines of overscan...
         ldx #0
         stx COLUBK
+
         inc BlVPos
+        lda BLHDir                                      ; 2 Load ball direction and speed
+        sta HMBL                                        ; 3 set ball direction and speed
+        and #%10000000                                  ; 2
+        cmp #%10000000                                  ; 2 
+        bne SkipBLLeft                                  ; 2/3
+        inc BlHPos                                      ; 5
+        sec 
+        bcs SkipBLRight
+SkipBLLeft
+        dec BlHPos                                      ; 5
+SkipBLRight
+        sta WSYNC
+        sta HMOVE                                       ; 3
 Overscan
         sta WSYNC
         inx
-        cpx #29
+        cpx #28
         bne Overscan
         jmp StartOfFrame
 
