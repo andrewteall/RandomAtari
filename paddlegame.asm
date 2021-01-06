@@ -253,21 +253,35 @@ DrawScore
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;; Drawing Top Play area Separator ;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Creating a line across the screen to separate the score area from the 
+; play area. Not logic to accompany this, just Drawing a line.
+;
+; X - Line Number
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Draw Top Bar
-TopBar
-        lda #%11111111                                  ; 2
+TopPlayAreaSeparator
+        lda #%11111111                                  ; 2     
         sta PF0                                         ; 3
         sta PF1                                         ; 3
         sta PF2                                         ; 3
         inx                                             ; 2
         cpx #24                                         ; 2
         sta WSYNC                                       ; 3
-        bne TopBar                                      ; 2/3
+        bne TopPlayAreaSeparator                        ; 2/3
 
         lda #%0                                         ; 2
         sta PF0                                         ; 3
         sta PF1                                         ; 3
         sta PF2                                         ; 3
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;; End Drawing Top Play area Separator ;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
 
 GameBoard
 ;;;;;;;;;;;;;;;;; Determine if we draw P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;
