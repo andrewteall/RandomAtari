@@ -14,26 +14,35 @@ P0SpritePtr ds 2        ; $86
 P0Offset ds 1           ; $88
 P0Offsetidx ds 1        ; $89
 P0Height ds 1           ; $8a
+
 P0Score1 ds 1           ; $8b
 P0Score2 ds 1           ; $8c
+
 P1Score1 ds 1
 P1Score2 ds 1
+
 P0Score1idx ds 1        ; $8d
 P0Score2idx ds 1        ; $8e
 P1Score1idx ds 1        ; $8d
 P1Score2idx ds 1        ; $8e
+
 P0ScoreTmp ds 1
 P1ScoreTmp ds 1
+
 P0ScoreArr ds 5
 P1ScoreArr ds 5
+
 P0ScorePtr ds 2
 P1ScorePtr ds 2
+
 P0Score1DigitPtr ds 2
 P0Score2DigitPtr ds 2
 P1Score1DigitPtr ds 2
 P1Score2DigitPtr ds 2
 ;CoarseCounter ds 1      ; $85
 ;FineCounter ds 1        ; $86
+
+P0VPosTmp ds 1
 
 
         SEG
@@ -78,7 +87,7 @@ Clear
         ldx #BLXSTARTPOS
         stx BlHPos
         
-        ldx #38
+        ldx #37
         stx P0Height
 
         lda #0          ; Make Controllers Input
@@ -192,17 +201,17 @@ StartOfFrame
 ;-------------------------------------------------------------------------------
         ; 37 scanlines of vertical blank...
         ldx #0
-VerticalBLank
+VerticalBlank
         sta WSYNC
         inx                                             ; 2
         cpx #37                                         ; 2
-        bne VerticalBLank                               ; 2/3
+        bne VerticalBlank                               ; 2/3
         
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; 192 scanlines of picture...
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ldx #155
-        stx COLUBK
+        ldx #155                                        ; Load Background color into X
+        stx COLUBK                                      ; Set background color
         ldx #0                                          ; 2 this counts our scanline number ; scanline 38               
 ViewableScreenStart
 
@@ -253,12 +262,12 @@ DrawScore
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;; Drawing Top Play area Separator ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Creating a line across the screen to separate the score area from the 
-; play area. Not logic to accompany this, just Drawing a line.
+; play area. Not logic to accompany this, just Drawing a line. Could 
+; Possibly use background color
 ;
 ; X - Line Number
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -281,39 +290,12 @@ TopPlayAreaSeparator
 ;;;;;;;;;;;;;;;;; End Drawing Top Play area Separator ;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-
+        ldy #0                                          ; 2
+        inx                                             ; 2     Increment line counter 
+        sta WSYNC                                       ; 3     Move to next line. This prevents th very top line of the play field
+                                                        ;       from being drawable but lets us start fresh when drawing the players
+                                                        ;       and the ball.
 GameBoard
-;;;;;;;;;;;;;;;;; Determine if we draw P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;
-; 45 Cycles to Draw P0
-; 17 Cycles to NOT Draw P0
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda P0VPos                                      ; 3     Load the Vertical Y Coordinate into the Accumulator
-        clc                                             ; 2     We do nothing to set the carry so no need to clear
-        adc P0Offset                                    ; 3     Add the P0 Offset to the Vertical Y Coordinate
-        sta P0Offsetidx                                 ; 3     Save the new value to the P0 Offset Index
-        
-        cpx P0Offsetidx                                 ; 3     Compare P0Offset + P0VPos to X              
-        bne SkipP0Draw                                  ; 2/3   Draw Sprite or Not                                        
- 
-;;;;;;;;;;;;;;;;; Drawing P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-P0Draw 
-        ldy P0Offset                                    ; 3                   
-        
-        lda (P0SpritePtr),y                             ; 5          
-        sta GRP0                                        ; 3
-        sta GRP1                                        ; 3
-        
-        inc P0Offset                                    ; 5             
-
-        lda P0Height                                    ; 3             
-        cmp P0Offset                                    ; 3             
-        bne SkipResetOffset                             ; 2/3           
-        lda #0                                          ; 2   Reset the offset to zero when we're done drawing the Sprite
-        sta P0Offset                                    ; 3    
-SkipResetOffset        
-;;;;;;;;;;;;;;;;; End Drawing P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
-SkipP0Draw
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;; Determine if we draw Ball ;;;;;;;;;;;;;;;;;;;;;;;;; 
@@ -327,17 +309,37 @@ SkipP0Draw
         bne DisableBall                                 ; 2/3   Go to enabling the ball or not  
 ;;;;;;;;;;;;;;;;; Horizontal Ball Position ;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #%00000010                                  ; 2     Load #2 to A to prepare to enable the ball 
-        ;sec                                             ; 2    Use the 'cpx BlVPos' to set the carry above
         bcs BallEnabled                                 ; 2/3   Always skip to Enable the ball
 DisableBall
-        lda #%00000000                                  ; 2     Load #0 to A to prepare to disable the ball               
+        lda #%00000000                                  ; 2     Load #0 to A to prepare to disable the ball  
 BallEnabled
         sta ENABL                                       ; 3     Store A to Ball Regiter to enable or disable for this line
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;; End Horizontal Ball Position ;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;;;;;;;;;;;;;;; Determine if we draw P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;
+; 14 Cycles to Draw P0
+; 5 Cycles to NOT Draw P0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
+        cpx P0VPosTmp                                   ; 2     
+        bne SkipP0Draw                                  ; 2/3
+;;;;;;;;;;;;;;;;; Drawing P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+        lda (P0SpritePtr),y                             ; 5          
+        sta GRP0                                        ; 3
+        iny                                             ; 2
+        inc P0VPosTmp                                   ; 2
+ ;;;;;;;;;;;;;;;;; End Drawing P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
+SkipP0Draw
+
+
         inx                                             ; 2     increment line counter
+        cpy P0Height
+        bne SkipResetHeight
+        ldy #0
+        lda P0VPos
+        sta P0VPosTmp
+SkipResetHeight
         cpx #184                                        ; 2
         sta WSYNC                                       ; 3     move to next line
         bne GameBoard                                   ; 2/3   No? Draw next scanline
@@ -381,18 +383,20 @@ BallDirection
         cmp #%11101111    
         bne SkipUp
         dey
+        dec BlVPos
 SkipUp
 
         lda SWCHA  
         ora #%11011111
         cmp #%11011111   
         bne SkipDown
-        iny        
+        iny       
+        inc BlVPos 
 SkipDown
 
-        cpy #23
+        cpy #24
         bne ZeroVPos
-        ldy #24
+        ldy #25
 ZeroVPos
 
         cpy #147
@@ -400,9 +404,14 @@ ZeroVPos
         ldy #146
 MaxVPos
         sty P0VPos
+        sty P0VPosTmp                                   
 
         ldy BlHPos
-        cpy #$a0                
+        
+        lda SWCHA                     
+        ora #%10111111                
+        cmp #%10111111 
+        ;cpy #$a0                
         bne MaxHBPos
         lda #%00010000                                  ; Set Direction Left
         sta BLHDir
@@ -413,15 +422,17 @@ MaxVPos
         bne MinHBPos
         lda #0
         sta P1Score1
-        inc P1Score2
+        ;inc P1Score2
 MaxHBPos
-
-        cpy #$00
+        lda SWCHA                     
+        ora #%01111111                
+        cmp #%01111111 
+        ;cpy #$00
         bne MinHBPos
         lda #%11110000                                  ; Set Direction Right
         sta BLHDir
         
-        inc P0Score1
+        ;inc P0Score1
         lda P0Score1
         cmp #10
         bne MinHBPos
@@ -543,24 +554,29 @@ CalcScore
         lda BLVDir
         cmp #0
         bne BallDown
-        dec BlVPos
+        ;dec BlVPos
         sec
         bcs BallUp
 BallDown
-        inc BlVPos
+        ;inc BlVPos
 BallUp
 
         lda BlVPos
-        cmp #184
+        cmp #183
         bcc BallChangeDown
-        lda #0
+        lda #182
+        sta BlVPos
+        ;lda #0
+        
         sta BLVDir
 BallChangeDown
         
         lda BlVPos
         cmp #24
         bcs BallChangeUp
-        lda #1
+        lda #25
+        sta BlVPos
+        ;lda #1
         sta BLVDir
 BallChangeUp
         
@@ -578,6 +594,8 @@ SkipBLLeft
 SkipBLRight
         sta WSYNC
         sta HMOVE                                       ; 3
+        lda #%00000000                                  ; Set Direction Left
+        sta BLHDir
 Overscan
         sta WSYNC
         inx
@@ -624,8 +642,7 @@ Overscan
 ;;;;;;;;;;;; End Calculate Horizontal Sprite Position ;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-P0SpriteF1 .byte  #%00000000
-           .byte  #%00011000
+P0SpriteF1 .byte  #%00011000
            .byte  #%00111100
            .byte  #%00011000
            .byte  #%00111100
