@@ -209,9 +209,9 @@ ViewableScreenStart
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;; Drawing Score Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Using PF1 of the Playfield Grpahics to to draw a 2 digit score for each 
+; Using PF1 of the Playfield Grpahics to draw a 2 digit score for each 
 ; player. Scores are calcualted in overscan and stored in memory in a 5
-; byte array for each player housing the bitmap score graphics for each.
+; byte array for each player housing the bitmap score graphics.
 ;
 ; X - Still is the line number we're on
 ; 30 cycles for the drawing the first line. Counting cycles from above 1
@@ -229,6 +229,7 @@ ScoreArea
         sbc #2                                          ; 2     Subtract 2 to account for starting on line 3
         lsr                                             ; 2     Divide by 2 to get index twice for double height
         tay                                             ; 2     Transfer A to Y so we can index off Y
+
         lda P0ScoreArr,y                                ; 4     Get the Score From our Player 0 Score Array
         sta PF1                                         ; 3     Store Score to PF1
 
