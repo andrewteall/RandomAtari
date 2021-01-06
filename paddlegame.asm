@@ -206,37 +206,49 @@ VerticalBLank
         ldx #0                                          ; 2 this counts our scanline number ; scanline 38               
 ViewableScreenStart
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;; Drawing Score Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Using PF1 of the Playfield Grpahics to to draw a 2 digit score for each 
+; player. Scores are calcualted in overscan and stored in memory in a 5
+; byte array for each player housing the bitmap score graphics for each.
 ;
+; X - Still is the line number we're on
+; 30 cycles for the drawing the first line. Counting cycles from above 1
+; 19 cycles to draw each line 2-3
+; 48 cycles to draw each line of the scores 4-13
+; 24 cycles to draw each remianing line 14-16
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ScoreArea 
-        cpx #3                                          ; 2     Draw Between lines 3 - 13
-        bcc SkipDrawScore                               ; 2/3
-        cpx #13                                         ; 2     Double Height Numbers
-        bcs SkipDrawScore                               ; 2/3
+        cpx #3                                          ; 2     Draw Between lines 3 - 13 exclusive
+        bcc SkipDrawScore                               ; 2/3   Draw Between lines 3 - 13 exclusive
+        cpx #13                                         ; 2     Draw Between lines 3 - 13 exclusive
+        bcs SkipDrawScore                               ; 2/3   Draw Between lines 3 - 13 exclusive
         
-        txa                                             ; 2     Transfer X to A so we can subtract
+        txa                                             ; 2     Transfer X to the Accumulator so we can subtract
         sbc #2                                          ; 2     Subtract 2 to account for starting on line 3
         lsr                                             ; 2     Divide by 2 to get index twice for double height
-        tay                                             ; 2     Transfer A to Y
+        tay                                             ; 2     Transfer A to Y so we can index off Y
         lda P0ScoreArr,y                                ; 4     Get the Score From our Player 0 Score Array
         sta PF1                                         ; 3     Store Score to PF1
-        nop                                             ; 2     Wait 2 cycles
-        nop                                             ; 2     Wait 2 cycles
-        lda P1ScoreArr,y                                ; 4     Get the Score From our Player 0 Score Array
+
+        nop                                             ; 2     Wait 2 cycles to get past drawing player 0's score
+        nop                                             ; 2     Wait 2 cycles more to get past drawing player 0's score
+
+        lda P1ScoreArr,y                                ; 4     Get the Score From our Player 1 Score Array
         sta PF1                                         ; 3     Store Score to PF1  
         clc                                             ; 2     Clear to Carry so we always branch
         bcc DrawScore                                   ; 2/3   Skip clearing the playfield
 SkipDrawScore
-        lda #0                                          ; 2     Clear the Playfield
-        sta PF1                                         ; 3     Clear the Playfield
+        lda #0                                          ; 2     We're on lines that don't have the score so clear the playfield(PF1)
+        sta PF1                                         ; 3     We're on lines that don't have the score so clear the playfield(PF1)
 DrawScore
         inx                                             ; 2     Increment our line counter
         cpx #16                                         ; 2     See if we're at line 16
         sta WSYNC                                       ; 3     Go to Next line
-        bne ScoreArea                                   ; 2/3   IF at line 16 then Move one else branch back
-;;;;;;;;;;;;;;;;; End Drawing Score Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;
+        bne ScoreArea                                   ; 2/3   If at line 16 then move on else branch back
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;; End Drawing Score Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
