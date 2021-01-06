@@ -16,12 +16,18 @@ P0Offsetidx ds 1        ; $89
 P0Height ds 1           ; $8a
 P0Score1 ds 1           ; $8b
 P0Score2 ds 1           ; $8c
-P0Score1idx ds 1        ; $8d
-P0Score2idx ds 1        ; $8e
-P0ScoreTmp ds 1
 P1Score1 ds 1
 P1Score2 ds 1
+P0Score1idx ds 1        ; $8d
+P0Score2idx ds 1        ; $8e
+P1Score1idx ds 1        ; $8d
+P1Score2idx ds 1        ; $8e
+P0ScoreTmp ds 1
 P1ScoreTmp ds 1
+P0ScoreArr ds 5
+P1ScoreArr ds 5
+P0ScorePtr ds 2
+P1ScorePtr ds 2
 P0Score1DigitPtr ds 2
 P0Score2DigitPtr ds 2
 P1Score1DigitPtr ds 2
@@ -93,8 +99,8 @@ Clear
         lda #<Zero
         sta P0Score2DigitPtr
 
-        lda #>Zero
-        sta P0Score2DigitPtr+1
+        ; lda #>P0Score
+        ; sta P0Score2DigitPtr+1
                                                                  
         lda #0
         sta P0Offset
@@ -204,42 +210,31 @@ ViewableScreenStart
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ScoreArea 
-        cpx #3                                          ; 2  Draw Between lines 3 - 13
+        cpx #3                                          ; 2     Draw Between lines 3 - 13
         bcc SkipDrawScore                               ; 2/3
-        cpx #13                                         ; 2  Double Height Numbers
+        cpx #13                                         ; 2     Double Height Numbers
         bcs SkipDrawScore                               ; 2/3
         
-        txa                                             ; 2
-        sbc #2                                          ; 2
-        lsr                                             ; 2
-        adc P0Score1idx                                 ; 3
-        tay                                             ; 2
-        lda (P0Score1DigitPtr),y                        ; 5
-        and #%00001111                                  ; 2    
-        sta P0ScoreTmp                                  ; 3     29
-
-        txa                                             ; 2     
-        sbc #2                                          ; 2     33  <-- Need to write PF1 before here
-        lsr                                             ; 2
-        adc P0Score2idx                                 ; 3
-        tay                                             ; 2
-        lda (P0Score2DigitPtr),y                        ; 5
-        and #%11110000                                  ; 2     47
-        
-        sta WSYNC
-
-        ora P0ScoreTmp                                  ; 3     
-        sta PF1                                         ; 3     53
-        bcc DrawScore                                   ; 2/3   56
+        txa                                             ; 2     Transfer X to A so we can subtract
+        sbc #2                                          ; 2     Subtract 2 to account for starting on line 3
+        lsr                                             ; 2     Divide by 2 to get index twice for double height
+        tay                                             ; 2     Transfer A to Y
+        lda P0ScoreArr,y                                ; 4     Get the Score From our Player 0 Score Array
+        sta PF1                                         ; 3     Store Score to PF1
+        nop                                             ; 2     Wait 2 cycles
+        nop                                             ; 2     Wait 2 cycles
+        lda P1ScoreArr,y                                ; 4     Get the Score From our Player 0 Score Array
+        sta PF1                                         ; 3     Store Score to PF1  
+        clc                                             ; 2     Clear to Carry so we always branch
+        bcc DrawScore                                   ; 2/3   Skip clearing the playfield
 SkipDrawScore
-        lda #0                                          ; 2
-        sta PF1                                         ; 3     61
-        sta WSYNC
+        lda #0                                          ; 2     Clear the Playfield
+        sta PF1                                         ; 3     Clear the Playfield
 DrawScore
-        inx                                             ; 2
-        cpx #16                                         ; 2
-        ;sta WSYNC                                       ; 3
-        bne ScoreArea                                   ; 2/3
+        inx                                             ; 2     Increment our line counter
+        cpx #16                                         ; 2     See if we're at line 16
+        sta WSYNC                                       ; 3     Go to Next line
+        bne ScoreArea                                   ; 2/3   IF at line 16 then Move one else branch back
 ;;;;;;;;;;;;;;;;; End Drawing Score Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -247,19 +242,19 @@ DrawScore
 
 ; Draw Top Bar
 TopBar
-        lda #%11111111
-        sta PF0
-        sta PF1
-        sta PF2
-        inx
-        cpx #24
-        sta WSYNC
-        bne TopBar
+        lda #%11111111                                  ; 2
+        sta PF0                                         ; 3
+        sta PF1                                         ; 3
+        sta PF2                                         ; 3
+        inx                                             ; 2
+        cpx #24                                         ; 2
+        sta WSYNC                                       ; 3
+        bne TopBar                                      ; 2/3
 
-        lda #%0
-        sta PF0
-        sta PF1
-        sta PF2
+        lda #%0                                         ; 2
+        sta PF0                                         ; 3
+        sta PF1                                         ; 3
+        sta PF2                                         ; 3
 
 GameBoard
 ;;;;;;;;;;;;;;;;; Determine if we draw P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -368,14 +363,14 @@ SkipUp
         iny        
 SkipDown
 
-        cpy #0
+        cpy #23
         bne ZeroVPos
-        ldy #1
+        ldy #24
 ZeroVPos
 
-        cpy #155
+        cpy #147
         bne MaxVPos
-        ldy #154
+        ldy #146
 MaxVPos
         sty P0VPos
 
@@ -384,6 +379,14 @@ MaxVPos
         bne MaxHBPos
         lda #%00010000                                  ; Set Direction Left
         sta BLHDir
+
+        inc P1Score1
+        lda P1Score1
+        cmp #10
+        bne MinHBPos
+        lda #0
+        sta P1Score1
+        inc P1Score2
 MaxHBPos
 
         cpy #$00
@@ -431,10 +434,79 @@ Score
 
         lda #>(Zero)
         sta P0Score2DigitPtr+1
+;;;;;;
+        lda P1Score1
+        sta P1Score1idx   
+        lda P1Score1idx
+        asl
+        asl
+        adc P1Score1idx
+        sta P1Score1idx
         
+        lda #<(Zero)
+        sta P1Score1DigitPtr
+
+        lda #>(Zero)
+        sta P1Score1DigitPtr+1
+
+        lda P1Score2
+        ;lda #1
+        sta P1Score2idx   
+        lda P1Score2idx
+        asl
+        asl
+        adc P1Score2idx
+        sta P1Score2idx
+        
+        lda #<(Zero)
+        sta P1Score2DigitPtr
+
+        lda #>(Zero)
+        sta P1Score2DigitPtr+1   
 
 
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldx #0
+CalcScore
+        ;P0
+        txa
+        adc P0Score1idx                                 ; 3
+        tay                                             ; 2
+        lda (P0Score1DigitPtr),y                        ; 5
+        and #%00001111                                  ; 2    
+        sta P0ScoreTmp                                  ; 3     
+
+        txa   
+        adc P0Score2idx                                 ; 3
+        tay                                             ; 2
+        lda (P0Score2DigitPtr),y                        ; 5
+        and #%11110000                                  ; 2     
+
+        ora P0ScoreTmp                                  ; 3     
+        sta P0ScoreArr,x                                ; 3
+
+        ;P1
+        txa
+        adc P1Score1idx                                 ; 3
+        tay                                             ; 2
+        lda (P1Score1DigitPtr),y                        ; 5
+        and #%00001111                                  ; 2    
+        sta P1ScoreTmp                                  ; 3     
+
+        txa   
+        adc P1Score2idx                                 ; 3
+        tay                                             ; 2
+        lda (P1Score2DigitPtr),y                        ; 5
+        and #%11110000                                  ; 2     
+
+        ora P1ScoreTmp                                  ; 3     
+        sta P1ScoreArr,x                                ; 3
+
+        inx
+        cpx #5
+        bcc CalcScore                                   ; 2/3   
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldx #0
         stx COLUBK
@@ -482,7 +554,7 @@ SkipBLRight
 Overscan
         sta WSYNC
         inx
-        cpx #27
+        cpx #21
         bne Overscan
         jmp StartOfFrame
 
