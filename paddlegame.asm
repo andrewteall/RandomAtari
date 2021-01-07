@@ -43,6 +43,7 @@ P1Score2DigitPtr ds 2
 ;FineCounter ds 1        ; $86
 
 P0VPosTmp ds 1
+P1VPosTmp ds 1
 
 
         SEG
@@ -84,8 +85,8 @@ Clear
         ldx #BLYSTARTPOS
         stx BlVPos
         
-        ldx #BLXSTARTPOS
-        stx BlHPos
+        ;ldx #BLXSTARTPOS
+        ;stx BlHPos
         
         ldx #37
         stx P0Height
@@ -141,13 +142,28 @@ Clear
         lda #%00000000
         sta BLVDir
 
+        lda #12                                        ; Setting the starting count for the ball
+        sta BlHPos
+
         
 
 ;;;;;;;;;;;;;;;;; Set P0 Sprite & Ball Horizontal Position ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        sta WSYNC                                          
-        sta RESP0                                       ; 3     
+        sta WSYNC  
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        
         sta RESBL                                       ; 3
+        sta RESP0                                       ; 3  
         nop
         nop
         nop
@@ -308,30 +324,38 @@ GameBoard
                                                         ;       and set the carry flag for the BallEnabled Branch below         
         bne DisableBall                                 ; 2/3   Go to enabling the ball or not  
 ;;;;;;;;;;;;;;;;; Horizontal Ball Position ;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #%00000010                                  ; 2     Load #2 to A to prepare to enable the ball 
+        lda #%00000010                                  ; 2     Load #2 to A to prepare to enable the ball
+        sta ENABL                                       ; 3     Store A to Ball Regiter to enable or disable for this line 
         bcs BallEnabled                                 ; 2/3   Always skip to Enable the ball
 DisableBall
-        lda #%00000000                                  ; 2     Load #0 to A to prepare to disable the ball  
+        lda #%00000000                                  ; 2     Load #0 to A to prepare to disable the ball
+        sta ENABL                                       ; 3     Store A to Ball Regiter to enable or disable for this line  
 BallEnabled
-        sta ENABL                                       ; 3     Store A to Ball Regiter to enable or disable for this line
+        
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;; End Horizontal Ball Position ;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;;;;;;;;;;;;;;;; Determine if we draw P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;; Drawing PLayers ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;; Determine if we draw P0 Sprite ;;;;;;;;;;;;;;;;;;;;
 ; 14 Cycles to Draw P0
 ; 5 Cycles to NOT Draw P0
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
         cpx P0VPosTmp                                   ; 2     
         bne SkipP0Draw                                  ; 2/3
-;;;;;;;;;;;;;;;;; Drawing P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;;;;;;;;;;;;;;;;; Drawing P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda (P0SpritePtr),y                             ; 5          
         sta GRP0                                        ; 3
         iny                                             ; 2
         inc P0VPosTmp                                   ; 2
- ;;;;;;;;;;;;;;;;; End Drawing P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
+ ;;;;;;;;;;;;;;;;; End Drawing P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 SkipP0Draw
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;; End Drawing PLayers ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         inx                                             ; 2     increment line counter
         cpy P0Height
@@ -344,6 +368,16 @@ SkipResetHeight
         sta WSYNC                                       ; 3     move to next line
         bne GameBoard                                   ; 2/3   No? Draw next scanline
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;; Drawing Bottom Play area Separator ;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Creating a line across the screen to separate the bottom from the 
+; play area. Not logic to accompany this, just Drawing a line. Could 
+; Possibly use background color
+;
+; X - Line Number
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Draw Bottom Bar
 BottomBar
         lda #%11111111
@@ -359,39 +393,38 @@ BottomBar
         sta PF0
         sta PF1
         sta PF2
+
+;;;;;;;;;;;;;;;;; End Drawing Bottom Play area Separator ;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         
-;-------------------------------------------------------------------------------
-;-------- Blanking -------------------------------------------------------------
-;-------------------------------------------------------------------------------
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;Blanking ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         lda #%01000010
         sta VBLANK                                      ; end of screen - enter blanking
-        ldy #0                                          ; Clear the Playfield
-        sty PF0                                         ; Clear the Playfield
-        sty PF1                                         ; Clear the Playfield
-        sty PF2                                         ; Clear the Playfield
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;; Game Logic  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-BallDirection
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+GameLogic ;;;;;;;;;;;;;;;;; Game Logic  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+PlayerControl
         ldy P0VPos
-        lda SWCHA                     
-        ora #%11101111                
-        cmp #%11101111    
+        lda SWCHA                
+        ora #%11101111
+        cmp #%11101111
         bne SkipUp
         dey
-        dec BlVPos
 SkipUp
 
-        lda SWCHA  
+        lda SWCHA
         ora #%11011111
-        cmp #%11011111   
+        cmp #%11011111
         bne SkipDown
-        iny       
-        inc BlVPos 
+        iny
 SkipDown
 
         cpy #24
@@ -404,14 +437,14 @@ ZeroVPos
         ldy #146
 MaxVPos
         sty P0VPos
-        sty P0VPosTmp                                   
-
-        ldy BlHPos
+        sty P0VPosTmp   
         
-        lda SWCHA                     
-        ora #%10111111                
-        cmp #%10111111 
-        ;cpy #$a0                
+                                        
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+BallControl
+        ldy BlHPos
+
+        cpy #159
         bne MaxHBPos
         lda #%00010000                                  ; Set Direction Left
         sta BLHDir
@@ -422,17 +455,14 @@ MaxVPos
         bne MinHBPos
         lda #0
         sta P1Score1
-        ;inc P1Score2
+        inc P1Score2
 MaxHBPos
-        lda SWCHA                     
-        ora #%01111111                
-        cmp #%01111111 
-        ;cpy #$00
+        cpy #1
         bne MinHBPos
-        lda #%11110000                                  ; Set Direction Right
+        lda #%11110000
         sta BLHDir
-        
-        ;inc P0Score1
+
+        inc P0Score1
         lda P0Score1
         cmp #10
         bne MinHBPos
@@ -441,6 +471,50 @@ MaxHBPos
         inc P0Score2
 MinHBPos
 
+
+        lda BLVDir
+        cmp #0
+        bne BallDown
+        dec BlVPos
+        sec
+        bcs BallUp
+BallDown
+        inc BlVPos
+BallUp
+
+        lda BlVPos
+        cmp #183
+        bcc BallChangeDown
+        lda #182
+        sta BlVPos
+        lda #0
+        
+        sta BLVDir
+BallChangeDown
+        
+        lda BlVPos
+        cmp #25
+        bcs BallChangeUp
+        lda #25
+        sta BlVPos
+        lda #1
+        sta BLVDir
+BallChangeUp
+        
+
+        lda BLHDir                                      ; 2 Load ball direction and speed
+        sta HMBL                                        ; 3 set ball direction and speed
+        and #%10000000                                  ; 2
+        cmp #%10000000                                  ; 2 
+        bne SkipBLLeft                                  ; 2/3
+        inc BlHPos                                      ; 5
+        sec 
+        bcs SkipBLRight
+SkipBLLeft
+        dec BlHPos                                      ; 5
+SkipBLRight
+        sta WSYNC
+        sta HMOVE                                       ; 3
 
 ;; Calculate Score
 Score
@@ -551,51 +625,7 @@ CalcScore
 ; 30 scanlines of overscan...
         ldx #0
 
-        lda BLVDir
-        cmp #0
-        bne BallDown
-        ;dec BlVPos
-        sec
-        bcs BallUp
-BallDown
-        ;inc BlVPos
-BallUp
 
-        lda BlVPos
-        cmp #183
-        bcc BallChangeDown
-        lda #182
-        sta BlVPos
-        ;lda #0
-        
-        sta BLVDir
-BallChangeDown
-        
-        lda BlVPos
-        cmp #24
-        bcs BallChangeUp
-        lda #25
-        sta BlVPos
-        ;lda #1
-        sta BLVDir
-BallChangeUp
-        
-
-        lda BLHDir                                      ; 2 Load ball direction and speed
-        sta HMBL                                        ; 3 set ball direction and speed
-        and #%10000000                                  ; 2
-        cmp #%10000000                                  ; 2 
-        bne SkipBLLeft                                  ; 2/3
-        inc BlHPos                                      ; 5
-        sec 
-        bcs SkipBLRight
-SkipBLLeft
-        dec BlHPos                                      ; 5
-SkipBLRight
-        sta WSYNC
-        sta HMOVE                                       ; 3
-        lda #%00000000                                  ; Set Direction Left
-        sta BLHDir
 Overscan
         sta WSYNC
         inx
