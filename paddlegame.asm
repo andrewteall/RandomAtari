@@ -459,19 +459,6 @@ BallControl
         lda #%00010000                                  ; Set Direction Left
         sta BLHDir
 
-        inc P1Score1
-        lda P1Score1
-        cmp #10
-        bne MinHBPos
-        lda #0
-        sta P1Score1
-        inc P1Score2
-MaxHBPos
-        cpy #1
-        bne MinHBPos
-        lda #%11110000
-        sta BLHDir
-
         inc P0Score1
         lda P0Score1
         cmp #10
@@ -479,6 +466,19 @@ MaxHBPos
         lda #0
         sta P0Score1
         inc P0Score2
+MaxHBPos
+        cpy #1
+        bne MinHBPos
+        lda #%11110000
+        sta BLHDir
+
+        inc P1Score1
+        lda P1Score1
+        cmp #10
+        bne MinHBPos
+        lda #0
+        sta P1Score1
+        inc P1Score2
 MinHBPos
 
 
