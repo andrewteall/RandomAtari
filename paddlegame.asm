@@ -21,6 +21,9 @@ P0Height ds 1           ; $8a
 P1SpritePtr ds 2        ; $86
 P1Height ds 1           ; $8a
 
+P0GRIdx ds 1
+P1GRIdx ds 1
+
 P0Score1 ds 1           ; $8b
 P0Score2 ds 1           ; $8c
 
@@ -84,6 +87,9 @@ Clear
 
         ldx #P0YSTARTPOS
         stx P0VPos
+
+        ldx #100
+        stx P1VPos
         
         ldx #P0XSTARTPOS
         stx P0HPos
@@ -96,6 +102,9 @@ Clear
         
         ldx #37
         stx P0Height
+
+        ldx #37
+        stx P1Height
 
         lda #0          ; Make Controllers Input
         sta SWACNT      ; Make Controllers Input
@@ -146,6 +155,10 @@ Clear
         lda #12                                        ; Setting the starting count for the ball
         sta BlHPos
 
+        lda #0
+        sta P0GRIdx
+        sta P1GRIdx
+
         
 
 ;;;;;;;;;;;;;;;;; Set P0 Sprite & Ball Horizontal Position ;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -165,21 +178,6 @@ Clear
         
         sta RESBL                                       ; 3
         sta RESP0                                       ; 3  
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
         nop
         nop
         nop
@@ -316,22 +314,19 @@ GameBoard
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;; Determine if we draw Ball ;;;;;;;;;;;;;;;;;;;;;;;;; 
-; 15 Cycles to Draw the Ball - 13 Cycles if we can use the trick below
+; 12 Cycles to Draw the Ball
 ; 11 Cycles to Not Draw the Ball
 ; TODO: ADD Ball Height
 ; X - Current line number
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        cpx BlVPos                                      ; 3     Determine whether or not we're going to draw the ball on this line
-                                                        ;       and set the carry flag for the BallEnabled Branch below         
-        bne DisableBall                                 ; 2/3   Go to enabling the ball or not  
+        lda #%00000000                                  ; 2     Load 0 to A to prepare to disable the ball
+        cpx BlVPos                                      ; 3     Determine whether or not we're going to draw the ball on this line                                                ;       and set the carry flag for the BallEnabled Branch below         
+        bne BallEnabled                                 ; 2/3   Go to enabling the ball or not  
 ;;;;;;;;;;;;;;;;; Horizontal Ball Position ;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #%00000010                                  ; 2     Load #2 to A to prepare to enable the ball
-        sta ENABL                                       ; 3     Store A to Ball Regiter to enable or disable for this line 
-        bcs BallEnabled                                 ; 2/3   Always skip to Enable the ball
 DisableBall
-        lda #%00000000                                  ; 2     Load #0 to A to prepare to disable the ball
-        sta ENABL                                       ; 3     Store A to Ball Regiter to enable or disable for this line  
+        lda #%00000010                                  ; 2     Load #2 to A to prepare to enable the ball
 BallEnabled
+        sta ENABL                                       ; 3     Store A to Ball Regiter to enable or disable for this line 
         
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;; End Horizontal Ball Position ;;;;;;;;;;;;;;;;;;;;;;;
@@ -344,29 +339,58 @@ BallEnabled
 ;;;;;;;;;;;;;;;;; Determine if we draw P0 Sprite ;;;;;;;;;;;;;;;;;;;;
 ; 14 Cycles to Draw P0
 ; 5 Cycles to NOT Draw P0
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
-        cpx P0VPosTmp                                   ; 2     
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;       
+        cpx P0VPosTmp                                   ; 3     
         bne SkipP0Draw                                  ; 2/3
+        ;ldy P0GRIdx                                     ; 3
 ;;;;;;;;;;;;;;;;; Drawing P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda (P0SpritePtr),y                             ; 5          
         sta GRP0                                        ; 3
         iny                                             ; 2
-        inc P0VPosTmp                                   ; 2
+        ;sty P0GRIdx                                     ; 3
+        inc P0VPosTmp                                   ; 5
  ;;;;;;;;;;;;;;;;; End Drawing P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 SkipP0Draw
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;; End Drawing PLayers ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        inx                                             ; 2     increment line counter
-        cpy P0Height
-        bne SkipResetHeight
-        ldy #0
-        lda P0VPos
-        sta P0VPosTmp
-SkipResetHeight
+        cpy P0Height                                    ; 3
+        bne SkipP0ResetHeight                           ; 2/3
+        ldy #0                                          ; 2
+        ;sty P0GRIdx                                     ; 3
+        lda P0VPos                                      ; 3
+        sta P0VPosTmp                                   ; 3
+SkipP0ResetHeight
+        
+
+;;;;;;;;;;;;;;;;; Determine if we draw P1 Sprite ;;;;;;;;;;;;;;;;;;;;
+; 14 Cycles to Draw P1
+; 5 Cycles to NOT Draw P1
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;         cpx P1VPosTmp                                   ; 3     
+;         bne SkipP1Draw                                  ; 2/3
+;         ldy P1GRIdx                                     ; 3
+; ;;;;;;;;;;;;;;;;; Drawing P1 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;         lda (P0SpritePtr),y                             ; 5          
+;         sta GRP1                                        ; 3
+;         iny                                             ; 2
+;         sty P1GRIdx                                     ; 3
+;         inc P1VPosTmp                                   ; 5
+;  ;;;;;;;;;;;;;;;;; End Drawing P1 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; SkipP1Draw
+
+;         cpy P1Height                                    ; 3
+;         bne SkipP1ResetHeight                           ; 2/3
+;         ldy #0                                          ; 2
+;         sty P1GRIdx                                     ; 3
+;         lda P1VPos                                      ; 3
+;         sta P1VPosTmp                                   ; 3
+; SkipP1ResetHeight
+
+        inx                                             ; 2     Increment the line counter
         cpx #184                                        ; 2
-        sta WSYNC                                       ; 3     move to next line
+        sta WSYNC                                       ; 3     P0-57 All-107 move to next line
         bne GameBoard                                   ; 2/3   No? Draw next scanline
 
 
@@ -433,13 +457,40 @@ SkipDown
         ldy #25
 ZeroVPos
 
-        cpy #147
+        cpy #148
         bne MaxVPos
-        ldy #146
+        ldy #147
 MaxVPos
         sty P0VPos
         sty P0VPosTmp   
-                                   
+
+;;;;;;;;
+        ldy P1VPos
+        lda SWCHA
+        ora #%11111110
+        cmp #%11111110
+        bne SkipP1Up
+        dey
+SkipP1Up
+
+        lda SWCHA
+        ora #%11111101
+        cmp #%11111101
+        bne SkipP1Down
+        iny
+SkipP1Down
+
+        cpy #24
+        bne ZeroP1VPos
+        ldy #25
+ZeroP1VPos
+
+        cpy #148
+        bne MaxP1VPos
+        ldy #147
+MaxP1VPos
+        sty P1VPos
+        sty P1VPosTmp            
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 CollisionDetection
         lda CXP0FB
@@ -640,7 +691,7 @@ CalcScore
 Overscan
         sta WSYNC
         inx
-        cpx #21
+        cpx #20
         bne Overscan
         jmp StartOfFrame
 
