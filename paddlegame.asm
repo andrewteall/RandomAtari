@@ -6,14 +6,20 @@
         ORG $80
 P0VPos ds 1             ; $80
 P0HPos ds 1             ; $81
-BlVPos ds 1             ; $82
-BlHPos ds 1             ; $83
-BLHDir ds 1             ; $84
-BLVDir ds 1             ; $85
-P0SpritePtr ds 2        ; $86
-P0Offset ds 1           ; $88
-P0Offsetidx ds 1        ; $89
+
+P1VPos ds 1             ; $82
+P1HPos ds 1             ; $83
+
+BlVPos ds 1             ; $84
+BlHPos ds 1             ; $85
+BLHDir ds 1             ; $86
+BLVDir ds 1             ; $87
+
+P0SpritePtr ds 2        ; $88
 P0Height ds 1           ; $8a
+
+P1SpritePtr ds 2        ; $86
+P1Height ds 1           ; $8a
 
 P0Score1 ds 1           ; $8b
 P0Score2 ds 1           ; $8c
@@ -111,12 +117,7 @@ Clear
 
         ; lda #>P0Score
         ; sta P0Score2DigitPtr+1
-                                                                 
-        lda #0
-        sta P0Offset
-
-        lda #0
-        sta P0Offsetidx
+                                                                
 
         lda #0
         sta P0Score1
@@ -438,9 +439,18 @@ ZeroVPos
 MaxVPos
         sty P0VPos
         sty P0VPosTmp   
-        
-                                        
+                                   
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+CollisionDetection
+        lda CXP0FB
+        and #%01000000
+        cmp #%01000000
+        bne SkipCollision
+        lda #%11110000
+        sta BLHDir
+SkipCollision
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 BallControl
         ldy BlHPos
 
@@ -576,6 +586,7 @@ Score
         lda #>(Zero)
         sta P1Score2DigitPtr+1   
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 
@@ -625,7 +636,7 @@ CalcScore
 ; 30 scanlines of overscan...
         ldx #0
 
-
+        stx CXCLR
 Overscan
         sta WSYNC
         inx
