@@ -17,10 +17,10 @@ BLHDir ds 1             ; $86
 BLVDir ds 1             ; $87
 
 P0SpritePtr ds 2        ; $88
-P0Height ds 1           ; $8a
+
 
 P1SpritePtr ds 2        ; $86
-P1Height ds 1           ; $8a
+
 
 P0GREnd ds 1
 P1GREnd ds 1
@@ -99,11 +99,8 @@ Clear
         ;ldx #BLXSTARTPOS
         ;stx BlHPos
         
-        ldx #35
-        stx P0Height
 
-        ldx #35
-        stx P1Height
+ 
 
         lda #0          ; Make Controllers Input
         sta SWACNT      ; Make Controllers Input
@@ -386,14 +383,11 @@ SkipP1ResetHeight
 ;;;;;;;;;;;;;;;; Housekeeping ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; 10 cycles to loop
 ; 9 cycles not to loop
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         inx                                             ; 2     Increment the line counter
         cpx #184                                        ; 2
         sta WSYNC                                       ; 3     P0-57 All-107 move to next line
         bne GameBoard                                   ; 2/3   No? Draw next scanline
-
-
-
-
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -741,6 +735,9 @@ Overscan
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;; End Calculate Horizontal Sprite Position ;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+P0Height   .byte  #35
+P1Height   .byte  #35
 
 P0SpriteF1 .byte  #%00011000
            .byte  #%00111100
