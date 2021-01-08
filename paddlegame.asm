@@ -17,8 +17,6 @@ BLHDir ds 1             ; $86
 BLVDir ds 1             ; $87
 
 P0SpritePtr ds 2        ; $88
-
-
 P1SpritePtr ds 2        ; $86
 
 
@@ -82,9 +80,6 @@ Clear
         ldx #133
         stx COLUP0
 
-        ldx #133
-        ;stx COLUBL
-
         ldx #P0YSTARTPOS
         stx P0VPos
         
@@ -119,29 +114,7 @@ Clear
 
         lda #<Zero
         sta P0Score2DigitPtr
-
-        ; lda #>P0Score
-        ; sta P0Score2DigitPtr+1
-                                                                
-
-        lda #0
-        sta P0Score1
-
-        lda #0
-        sta P0Score2
-
-        lda #0
-        sta P0Score1idx
-
-        lda #0
-        sta P0Score2idx
-
-        lda #0
-        sta P1Score2
-
-        lda #0
-        sta P1Score1
-
+ 
         lda #%11110000
         sta BLHDir
 
@@ -150,10 +123,6 @@ Clear
 
         lda #12                                        ; Setting the starting count for the ball
         sta BlHPos
-
-        lda #0
-        sta P0GREnd
-        sta P1GREnd
 
         
 
