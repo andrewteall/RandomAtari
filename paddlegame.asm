@@ -55,8 +55,6 @@ P1Score2DigitPtr ds 2
 SkipGame ds 1
 
 
-
-
         SEG
         ORG $F000
 
@@ -65,7 +63,13 @@ P0XSTARTPOS        = #15
 P0YSTARTPOS        = #100
 BLXSTARTPOS        = #6
 BLYSTARTPOS        = #20
-BGCOLOR            = #0     
+BlHPOS             = #12
+BGCOLOR            = #155
+PFCOLOR            = #$23
+P0COLOR            = #133
+P0PADDLEHEIGHT     = #35
+P1PADDLEHEIGHT     = #35
+
 Reset
         ldx #0
         txa
@@ -75,60 +79,29 @@ Clear
         pha
         bne Clear
 
-        ldx #0
-        stx COLUBK         ; set the background color
-        ldx #$23
-        stx COLUPF
+
         ldx #%00010000
         stx CTRLPF
-        ldx #133
+
+        sta SWACNT      ; Make Controllers Input. A should be 0 from initialization
+
+        ldx #PFCOLOR
+        stx COLUPF
+        ldx #P0COLOR
         stx COLUP0
-
-        ldx #P0YSTARTPOS
-        stx P0VPos
         
-        stx P1VPos
-        
-        ldx #P0XSTARTPOS
-        stx P0HPos
-
-        ldx #BLYSTARTPOS
-        stx BlVPos
-        
-        ;ldx #BLXSTARTPOS
-        ;stx BlHPos
-        
-        ldx #35
+        ldx #P0PADDLEHEIGHT
         stx P0Height
         stx P1Height
 
- 
+        ldx #P0YSTARTPOS
+        stx P0VPos        
+        stx P1VPos
+        
+        ldx #BLYSTARTPOS
+        stx BlVPos
 
-        lda #0          ; Make Controllers Input
-        sta SWACNT      ; Make Controllers Input
-
-        lda #<P0SpriteF1
-        sta P0SpritePtr
-
-        lda #>P0SpriteF1
-        sta P0SpritePtr+1
-
-        lda #<Zero
-        sta P0Score1DigitPtr
-
-        lda #>Zero
-        sta P0Score1DigitPtr+1
-
-        lda #<Zero
-        sta P0Score2DigitPtr
- 
-        lda #%00000000
-        sta BLHDir
-
-        lda #%00000000
-        sta BLVDir
-
-        lda #12                                        ; Setting the starting count for the ball
+        lda #BlHPOS                                     ; Setting the starting count for the ball
         sta BlHPos
 
         
@@ -202,7 +175,7 @@ GameStart
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; 192 scanlines of picture...
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ldx #155                                        ; Load Background color into X
+        ldx #BGCOLOR                                    ; Load Background color into X
         stx COLUBK                                      ; Set background color
         ldx #0                                          ; 2 this counts our scanline number ; scanline 38               
 ViewableScreenStart
@@ -403,6 +376,9 @@ BottomBar
 GameSkip
         ldx #192
 StartMenu
+        stx COLUBK
+        
+
         dex                                             ; 2
         sta WSYNC                                       ; 3
         bne StartMenu                                   ; 2/3   
