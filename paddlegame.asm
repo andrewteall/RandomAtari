@@ -52,6 +52,8 @@ P1Score2DigitPtr ds 2
 ;CoarseCounter ds 1      ; $85
 ;FineCounter ds 1        ; $86
 
+SkipGame ds 1
+
 
 
 
@@ -120,7 +122,7 @@ Clear
         lda #<Zero
         sta P0Score2DigitPtr
  
-        lda #%11110000
+        lda #%00000000
         sta BLHDir
 
         lda #%00000000
@@ -191,7 +193,12 @@ VerticalBlank
         inx                                             ; 2
         cpx #37                                         ; 2
         bne VerticalBlank                               ; 2/3
-        
+
+        lda SkipGame
+        cmp #%00000000
+        bne GameStart
+        jmp GameSkip 
+GameStart        
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; 192 scanlines of picture...
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -391,10 +398,29 @@ BottomBar
 
 ;;;;;;;;;;;;;;;;; End Drawing Bottom Play area Separator ;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        
+
+        beq DontStartGame
+GameSkip
+        ldx #192
+StartMenu
+        dex                                             ; 2
+        sta WSYNC                                       ; 3
+        bne StartMenu                                   ; 2/3   
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;Blanking ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+StartGameCheck
+        lda INPT4
+        ora #%01111111
+        cmp #%01111111
+        bne DontStartGame
+        lda #1
+        sta SkipGame
+        lda #%11110000
+        sta BLHDir
+
+DontStartGame
 
         lda #%01000010
         sta VBLANK                                      ; end of screen - enter blanking
@@ -406,6 +432,12 @@ BottomBar
 GameLogic ;;;;;;;;;;;;;;;;; Game Logic  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+        lda SkipGame
+        cmp #0
+        bne CalcGameLogic
+        jmp SkipLogic
+CalcGameLogic
 PlayerControl
         ldy P0VPos
         lda SWCHA                
@@ -570,7 +602,6 @@ Score
         sta P0Score1DigitPtr+1
 
         lda P0Score2
-        ;lda #1
         sta P0Score2idx   
         lda P0Score2idx
         asl
@@ -599,7 +630,6 @@ Score
         sta P1Score1DigitPtr+1
 
         lda P1Score2
-        ;lda #1
         sta P1Score2idx   
         lda P1Score2idx
         asl
@@ -664,11 +694,21 @@ CalcScore
         ldx #0
 
         stx CXCLR
+
 Overscan
         sta WSYNC
         inx
         cpx #20
         bne Overscan
+        jmp StartOfFrame
+
+SkipLogic
+        ldx #0
+StartMenuOverscan
+        sta WSYNC
+        inx
+        cpx #30
+        bne StartMenuOverscan
         jmp StartOfFrame
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
