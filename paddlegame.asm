@@ -4,8 +4,7 @@
 ;Start Program
         SEG.U vars
         ORG $80
-P0VPosTmp ds 1
-P1VPosTmp ds 1
+
 P0VPos ds 1             ; $80
 P0HPos ds 1             ; $81
 
@@ -23,8 +22,8 @@ P0Height ds 1           ; $8a
 P1SpritePtr ds 2        ; $86
 P1Height ds 1           ; $8a
 
-P0GRIdx ds 1
-P1GRIdx ds 1
+P0GREnd ds 1
+P1GREnd ds 1
 
 P0Score1 ds 1           ; $8b
 P0Score2 ds 1           ; $8c
@@ -88,7 +87,6 @@ Clear
 
         ldx #P0YSTARTPOS
         stx P0VPos
-        stx P0VPosTmp
         
         stx P1VPos
         
@@ -101,10 +99,10 @@ Clear
         ;ldx #BLXSTARTPOS
         ;stx BlHPos
         
-        ldx #37
+        ldx #35
         stx P0Height
 
-        ldx #37
+        ldx #35
         stx P1Height
 
         lda #0          ; Make Controllers Input
@@ -157,8 +155,8 @@ Clear
         sta BlHPos
 
         lda #0
-        sta P0GRIdx
-        sta P1GRIdx
+        sta P0GREnd
+        sta P1GREnd
 
         
 
@@ -335,34 +333,51 @@ BallDisabled
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;; Drawing PLayers ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;;;;;;;;;;;;;;; Determine if we draw P0 Sprite ;;;;;;;;;;;;;;;;;;;;
-; 31 Cycles to Draw P0          + 5 Cycles to reset the index
-; 6 Cycles to NOT Draw P0   
+; 26 Cycles to Draw PX          
+; 14 Cycles to NOT Draw PX and reset the index
+; 12 Cycles to NOT Draw PX   
 ; X - Line Counter
-; Y - Index Offset
+; Y - #0 To be used to reset the graphics registers
 ; A - 
-; P0VPosTmp - Line to draw on 
-; P0Height - Sprite Height
+; PXGREnd - Determine what line to turn off the graphics for the
+;           respective players 
+; Note: Drawing PX AND Disabling PX should never happen on the same
+;       Scanline.
+;       Also we can't clear the carry before adding so we need to 
+;       keep an eye on it
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        cpx P0VPosTmp                                   ; 3
-        bne SkipP0Draw                                  ; 2/3
-        ;ldy P0GRIdx                                     ; 3
-;;;;;;;;;;;;;;;;; Drawing P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda P0SpriteF1,y                                ; 4
-        sta GRP0                                        ; 3
-        sta GRP1                                        ; 3
-        iny                                             ; 2
 
-        cpy P0Height                                    ; 3
-        bne SkipP0ResetHeight                           ; 2/3
-        ldy #0                                          ; 2
-        sta P0VPosTmp                                   ; 3     A should be #0 from GRP0 being zero'd
-SkipP0ResetHeight
-        ;sty P0GRIdx                                     ; 3
-        inc P0VPosTmp                                   ; 5
+;;;;;;;;;;;;;;;;;;;;;;;;;; Drawing P0 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        cpx P0VPos                                      ; 3     Compare P0's Top Postion with what line we're on 
+        bne SkipP0Draw                                  ; 2/3   If they match then start drawing P0
+;;;;;;;;;;;;;;;;; Drawing P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda P0SpriteF1                                  ; 4     Load the graphics bitmap
+        sta GRP0                                        ; 3     Set P0's grpahics
+        txa                                             ; 2     Transfer the line number to A for math
+        adc P0Height                                    ; 3     Add P0's Sprite height to know what line to stop drawing
+        sta P0GREnd                                     ; 3     Store that number to ram
  ;;;;;;;;;;;;;;;;; End Drawing P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 SkipP0Draw
+        cpx P0GREnd                                     ; 3     Compare where we stop drawing P0 to the line number
+        bne SkipP0ResetHeight                           ; 2/3   If they match then stop drawing P0
+        sty GRP0                                        ; 3     Set P0's graphics to 0 from Y
+SkipP0ResetHeight
+
+;;;;;;;;;;;;;;;;;;;;;;;;;; Drawing P1 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        cpx P1VPos                                      ; 3
+        bne SkipP1Draw                                  ; 2/3
+;;;;;;;;;;;;;;;;; Drawing P1 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda P0SpriteF1                                  ; 4
+        sta GRP1                                        ; 3
+        txa                                             ; 2
+        adc P1Height                                    ; 3
+        sta P1GREnd                                     ; 3
+ ;;;;;;;;;;;;;;;;; End Drawing P1 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+SkipP1Draw
+        cpx P1GREnd                                     ; 3
+        bne SkipP1ResetHeight                           ; 2/3
+        sty GRP1                                        ; 3     Y is set before we enter the game board
+SkipP1ResetHeight
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;; End Drawing PLayers ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -449,7 +464,6 @@ ZeroVPos
         ldy #147
 MaxVPos
         sty P0VPos
-        sty P0VPosTmp   
 
 ;;;;;;;;
         ldy P1VPos
@@ -476,8 +490,7 @@ ZeroP1VPos
         bne MaxP1VPos
         ldy #147
 MaxP1VPos
-        sty P1VPos
-        sty P1VPosTmp            
+        sty P1VPos       
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 CollisionDetection
         lda CXP0FB
