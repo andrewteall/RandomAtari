@@ -19,6 +19,8 @@ BLVDir ds 1             ; $87
 P0SpritePtr ds 2        ; $88
 P1SpritePtr ds 2        ; $86
 
+P0Height ds 1
+P1Height ds 1
 
 P0GREnd ds 1
 P1GREnd ds 1
@@ -94,6 +96,9 @@ Clear
         ;ldx #BLXSTARTPOS
         ;stx BlHPos
         
+        ldx #35
+        stx P0Height
+        stx P1Height
 
  
 
@@ -704,9 +709,6 @@ Overscan
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;; End Calculate Horizontal Sprite Position ;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-P0Height   .byte  #35
-P1Height   .byte  #35
 
 P0SpriteF1 .byte  #%00011000
            .byte  #%00111100
