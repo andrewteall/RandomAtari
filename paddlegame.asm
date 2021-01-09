@@ -270,8 +270,7 @@ GameBoard
 ; X - Current line number
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #%00000000                                  ; 2     Load 0 to A to prepare to disable the ball
-        cpx BlVPos                                      ; 3     Determine whether or not we're going to draw the ball on this line                                                
-                                                        ;       and set the carry flag for the BallEnabled Branch below         
+        cpx BlVPos                                      ; 3     Determine whether or not we're going to draw the ball on this line         
         bne BallDisabled                                ; 2/3   Go to enabling the ball or not  
 ;;;;;;;;;;;;;;;;; Horizontal Ball Position ;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #%00000010                                  ; 2     Load #2 to A to prepare to enable the ball
