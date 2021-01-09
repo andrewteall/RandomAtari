@@ -177,7 +177,8 @@ GameStart
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldx #BGCOLOR                                    ; Load Background color into X
         stx COLUBK                                      ; Set background color
-        ldx #0                                          ; 2 this counts our scanline number ; scanline 38               
+        ldx #0                                          ; 2 this counts our scanline number ; scanline 38  
+        stx CTRLPF             
 ViewableScreenStart
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -374,14 +375,36 @@ BottomBar
 
         beq DontStartGame
 GameSkip
-        ldx #192
-StartMenu
-        stx COLUBK
-        
-
-        dex                                             ; 2
         sta WSYNC                                       ; 3
-        bne StartMenu                                   ; 2/3   
+        ldx #191
+        ldy #%00000001
+        sty CTRLPF
+StartMenu
+        
+        ldy #$B4
+        cpx #85
+        bcc TopColor
+        ldy #$84
+TopColor
+        sty COLUBK
+        
+        cpx #122
+        bne DrawCastle
+        ldy #%11100000
+        sty PF2
+DrawCastle
+
+        cpx #42
+        bne StopDrawCastle
+        ldy #0
+        sty PF2
+StopDrawCastle
+
+        dex
+        sta WSYNC                                       ; 3
+        bne StartMenu                                   ; 2/3
+        ldy #0
+        sty COLUBK   
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;Blanking ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
