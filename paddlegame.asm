@@ -255,7 +255,7 @@ TopPlayAreaSeparator
 ;;;;;;;;;;;;;;;;; End Drawing Top Play area Separator ;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        ldy #0                                          ; 2
+        ldy #0                                          ; 2     Set Y to 0 to be used to reset the Player Graphics later on
         inx                                             ; 2     Increment line counter 
         sta WSYNC                                       ; 3     Move to next line. This prevents th very top line of the play field
                                                         ;       from being drawable but lets us start fresh when drawing the players
