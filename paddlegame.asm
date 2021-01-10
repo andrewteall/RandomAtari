@@ -49,10 +49,19 @@ P0Score1DigitPtr ds 2
 P0Score2DigitPtr ds 2
 P1Score1DigitPtr ds 2
 P1Score2DigitPtr ds 2
-;CoarseCounter ds 1      ; $85
-;FineCounter ds 1        ; $86
+
+CoarseCounter ds 1      
+FineCounter ds 1        
 
 SkipGame ds 1
+
+TextBuffer1 ds 5
+TextBuffer2 ds 5
+TextBuffer3 ds 5
+TextBuffer4 ds 5
+TextBuffer5 ds 5
+
+TextTemp ds 1
 
 
         SEG
@@ -123,6 +132,17 @@ Clear
         
         sta RESBL                                       ; 3
         sta RESP0                                       ; 3  
+        ; ldx #0
+        ; lda #04
+        ; jsr CalcXPos
+
+        ; ldx #1
+        ; lda #199
+        ; jsr CalcXPos
+
+        ; ldx 4
+        ; lda #BlHPOS
+        ; jsr CalcXPos
         nop
         nop
         nop
@@ -140,6 +160,8 @@ Clear
         nop
         nop
         sta RESP1                                       ; 3 
+        ; sta WSYNC
+        ; sta HMOVE
        
 ;;;;;;;;;;;;;;;;; End Set P0 Sprite & Ball Horizontal Position ;;;;;;;;;;;;;;;;;;;;;;
 
@@ -376,32 +398,63 @@ BottomBar
         beq DontStartGame
 GameSkip
         sta WSYNC                                       ; 3
-        ldx #191
+        ldx #10
+        stx COLUP0
+        ldx #0
         ldy #%00000001
         sty CTRLPF
+
 StartMenu
         
-        ldy #$B4
+        ldy #$84
         cpx #85
         bcc TopColor
-        ldy #$84
+        ldy #$B4
 TopColor
         sty COLUBK
         
-        cpx #122
+        cpx #42
         bne DrawCastle
         ldy #%11100000
         sty PF2
 DrawCastle
 
-        cpx #42
+        cpx #122
         bne StopDrawCastle
         ldy #0
         sty PF2
 StopDrawCastle
 
-        dex
+
+TextArea 
+        cpx #140                                         ; 2
+        bcs SkipDrawText                                ; 2/3
+        cpx #135                                         ; 2 
+        bcc SkipDrawText                                ; 2/3
+
+
+        txa                                             ; 2
+        sbc #135                                         ; 2
+        ;lsr                                             ; 2
+        tay                                             ; 2 
+
+        lda TextBuffer1,y                                ; 4
+        sta GRP0                                         ; 3
+
+        lda TextBuffer2,y                                ; 4
+        sta GRP1                                         ; 3
+
+        clc                                             ; 2
+        bcc DrawText                                    ; 2/3
+SkipDrawText
+        lda #0                                          ; 2
+        sta GRP0                                        ; 3
+        sta GRP1                                        ; 3
+DrawText
+
+        inx
         sta WSYNC                                       ; 3
+        cpx #191
         bne StartMenu                                   ; 2/3
         ldy #0
         sty COLUBK   
@@ -703,51 +756,68 @@ Overscan
 
 SkipLogic
         ldx #0
+TextBuilder
+        lda P,x
+        and #%11110000
+        sta TextTemp
+
+        lda R,x
+        and #%00001111
+
+        ora TextTemp
+        sta TextBuffer1,x
+
+        lda E,x
+        and #%11110000
+        sta TextTemp
+
+        lda S,x
+        and #%00001111
+
+        ora TextTemp
+        sta TextBuffer2,x
+        inx
+        cpx #5
+
+        bne TextBuilder
+
+        ldx #0
 StartMenuOverscan
         sta WSYNC
         inx
-        cpx #30
+        cpx #27
         bne StartMenuOverscan
         jmp StartOfFrame
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
-;;;;;;;;;;;; Calculate Horizontal Sprite Position ;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Min 38 cycles
-;; Max 146 cycles 
-;; 1 scan line 76                       (16*x) + 38 = 152
-;; 2 scan lines 152
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; CalcXPos: 
-;         lda #0                                          ; 2
-;         sta CoarseCounter                               ; 3 Reset Course Positioning to 0
-;         lda BlHPos                                      ; 2    
-;         sec                                             ; 2
-; Divide15 
-;         inc CoarseCounter                               ; 2
-;         sbc #15                                         ; 2
-;         bcs Divide15                                    ; 2/3
-;         cmp #1
-;         bpl Skip1Wsync
-;         sta WSYNC
-; Skip1Wsync
-;         cmp #7
-;         bpl Skip2Wsync
-;         sta WSYNC
-; Skip2Wsync
-;         adc #15                                         ; 2
-;         dec CoarseCounter                                 ; 5
-;         eor #$07                                        ; 2
-;         asl                                             ; 2
-;         asl                                             ; 2
-;         asl                                             ; 2
-;         asl                                             ; 2
-;         sta FineCounter                                   ; 3
-;         sta HMBL                                        ; 3
-;         rts                                             ; 6
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;; End Calculate Horizontal Sprite Position ;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
+;;;;;;;;;;; Calculate Horizontal Sprite Position ;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Min 38 cycles
+; Max 146 cycles 
+; 
+; X - The Object to place
+; A - X Coordinate
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+CalcXPos: 
+        sec                                             ; 2
+        sta WSYNC
+.Divide15 
+        sbc #15                                         ; 2
+        bcs .Divide15                                   ; 2/3
+        sta RESP0,x                                     ; 3     Set Coarse Position
+        adc #15                                         ; 2
+        dec CoarseCounter                               ; 5
+        eor #$07                                        ; 2
+        asl                                             ; 2
+        asl                                             ; 2
+        asl                                             ; 2
+        asl                                             ; 2
+        sta HMP0,x                                      ; 3
+        
+        rts                                             ; 6
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;; End Calculate Horizontal Sprite Position ;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 P0SpriteF1 .byte  #%00011000
            .byte  #%00111100
@@ -846,6 +916,42 @@ Nine       .byte  #%11101110
            .byte  #%11101110
            .byte  #%00100010
            .byte  #%11101110
+
+P          .byte  #%11101110
+           .byte  #%10101010
+           .byte  #%11101110
+           .byte  #%10001000
+           .byte  #%10001000
+
+R          .byte  #%11101110
+           .byte  #%10101010
+           .byte  #%11101110
+           .byte  #%11001100
+           .byte  #%10101010
+        
+E          .byte  #%11101110
+           .byte  #%10001000
+           .byte  #%11101110
+           .byte  #%10001000
+           .byte  #%11101110
+
+S          .byte  #%11101110
+           .byte  #%10001000
+           .byte  #%11101110
+           .byte  #%00100010
+           .byte  #%11101110
+
+T          .byte  #%11101110
+           .byte  #%01000100
+           .byte  #%01000100
+           .byte  #%01000100
+           .byte  #%01000100
+
+A          .byte  #%11101110
+           .byte  #%10101010
+           .byte  #%11101110
+           .byte  #%10101010
+           .byte  #%10101010
 
 ;-------------------------------------------------------------------------------
         ORG $FFFA
