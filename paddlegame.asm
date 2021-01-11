@@ -1,6 +1,6 @@
         processor 6502
         include "includes/vcs.h"
-        include "includes/macro.h"
+        include "macro.h"
 ;Start Program
         SEG.U vars
         ORG $80
@@ -72,7 +72,7 @@ P0XSTARTPOS        = #15
 P0YSTARTPOS        = #100
 BLXSTARTPOS        = #6
 BLYSTARTPOS        = #20
-BlHPOS             = #12
+BlHPOS             = #2
 BGCOLOR            = #155
 PFCOLOR            = #$23
 P0COLOR            = #133
@@ -117,51 +117,34 @@ Clear
 
 ;;;;;;;;;;;;;;;;; Set P0 Sprite & Ball Horizontal Position ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        sta WSYNC  
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
         
-        sta RESBL                                       ; 3
-        sta RESP0                                       ; 3  
-        ; ldx #0
-        ; lda #04
-        ; jsr CalcXPos
+        ldx #1
+        lda #152
+        jsr CalcXPos
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24 
+        lda #0
+        sta HMP1
 
-        ; ldx #1
-        ; lda #199
-        ; jsr CalcXPos
+        ldx #0
+        lda #0
+        jsr CalcXPos
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24 
+        lda #0
+        sta HMP0
 
-        ; ldx 4
-        ; lda #BlHPOS
-        ; jsr CalcXPos
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        sta RESP1                                       ; 3 
-        ; sta WSYNC
-        ; sta HMOVE
+        ldx 4
+        lda #BlHPOS
+        jsr CalcXPos
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        lda #0
+        sta HMBL
+
        
 ;;;;;;;;;;;;;;;;; End Set P0 Sprite & Ball Horizontal Position ;;;;;;;;;;;;;;;;;;;;;;
 
@@ -578,7 +561,7 @@ BallControl
         sta P0Score1
         inc P0Score2
 MaxHBPos
-        cpy #1
+        cpy #0
         bne MinHBPos
         lda #%11110000
         sta BLHDir
@@ -798,20 +781,19 @@ StartMenuOverscan
 ; X - The Object to place
 ; A - X Coordinate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-CalcXPos: 
+CalcXPos:
+        sta WSYNC                                       ; 3
+        sta HMCLR                                       ; 3
         sec                                             ; 2
-        sta WSYNC
 .Divide15 
         sbc #15                                         ; 2
         bcs .Divide15                                   ; 2/3
-        sta RESP0,x                                     ; 3     Set Coarse Position
-        adc #15                                         ; 2
-        dec CoarseCounter                               ; 5
         eor #$07                                        ; 2
         asl                                             ; 2
         asl                                             ; 2
         asl                                             ; 2
         asl                                             ; 2
+        sta RESP0,x                                     ; 3     Set Coarse Position
         sta HMP0,x                                      ; 3
         
         rts                                             ; 6
