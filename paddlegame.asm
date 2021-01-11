@@ -89,8 +89,8 @@ Clear
         bne Clear
 
 
-        ldx #%00010000
-        stx CTRLPF
+        ;ldx #%00010000
+        ;stx CTRLPF
 
         sta SWACNT      ; Make Controllers Input. A should be 0 from initialization
 
@@ -546,9 +546,9 @@ SkipP1Collision
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 BallControl
-        ldy BlHPos
+        ldy BlHPos                         
 
-        cpy #159
+        cpy #159                <----------------- Figure out the edge timing!!
         bne MaxHBPos
         lda #%00010000                                  ; Set Direction Left
         sta BLHDir
