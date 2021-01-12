@@ -56,6 +56,7 @@ FineCounter ds 1
 SkipGameFlag ds 1
 BallFired ds 1
 FrameCounter ds 1
+SkipInit ds 1
 
 TextBuffer1 ds 5
 TextBuffer2 ds 5
@@ -113,29 +114,23 @@ Clear
         lda #BlHPOS                                     ; Setting the starting count for the ball
         sta BlHPos
 
-        lda #15                                     ; Setting the starting count for the ball
+        lda #15                                         ; Setting the starting count for the ball
         sta FrameCounter
 
-;;;;;;;;;;;;;;;;; Set P0 Sprite & Ball Horizontal Position ;;;;;;;;;;;;;;;;;;;;;;;;;;
+        sec
+        bcs CheckGameStart
 
-        
-        ldx #1
-        lda #132
-        jsr CalcXPos
-        sta WSYNC
-        sta HMOVE
-        SLEEP 24 
-        lda #0
-        sta HMP1
+StartGame
 
+        lda SkipInit
+        bne SkipCheck
         ldx #0
         lda #20                                         ; P0 Needs to start after position 3 because draw ball timing
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
-        SLEEP 24 
-        lda #0
-        sta HMP0
+        SLEEP 24
+        sta HMCLR
 
         ldx #4
         lda #BlHPOS
@@ -143,13 +138,23 @@ Clear
         sta WSYNC
         sta HMOVE
         SLEEP 24
-        lda #0
-        sta HMBL
+        sta HMCLR
 
-;;;;;;;;;;;;;;;; End Set P0 Sprite & Ball Horizontal Position ;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+        ldx #1
+        lda #132
+        jsr CalcXPos
+        
+        sta WSYNC
+        sta HMOVE
+        sta HMCLR
+        
+        lda #1
+        sta SkipInit
+        lda SkipGameFlag                                ; 3
+        bne SkipCheck
+        jmp StartMenu                                    ; 3
 StartOfFrame
+        ; 37 scanlines of vertical blank...
         ; Start of vertical blank processing
         lda #0
         sta VBLANK
@@ -165,23 +170,28 @@ StartOfFrame
         sta VSYNC ; Turn off VSYNC
 
 ;-------------------------------------------------------------------------------
-        ; 37 scanlines of vertical blank...
-        ldx #0
-VerticalBlank
-        sta WSYNC
-        inx                                             ; 2
-        cpx #37                                         ; 2
-        bne VerticalBlank                               ; 2/3
-
+CheckGameStart
         lda SkipGameFlag                                ; 3
         bne StartGame                                   ; 2/3
-        jmp SkipGame                                    ; 3
-StartGame       
+        jmp StartMenu                                    ; 3
+SkipCheck
+        ldx #37
+VerticalBlank
+        sta WSYNC
+        dex
+        bne VerticalBlank                               ; 2/3
+
+        
+       
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; 192 scanlines of picture...
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;lda $%00000000
-        ;sta NUSIZ0
+
+        
+        sta WSYNC
+        lda #%00000000
+        sta NUSIZ0
+        sta NUSIZ1
         ldx #BGCOLOR                                    ; Load Background color into X
         stx COLUBK                                      ; Set background color
         ldx #PFCOLOR
@@ -388,88 +398,6 @@ BottomBar
 ;;;;;;;;;;;;;;;;; End Drawing Bottom Play area Separator ;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        beq DontStartGame
-SkipGame
-        ldy #$0A
-        sty COLUPF
-        sta WSYNC                                       ; 3
-        ldx #10
-        stx COLUP0
-        ldx #0
-        ldy #%00000001
-        sty CTRLPF
-        
-
-StartMenuScreen
-        ;lda $%00000110
-        ;sta NUSIZ0
-
-        ldy #$84
-        cpx #85
-        bcc TopColor
-        ldy #$B4
-TopColor
-        sty COLUBK
-        
-        cpx #42
-        bne DrawCastle
-        ldy #%11100000
-        sty PF2
-DrawCastle
-
-        cpx #122
-        bne StopDrawCastle
-        ldy #0
-        sty PF2
-StopDrawCastle
-
-
-TextArea 
-        cpx #140                                        ; 2
-        bcs SkipDrawText                                ; 2/3
-        cpx #135                                        ; 2 
-        bcc SkipDrawText                                ; 2/3
-
-
-        txa                                             ; 2
-        sbc #135                                        ; 2
-        ;lsr                                             ; 2
-        tay                                             ; 2 
-
-        lda TextBuffer1,y                               ; 4
-        sta GRP0                                        ; 3
-
-        ;lda TextBuffer2,y                               ; 4
-        ;sta GRP1                                        ; 3
-
-        clc                                             ; 2
-        bcc DrawText                                    ; 2/3
-SkipDrawText
-        lda #0                                          ; 2
-        sta GRP0                                        ; 3
-        sta GRP1                                        ; 3
-DrawText
-
-        inx
-        sta WSYNC                                       ; 3
-        cpx #191
-        bne StartMenuScreen                             ; 2/3
-        ldy #0
-        sty COLUBK   
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;Blanking ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-StartGameCheck
-        lda INPT4
-        ora #%01111111
-        cmp #%01111111
-        bne DontStartGame
-        lda #1
-        sta SkipGameFlag
-
-DontStartGame
-
         lda #%00000010
         sta VBLANK                                      ; end of screen - enter blanking
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -478,11 +406,7 @@ GameLogic ;;;;;;;;;;;;;;;;; Game Logic  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda SkipGameFlag
-        cmp #0
-        bne CalcGameLogic
-        jmp SkipLogic
-CalcGameLogic
+
 PlayerControl
         ldy P0VPos
         lda SWCHA                
@@ -569,9 +493,7 @@ SkipDec
         bne BallNotFired
 
         lda INPT4
-        ora #%01111111
-        cmp #%01111111
-        bne BallNotFired
+        bmi BallNotFired
 
         lda #%11110000                                  ; Right
         sta BLHDir
@@ -579,14 +501,11 @@ SkipDec
         lda #1
         sta BallFired
         sec
-        bcs BallNotFired
+        bcs BallControl
 
 BallNotFired
-
         lda INPT5
-        ora #%01111111
-        cmp #%01111111
-        bne BallNotFired2
+        bmi BallNotFired2
 
         lda #%00010000                                  ; Right
         sta BLHDir
@@ -669,9 +588,8 @@ SkipBLLeft
 SkipBLRight
         sta WSYNC
         sta HMOVE                                       ; 3
-
-
 BallNotFired2
+
 ;; Calculate Score
 Score
         lda P0Score1
@@ -785,11 +703,122 @@ CalcScore
 Overscan
         sta WSYNC
         inx
-        cpx #20
+        cpx #19
         bne Overscan
         jmp StartOfFrame
 
-SkipLogic
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;; Start Menu ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+StartMenu
+
+        ldx #1
+        lda #38
+        jsr CalcXPos
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
+        
+
+        ldx #0
+        lda #30                                         
+        jsr CalcXPos
+
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
+
+        ldx #37
+VerticalBlankStartMenu
+        sta WSYNC
+        dex                                             ; 2
+        bne VerticalBlankStartMenu                      ; 2/3
+        
+        ldy #$0A
+        sty COLUPF
+        sta WSYNC                                       ; 3
+        ldx #10
+        stx COLUP0
+        ldx #0
+        ldy #%00000001
+        sty CTRLPF
+StartMenuScreen
+        lda #%00000001
+        sta NUSIZ0
+        lda #%00000001
+        sta NUSIZ1
+
+        ldy #$84
+        cpx #85
+        bcc TopColor
+        ldy #$B4
+TopColor
+        sty COLUBK
+        
+        cpx #42
+        bne DrawCastle
+        ldy #%11100000
+        sty PF2
+DrawCastle
+
+        cpx #122
+        bne StopDrawCastle
+        ldy #0
+        sty PF2
+StopDrawCastle
+
+
+TextArea 
+        cpx #140                                        ; 2
+        bcs SkipDrawText                                ; 2/3
+        cpx #135                                        ; 2 
+        bcc SkipDrawText                                ; 2/3
+
+
+        txa                                             ; 2
+        sbc #135                                        ; 2
+        tay                                             ; 2 
+
+        lda TextBuffer1,y                               ; 4
+        sta GRP0                                        ; 3
+        
+        lda TextBuffer2,y                               ; 4
+        sta GRP1                                        ; 3
+
+        clc                                             ; 2
+        bcc DrawText                                    ; 2/3
+SkipDrawText
+        lda #0                                          ; 2
+        sta GRP0                                        ; 3
+        sta GRP1                                        ; 3
+DrawText
+
+        inx
+        sta WSYNC                                       ; 3
+        cpx #191
+        bne StartMenuScreen                             ; 2/3
+        ldy #0
+        sty COLUBK   
+
+StartGameCheck
+        lda INPT4
+        ora #%01111111
+        cmp #%01111111
+        bne DontStartGame
+        lda #1
+        sta SkipGameFlag
+
+DontStartGame
+
+        lda #%00000010
+        sta VBLANK                                      ; end of screen - enter blanking
+
         ldx #0
 TextBuilder
         lda P,x
@@ -820,9 +849,17 @@ TextBuilder
 StartMenuOverscan
         sta WSYNC
         inx
-        cpx #27
+        cpx #23
         bne StartMenuOverscan
         jmp StartOfFrame
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;; Sub-Routines ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
 ;;;;;;;;;;; Calculate Horizontal Sprite Position ;;;;;;;;;;;;;;;;;;;;;;
@@ -853,6 +890,19 @@ CalcXPos:
 ;;;;;;;;;;; End Calculate Horizontal Sprite Position ;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;; End Sub-Routines ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;; Rom Data ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 P0SpriteF1 .byte  #%00011000
            .byte  #%00111100
            .byte  #%00011000
