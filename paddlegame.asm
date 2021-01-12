@@ -53,7 +53,7 @@ P1Score2DigitPtr ds 2
 CoarseCounter ds 1      
 FineCounter ds 1        
 
-SkipGame ds 1
+SkipGameFlag ds 1
 BallFired ds 1
 FrameCounter ds 1
 
@@ -94,7 +94,6 @@ Clear
         pha
         bne Clear
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;; Global Config ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -121,7 +120,7 @@ Clear
 
         
         ldx #1
-        lda #152
+        lda #132
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -130,7 +129,7 @@ Clear
         sta HMP1
 
         ldx #0
-        lda #0                                          ; P0 Needs to start after position 3 because draw ball timing
+        lda #20                                         ; P0 Needs to start after position 3 because draw ball timing
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -174,14 +173,15 @@ VerticalBlank
         cpx #37                                         ; 2
         bne VerticalBlank                               ; 2/3
 
-        lda SkipGame
-        cmp #%00000000
-        bne GameStart
-        jmp GameSkip 
-GameStart        
+        lda SkipGameFlag                                ; 3
+        bne StartGame                                   ; 2/3
+        jmp SkipGame                                    ; 3
+StartGame       
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; 192 scanlines of picture...
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ;lda $%00000000
+        ;sta NUSIZ0
         ldx #BGCOLOR                                    ; Load Background color into X
         stx COLUBK                                      ; Set background color
         ldx #PFCOLOR
@@ -189,7 +189,8 @@ GameStart
         ldx #P0COLOR
         stx COLUP0
         ldx #0                                          ; 2 this counts our scanline number ; scanline 38 
-        stx CTRLPF   
+        stx CTRLPF
+        
 ViewableScreenStart
         
 
@@ -388,16 +389,21 @@ BottomBar
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         beq DontStartGame
-GameSkip
+SkipGame
+        ldy #$0A
+        sty COLUPF
         sta WSYNC                                       ; 3
         ldx #10
         stx COLUP0
         ldx #0
         ldy #%00000001
         sty CTRLPF
-
-StartMenu
         
+
+StartMenuScreen
+        ;lda $%00000110
+        ;sta NUSIZ0
+
         ldy #$84
         cpx #85
         bcc TopColor
@@ -419,22 +425,22 @@ StopDrawCastle
 
 
 TextArea 
-        cpx #140                                         ; 2
+        cpx #140                                        ; 2
         bcs SkipDrawText                                ; 2/3
-        cpx #135                                         ; 2 
+        cpx #135                                        ; 2 
         bcc SkipDrawText                                ; 2/3
 
 
         txa                                             ; 2
-        sbc #135                                         ; 2
+        sbc #135                                        ; 2
         ;lsr                                             ; 2
         tay                                             ; 2 
 
-        lda TextBuffer1,y                                ; 4
-        sta GRP0                                         ; 3
+        lda TextBuffer1,y                               ; 4
+        sta GRP0                                        ; 3
 
-        lda TextBuffer2,y                                ; 4
-        sta GRP1                                         ; 3
+        ;lda TextBuffer2,y                               ; 4
+        ;sta GRP1                                        ; 3
 
         clc                                             ; 2
         bcc DrawText                                    ; 2/3
@@ -447,7 +453,7 @@ DrawText
         inx
         sta WSYNC                                       ; 3
         cpx #191
-        bne StartMenu                                   ; 2/3
+        bne StartMenuScreen                             ; 2/3
         ldy #0
         sty COLUBK   
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -460,11 +466,10 @@ StartGameCheck
         cmp #%01111111
         bne DontStartGame
         lda #1
-        sta SkipGame
+        sta SkipGameFlag
 
 DontStartGame
 
-        ;lda #%01000010
         lda #%00000010
         sta VBLANK                                      ; end of screen - enter blanking
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -473,7 +478,7 @@ GameLogic ;;;;;;;;;;;;;;;;; Game Logic  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda SkipGame
+        lda SkipGameFlag
         cmp #0
         bne CalcGameLogic
         jmp SkipLogic
