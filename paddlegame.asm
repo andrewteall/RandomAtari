@@ -181,13 +181,9 @@ VerticalBlank
         dex
         bne VerticalBlank                               ; 2/3
 
-        
-       
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; 192 scanlines of picture...
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-        
         sta WSYNC
         lda #%00000000
         sta NUSIZ0
@@ -202,8 +198,6 @@ VerticalBlank
         stx CTRLPF
         
 ViewableScreenStart
-        
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;; Drawing Score Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -734,7 +728,7 @@ StartMenu
         SLEEP 24
         sta HMCLR
 
-        ldx #37
+        ldx #33
 VerticalBlankStartMenu
         sta WSYNC
         dex                                             ; 2
@@ -742,18 +736,20 @@ VerticalBlankStartMenu
         
         ldy #$0A
         sty COLUPF
-        sta WSYNC                                       ; 3
+        
         ldx #10
         stx COLUP0
         ldx #0
         ldy #%00000001
         sty CTRLPF
-StartMenuScreen
         lda #%00000001
         sta NUSIZ0
         lda #%00000001
         sta NUSIZ1
 
+        sta WSYNC                                       ; 3
+StartMenuScreen
+        
         ldy #$84
         cpx #85
         bcc TopColor
@@ -849,7 +845,7 @@ TextBuilder
 StartMenuOverscan
         sta WSYNC
         inx
-        cpx #23
+        cpx #27
         bne StartMenuOverscan
         jmp StartOfFrame
 
