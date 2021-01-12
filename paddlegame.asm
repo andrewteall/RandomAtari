@@ -54,6 +54,8 @@ CoarseCounter ds 1
 FineCounter ds 1        
 
 SkipGame ds 1
+BallFired ds 1
+FrameCounter ds 1
 
 TextBuffer1 ds 5
 TextBuffer2 ds 5
@@ -71,14 +73,18 @@ TextTemp ds 1
 P0XSTARTPOS        = #15
 P0YSTARTPOS        = #100
 BLXSTARTPOS        = #6
-BLYSTARTPOS        = #20
-BlHPOS             = #2
+BLYSTARTPOS        = #92
+BlHPOS             = #80                                 ; #2 is ideal
 BGCOLOR            = #155
 PFCOLOR            = #$23
 P0COLOR            = #133
 P0PADDLEHEIGHT     = #35
 P1PADDLEHEIGHT     = #35
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;; Initialization ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 Reset
         ldx #0
         txa
@@ -89,16 +95,11 @@ Clear
         bne Clear
 
 
-        ;ldx #%00010000
-        ;stx CTRLPF
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;; Global Config ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        sta SWACNT                                      ; Make Controllers Input. A should be 0 from initialization
 
-        sta SWACNT      ; Make Controllers Input. A should be 0 from initialization
-
-        ldx #PFCOLOR
-        stx COLUPF
-        ldx #P0COLOR
-        stx COLUP0
-        
         ldx #P0PADDLEHEIGHT
         stx P0Height
         stx P1Height
@@ -113,7 +114,8 @@ Clear
         lda #BlHPOS                                     ; Setting the starting count for the ball
         sta BlHPos
 
-        
+        lda #15                                     ; Setting the starting count for the ball
+        sta FrameCounter
 
 ;;;;;;;;;;;;;;;;; Set P0 Sprite & Ball Horizontal Position ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -128,7 +130,7 @@ Clear
         sta HMP1
 
         ldx #0
-        lda #0
+        lda #0                                          ; P0 Needs to start after position 3 because draw ball timing
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -136,7 +138,7 @@ Clear
         lda #0
         sta HMP0
 
-        ldx 4
+        ldx #4
         lda #BlHPOS
         jsr CalcXPos
         sta WSYNC
@@ -145,8 +147,8 @@ Clear
         lda #0
         sta HMBL
 
-       
-;;;;;;;;;;;;;;;;; End Set P0 Sprite & Ball Horizontal Position ;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;; End Set P0 Sprite & Ball Horizontal Position ;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 StartOfFrame
         ; Start of vertical blank processing
@@ -182,9 +184,14 @@ GameStart
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldx #BGCOLOR                                    ; Load Background color into X
         stx COLUBK                                      ; Set background color
-        ldx #0                                          ; 2 this counts our scanline number ; scanline 38  
-        stx CTRLPF             
+        ldx #PFCOLOR
+        stx COLUPF
+        ldx #P0COLOR
+        stx COLUP0
+        ldx #0                                          ; 2 this counts our scanline number ; scanline 38 
+        stx CTRLPF   
 ViewableScreenStart
+        
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;; Drawing Score Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -260,10 +267,9 @@ TopPlayAreaSeparator
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;; End Drawing Top Play area Separator ;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
         ldy #0                                          ; 2     Set Y to 0 to be used to reset the Player Graphics later on
         inx                                             ; 2     Increment line counter 
-        sta WSYNC                                       ; 3     Move to next line. This prevents th very top line of the play field
+        sta WSYNC                                       ; 3     Move to next line. This prevents the very top line of the play field
                                                         ;       from being drawable but lets us start fresh when drawing the players
                                                         ;       and the ball.
 GameBoard
@@ -302,6 +308,9 @@ BallDisabled
 ;       Scanline.
 ;       Also we can't clear the carry before adding so we need to 
 ;       keep an eye on it
+;       P0 Should be positioned horizontally past coordinate #3 in
+;       order to avoid conflict with drawing the ball on the first
+;       line
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;; Drawing P0 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -452,16 +461,12 @@ StartGameCheck
         bne DontStartGame
         lda #1
         sta SkipGame
-        lda #%11110000
-        sta BLHDir
 
 DontStartGame
 
-        lda #%01000010
+        ;lda #%01000010
+        lda #%00000010
         sta VBLANK                                      ; end of screen - enter blanking
-
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 GameLogic ;;;;;;;;;;;;;;;;; Game Logic  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -544,11 +549,52 @@ SkipP0Collision
         sta BLHDir
 SkipP1Collision
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+BallInit                               
+
+        lda BallFired
+        bne BallControl
+        sta WSYNC
+        sta WSYNC
+        lda FrameCounter
+        beq SkipDec
+
+        dec FrameCounter
+SkipDec
+        lda FrameCounter
+        bne BallNotFired
+
+        lda INPT4
+        ora #%01111111
+        cmp #%01111111
+        bne BallNotFired
+
+        lda #%11110000                                  ; Right
+        sta BLHDir
+
+        lda #1
+        sta BallFired
+        sec
+        bcs BallNotFired
+
+BallNotFired
+
+        lda INPT5
+        ora #%01111111
+        cmp #%01111111
+        bne BallNotFired2
+
+        lda #%00010000                                  ; Right
+        sta BLHDir
+
+        lda #1
+        sta BallFired
+        sec
+        bcs BallNotFired2
 
 BallControl
         ldy BlHPos                         
 
-        cpy #159                <----------------- Figure out the edge timing!!
+        cpy #160
         bne MaxHBPos
         lda #%00010000                                  ; Set Direction Left
         sta BLHDir
@@ -561,7 +607,7 @@ BallControl
         sta P0Score1
         inc P0Score2
 MaxHBPos
-        cpy #0
+        cpy #1
         bne MinHBPos
         lda #%11110000
         sta BLHDir
@@ -605,7 +651,6 @@ BallChangeDown
         sta BLVDir
 BallChangeUp
         
-
         lda BLHDir                                      ; 2 Load ball direction and speed
         sta HMBL                                        ; 3 set ball direction and speed
         and #%10000000                                  ; 2
@@ -620,6 +665,8 @@ SkipBLRight
         sta WSYNC
         sta HMOVE                                       ; 3
 
+
+BallNotFired2
 ;; Calculate Score
 Score
         lda P0Score1
