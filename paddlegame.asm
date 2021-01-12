@@ -84,7 +84,7 @@ P1PADDLEHEIGHT     = #35
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;; Initialization ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;;;;;;;;;;;;;;;;; Console Initialization ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 Reset
         ldx #0
@@ -143,10 +143,17 @@ StartGame
         ldx #1
         lda #132
         jsr CalcXPos
-        
         sta WSYNC
         sta HMOVE
+        SLEEP 24
         sta HMCLR
+
+        lda #%00000000
+        sta NUSIZ0
+        sta NUSIZ1
+
+        ldx #P0COLOR
+        stx COLUP0
         
         lda #1
         sta SkipInit
@@ -154,7 +161,9 @@ StartGame
         bne SkipCheck
         jmp StartMenu                                    ; 3
 StartOfFrame
-        ; 37 scanlines of vertical blank...
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Vertical Blank is the only section shared by screens
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ; Start of vertical blank processing
         lda #0
         sta VBLANK
@@ -169,12 +178,16 @@ StartOfFrame
         lda #0
         sta VSYNC ; Turn off VSYNC
 
-;-------------------------------------------------------------------------------
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Check to see if we're starting the game or continuing to load the start
+; menu
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 CheckGameStart
         lda SkipGameFlag                                ; 3
         bne StartGame                                   ; 2/3
         jmp StartMenu                                    ; 3
 SkipCheck
+        ; 37 scanlines of vertical blank...
         ldx #37
 VerticalBlank
         sta WSYNC
@@ -184,16 +197,11 @@ VerticalBlank
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; 192 scanlines of picture...
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        sta WSYNC
-        lda #%00000000
-        sta NUSIZ0
-        sta NUSIZ1
+
         ldx #BGCOLOR                                    ; Load Background color into X
         stx COLUBK                                      ; Set background color
         ldx #PFCOLOR
         stx COLUPF
-        ldx #P0COLOR
-        stx COLUP0
         ldx #0                                          ; 2 this counts our scanline number ; scanline 38 
         stx CTRLPF
         
@@ -691,17 +699,13 @@ CalcScore
         stx COLUBK
 ; 30 scanlines of overscan...
         ldx #0
-
         stx CXCLR
-
 Overscan
         sta WSYNC
         inx
-        cpx #19
+        cpx #20
         bne Overscan
         jmp StartOfFrame
-
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -728,7 +732,7 @@ StartMenu
         SLEEP 24
         sta HMCLR
 
-        ldx #33
+        ldx #32
 VerticalBlankStartMenu
         sta WSYNC
         dex                                             ; 2
@@ -797,7 +801,7 @@ DrawText
 
         inx
         sta WSYNC                                       ; 3
-        cpx #191
+        cpx #192
         bne StartMenuScreen                             ; 2/3
         ldy #0
         sty COLUBK   
