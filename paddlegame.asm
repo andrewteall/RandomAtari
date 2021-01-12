@@ -840,11 +840,10 @@ TextBuilder
 
         bne TextBuilder
 
-        ldx #0
+        ldx #27
 StartMenuOverscan
         sta WSYNC
-        inx
-        cpx #27
+        dex
         bne StartMenuOverscan
         jmp StartOfFrame
 
