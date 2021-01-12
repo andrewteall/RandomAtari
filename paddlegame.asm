@@ -371,7 +371,6 @@ SkipP1ResetHeight
         sta WSYNC                                       ; 3     P0-57 All-107 move to next line
         bne GameBoard                                   ; 2/3   No? Draw next scanline
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;; Drawing Bottom Play area Separator ;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -407,7 +406,6 @@ BottomBar
 GameLogic ;;;;;;;;;;;;;;;;; Game Logic  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 
 PlayerControl
         ldy P0VPos
@@ -481,7 +479,6 @@ SkipP0Collision
 SkipP1Collision
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 BallInit                               
-
         lda BallFired
         bne BallControl
         sta WSYNC
@@ -652,8 +649,6 @@ Score
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldx #0
 CalcScore
@@ -715,7 +710,7 @@ Overscan
 StartMenu
 
         ldx #1
-        lda #38
+        lda #68
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -724,7 +719,7 @@ StartMenu
         
 
         ldx #0
-        lda #30                                         
+        lda #60                                         
         jsr CalcXPos
 
         sta WSYNC
