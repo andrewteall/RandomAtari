@@ -72,7 +72,7 @@ TextTemp ds 1
 
 ;PATTERN           = $80 ; storage Location (1st byte in RAM)
 P0XSTARTPOS        = #15
-P0YSTARTPOS        = #100
+P0YSTARTPOS        = #77
 BLXSTARTPOS        = #6
 BLYSTARTPOS        = #92
 BlHPOS             = #80                                 ; #2 is ideal
@@ -154,12 +154,13 @@ StartGame
 
         ldx #P0COLOR
         stx COLUP0
-        
+        stx COLUP1
+
         lda #1
         sta SkipInit
         lda SkipGameFlag                                ; 3
         bne SkipCheck
-        jmp StartMenu                                    ; 3
+        jmp StartMenu                                   ; 3
 StartOfFrame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Vertical Blank is the only section shared by screens
@@ -180,30 +181,30 @@ StartOfFrame
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Check to see if we're starting the game or continuing to load the start
-; menu
+; menu. Can possibly remove this
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 CheckGameStart
         lda SkipGameFlag                                ; 3
         bne StartGame                                   ; 2/3
-        jmp StartMenu                                    ; 3
+        jmp StartMenu                                   ; 3
 SkipCheck
         ; 37 scanlines of vertical blank...
-        ldx #37
+        ldx #37                                         ; 2
 VerticalBlank
-        sta WSYNC
-        dex
+        sta WSYNC                                       ; 3
+        dex                                             ; 2
         bne VerticalBlank                               ; 2/3
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; 192 scanlines of picture...
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        ldx #BGCOLOR                                    ; Load Background color into X
-        stx COLUBK                                      ; Set background color
-        ldx #PFCOLOR
-        stx COLUPF
+        ldx #BGCOLOR                                    ; 2     Load Background color into X
+        stx COLUBK                                      ; 3     Set background color
+        ldx #PFCOLOR                                    ; 2
+        stx COLUPF                                      ; 3
         ldx #0                                          ; 2 this counts our scanline number ; scanline 38 
-        stx CTRLPF
+        stx CTRLPF                                      ; 3
         
 ViewableScreenStart
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -398,12 +399,13 @@ BottomBar
 
 ;;;;;;;;;;;;;;;;; End Drawing Bottom Play area Separator ;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+; end of screen - enter blanking
         lda #%00000010
-        sta VBLANK                                      ; end of screen - enter blanking
+        sta VBLANK
+          
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-GameLogic ;;;;;;;;;;;;;;;;; Game Logic  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;; Game Logic  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -544,7 +546,6 @@ MaxHBPos
         inc P1Score2
 MinHBPos
 
-
         lda BLVDir
         cmp #0
         bne BallDown
@@ -593,7 +594,6 @@ BallNotFired2
 Score
         lda P0Score1
         sta P0Score1idx   
-        lda P0Score1idx
         asl
         asl
         adc P0Score1idx
@@ -607,7 +607,6 @@ Score
 
         lda P0Score2
         sta P0Score2idx   
-        lda P0Score2idx
         asl
         asl
         adc P0Score2idx
@@ -621,7 +620,6 @@ Score
 ;;;;;;
         lda P1Score1
         sta P1Score1idx   
-        lda P1Score1idx
         asl
         asl
         adc P1Score1idx
@@ -635,7 +633,6 @@ Score
 
         lda P1Score2
         sta P1Score2idx   
-        lda P1Score2idx
         asl
         asl
         adc P1Score2idx
@@ -690,17 +687,17 @@ CalcScore
         cpx #5
         bcc CalcScore                                   ; 2/3   
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ldx #0
-        stx COLUBK
-; 30 scanlines of overscan...
-        ldx #0
-        stx CXCLR
+        ldx #0                                          ; 2
+        stx COLUBK                                      ; 3
+        stx CXCLR                                       ; 3
+
+; 30 scanlines of overscan...        
+        ldx #20                                         ; 2
 Overscan
-        sta WSYNC
-        inx
-        cpx #20
-        bne Overscan
-        jmp StartOfFrame
+        sta WSYNC                                       ; 2
+        dex                                             ; 3
+        bne Overscan                                    ; 2/3
+        jmp StartOfFrame                                ; 3
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -708,20 +705,17 @@ Overscan
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 StartMenu
-
-        ldx #1
-        lda #68
-        jsr CalcXPos
-        sta WSYNC
-        sta HMOVE
-        SLEEP 24
-        sta HMCLR
+        ldx #1                                          ; 2
+        lda #68                                         ; 2
+        jsr CalcXPos                                    ; 6
+        sta WSYNC                                       ; 3
+        sta HMOVE                                       ; 3
+        SLEEP 24                                        ; 24
+        sta HMCLR                                       ; 3
         
-
         ldx #0
         lda #60                                         
         jsr CalcXPos
-
         sta WSYNC
         sta HMOVE
         SLEEP 24
@@ -732,49 +726,65 @@ VerticalBlankStartMenu
         sta WSYNC
         dex                                             ; 2
         bne VerticalBlankStartMenu                      ; 2/3
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 192 scanlines of picture...
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+        ldy #$0A                                        ; 2
+        sty COLUPF                                      ; 3
         
-        ldy #$0A
-        sty COLUPF
-        
-        ldx #10
-        stx COLUP0
-        ldx #0
-        ldy #%00000001
-        sty CTRLPF
-        lda #%00000001
-        sta NUSIZ0
-        lda #%00000001
-        sta NUSIZ1
+        ldx #10                                         ; 2
+        stx COLUP0                                      ; 3
+        stx COLUP1                                      ; 3
+        ldy #%00000001                                  ; 2
+        sty CTRLPF                                      ; 3
+        lda #%00000001                                  ; 2
+        sta NUSIZ0                                      ; 3
+        sta NUSIZ1                                      ; 3
+        ldx #0                                          ; 2
 
         sta WSYNC                                       ; 3
 StartMenuScreen
-        
-        ldy #$84
-        cpx #85
-        bcc TopColor
-        ldy #$B4
+;;;;;;;;;;;;;;;; Set Background Color ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 11 cycles for the top Color
+; 10 cycles for the bottom Color
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;       
+        ldy #$84                                        ; 2
+        cpx #85                                         ; 2
+        bcc TopColor                                    ; 2/3
+        ldy #$B4                                        ; 2
 TopColor
-        sty COLUBK
-        
-        cpx #42
-        bne DrawCastle
-        ldy #%11100000
-        sty PF2
+        sty COLUBK                                      ; 3
+;;;;;;;;;;;;;;;; End Set Background Color ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+
+;;;;;;;;;;;;;;;; Draw Playfield ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; X cycles to draw/erase the playfield
+; X cycles to not draw/not erase the playfield
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  
+        cpx #42                                         ; 2
+        bne DrawCastle                                  ; 2/3
+        ldy #%11100000                                  ; 2
+        sty PF2                                         ; 3
 DrawCastle
 
-        cpx #122
-        bne StopDrawCastle
-        ldy #0
-        sty PF2
+        cpx #122                                        ; 2
+        bne StopDrawCastle                              ; 2/3
+        ldy #0                                          ; 2
+        sty PF2                                         ; 3
 StopDrawCastle
 
+;;;;;;;;;;;;;;;; End Draw Playfield ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 
 TextArea 
         cpx #140                                        ; 2
         bcs SkipDrawText                                ; 2/3
         cpx #135                                        ; 2 
         bcc SkipDrawText                                ; 2/3
-
 
         txa                                             ; 2
         sbc #135                                        ; 2
@@ -794,25 +804,30 @@ SkipDrawText
         sta GRP1                                        ; 3
 DrawText
 
-        inx
+        inx                                             ; 2
         sta WSYNC                                       ; 3
-        cpx #192
+        cpx #192                                        ; 2
         bne StartMenuScreen                             ; 2/3
-        ldy #0
-        sty COLUBK   
+        ldy #0                                          ; 2
+        sty COLUBK                                      ; 3
 
+; end of screen - enter blanking
+        lda #%00000010                                  ; 2
+        sta VBLANK                                      ; 3
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;; Start Menu Logic ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 StartGameCheck
         lda INPT4
-        ora #%01111111
-        cmp #%01111111
-        bne DontStartGame
-        lda #1
+        bmi DontStartGame
+        ;lda #1
         sta SkipGameFlag
 
 DontStartGame
-
-        lda #%00000010
-        sta VBLANK                                      ; end of screen - enter blanking
 
         ldx #0
 TextBuilder
