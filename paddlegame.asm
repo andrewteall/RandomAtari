@@ -706,7 +706,7 @@ Overscan
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 StartMenu
         ldx #1                                          ; 2
-        lda #68                                         ; 2
+        lda #75                                         ; 2
         jsr CalcXPos                                    ; 6
         sta WSYNC                                       ; 3
         sta HMOVE                                       ; 3
@@ -714,7 +714,7 @@ StartMenu
         sta HMCLR                                       ; 3
         
         ldx #0
-        lda #60                                         
+        lda #67                                         
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -733,7 +733,8 @@ VerticalBlankStartMenu
 
         ldy #$0A                                        ; 2
         sty COLUPF                                      ; 3
-        
+        ldy #$84                                        ; 2
+        sty COLUBK                                      ; 3
         ldx #10                                         ; 2
         stx COLUP0                                      ; 3
         stx COLUP1                                      ; 3
@@ -743,48 +744,79 @@ VerticalBlankStartMenu
         sta NUSIZ0                                      ; 3
         sta NUSIZ1                                      ; 3
         ldx #0                                          ; 2
+        
 
         sta WSYNC                                       ; 3
 StartMenuScreen
-;;;;;;;;;;;;;;;; Set Background Color ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; 11 cycles for the top Color
-; 10 cycles for the bottom Color
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;       
-        ldy #$84                                        ; 2
-        cpx #85                                         ; 2
-        bcc TopColor                                    ; 2/3
-        ldy #$B4                                        ; 2
-TopColor
-        sty COLUBK                                      ; 3
-;;;;;;;;;;;;;;;; End Set Background Color ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+        inx
+        cpx #9
+        sta WSYNC
+        bne StartMenuScreen
+;;;;;;;;;;;;;;;; Draw Playfield ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; X cycles to draw/erase the playfield
+; X cycles to not draw/not erase the playfield
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        
+TopOutline  
+        ldy #%11111111                                  ; 2
+        sty PF2                                         ; 3
+        ldy #%11111111                                  ; 2
+        sty PF1                                         ; 3
+
+        inx
+        cpx #17
+        sta WSYNC
+        bne TopOutline
+        ldy #0                                          ; 2
+        sty PF0                                         ; 3
+        sty PF1                                         ; 3
+        sty PF2                                         ; 3
+;;;;;;;;;;;;;;;; End Draw Playfield ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+
+TitleContent
+        inx
+        cpx #106
+        sta WSYNC
+        bne TitleContent
 
 ;;;;;;;;;;;;;;;; Draw Playfield ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; X cycles to draw/erase the playfield
 ; X cycles to not draw/not erase the playfield
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  
-        cpx #42                                         ; 2
-        bne DrawCastle                                  ; 2/3
-        ldy #%11100000                                  ; 2
-        sty PF2                                         ; 3
-DrawCastle
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+BottomOutline  
 
-        cpx #122                                        ; 2
-        bne StopDrawCastle                              ; 2/3
-        ldy #0                                          ; 2
+        ldy #%11111111                                  ; 2
         sty PF2                                         ; 3
-StopDrawCastle
+        ldy #%11111111                                  ; 2
+        sty PF1                                         ; 3
+
+        inx
+        cpx #114
+        sta WSYNC
+        bne BottomOutline
+        ldy #0                                          ; 2
+        sty PF0                                         ; 3
+        sty PF1                                         ; 3
+        sty PF2                                         ; 3
 
 ;;;;;;;;;;;;;;;; End Draw Playfield ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 
+TitleSpace
+        inx
+        cpx #135
+        sta WSYNC
+        bne TitleSpace
+
 TextArea 
-        cpx #140                                        ; 2
-        bcs SkipDrawText                                ; 2/3
-        cpx #135                                        ; 2 
-        bcc SkipDrawText                                ; 2/3
+        ; cpx #140                                        ; 2
+        ; bcs SkipDrawText                                ; 2/3
+        ; cpx #135                                        ; 2 
+        ; bcc SkipDrawText                                ; 2/3
 
         txa                                             ; 2
         sbc #135                                        ; 2
@@ -796,6 +828,12 @@ TextArea
         lda TextBuffer2,y                               ; 4
         sta GRP1                                        ; 3
 
+        SLEEP 20
+
+        lda #0
+        sta GRP0
+        sta GRP1
+
         clc                                             ; 2
         bcc DrawText                                    ; 2/3
 SkipDrawText
@@ -803,11 +841,19 @@ SkipDrawText
         sta GRP0                                        ; 3
         sta GRP1                                        ; 3
 DrawText
+        inx
+        cpx #141
+        sta WSYNC
+        bne TextArea
 
+
+;;;;;;;;;;; Housekeeping ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+EndofScreenBuffer
         inx                                             ; 2
         sta WSYNC                                       ; 3
         cpx #192                                        ; 2
-        bne StartMenuScreen                             ; 2/3
+        bne EndofScreenBuffer                           ; 2/3
+        
         ldy #0                                          ; 2
         sty COLUBK                                      ; 3
 
@@ -835,17 +881,17 @@ TextBuilder
         and #%11110000
         sta TextTemp
 
-        lda R,x
+        lda L,x
         and #%00001111
 
         ora TextTemp
         sta TextBuffer1,x
 
-        lda E,x
+        lda A,x
         and #%11110000
         sta TextTemp
 
-        lda S,x
+        lda Y,x
         and #%00001111
 
         ora TextTemp
@@ -1045,6 +1091,42 @@ A          .byte  #%11101110
            .byte  #%11101110
            .byte  #%10101010
            .byte  #%10101010
+
+TITLE      .byte  #%11101110
+           .byte  #%10101010
+           .byte  #%11101010
+           .byte  #%10001010
+           .byte  #%10001110
+
+O          .byte  #%11101110
+           .byte  #%10101010
+           .byte  #%10101010
+           .byte  #%10101010
+           .byte  #%11101110
+
+N          .byte  #%11101110
+           .byte  #%10101010
+           .byte  #%10101010
+           .byte  #%10101010
+           .byte  #%10101010
+
+G          .byte  #%11101110
+           .byte  #%10001000
+           .byte  #%11101110
+           .byte  #%10101010
+           .byte  #%11101110
+
+L          .byte  #%10001000
+           .byte  #%10001000
+           .byte  #%10001000
+           .byte  #%10001000
+           .byte  #%11101110
+
+Y          .byte  #%10101010
+           .byte  #%10101010
+           .byte  #%11101110
+           .byte  #%01000100
+           .byte  #%01000100
 
 ;-------------------------------------------------------------------------------
         ORG $FFFA
