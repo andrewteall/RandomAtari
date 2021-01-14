@@ -388,7 +388,7 @@ BottomBar
         sta PF1
         sta PF2
         inx
-        cpx #192
+        cpx #193
         sta WSYNC
         bne BottomBar
 
@@ -692,7 +692,7 @@ CalcScore
         stx CXCLR                                       ; 3
 
 ; 30 scanlines of overscan...        
-        ldx #20                                         ; 2
+        ldx #19                                         ; 2
 Overscan
         sta WSYNC                                       ; 2
         dex                                             ; 3
@@ -721,7 +721,7 @@ StartMenu
         SLEEP 24
         sta HMCLR
 
-        ldx #32
+        ldx #33
 VerticalBlankStartMenu
         sta WSYNC
         dex                                             ; 2
@@ -901,7 +901,7 @@ TextBuilder
 
         bne TextBuilder
 
-        ldx #27
+        ldx #26
 StartMenuOverscan
         sta WSYNC
         dex
