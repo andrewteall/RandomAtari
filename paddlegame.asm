@@ -811,13 +811,10 @@ TitleSpace
         cpx #135
         sta WSYNC
         bne TitleSpace
+        sec                                             ; 2     Not sure why this is needed
+        bcs SkipDrawText                                ; 2/3   Not sure why this is needed
 
 TextArea 
-        ; cpx #140                                        ; 2
-        ; bcs SkipDrawText                                ; 2/3
-        ; cpx #135                                        ; 2 
-        ; bcc SkipDrawText                                ; 2/3
-
         txa                                             ; 2
         sbc #135                                        ; 2
         tay                                             ; 2 
