@@ -782,11 +782,52 @@ TopOutline
 TitleContent 
         cpx #21
         bmi SkipTitle
-        cpx #40
-        bpl SkipTitle
+        ; cpx #40
+        ; bpl SkipTitle
 
         txa
         sbc #20
+        lsr
+        lsr
+        tay
+
+        
+        lda GE,y
+        sta PF1
+        
+        lda NE,y
+        sta PF2
+
+        lda BR,y
+        sta PF0
+
+        lda IC,y
+        sta PF1
+        ;lda 80
+        nop
+        nop
+        nop
+
+
+SkipTitle        
+        inx
+        lda #0                                          ; 2
+        sta PF0                                         ; 3
+        sta PF1                                         ; 3
+        sta PF2                                         ; 3
+        cpx #40
+        sta WSYNC
+        bne TitleContent
+
+        ldy #0
+TitleContentLine2 
+        cpx #46
+        bmi SkipTitleLine2
+        ; cpx #65
+        ; bpl SkipTitleLine2
+
+        txa
+        sbc #45
         lsr
         lsr
         tay
@@ -802,20 +843,62 @@ TitleContent
         sta PF0
 
         lda LE,y
-        sta PF1
-        ;lda 80
+        sta PF1        
+        nop
+        nop
         nop
 
 
-SkipTitle        
+SkipTitleLine2        
         inx
         lda #0                                          ; 2
         sta PF0                                         ; 3
         sta PF1                                         ; 3
         sta PF2                                         ; 3
-        cpx #106
+        cpx #65
         sta WSYNC
-        bne TitleContent
+        bne TitleContentLine2
+
+        ldy #0
+TitleContentLine3 
+        cpx #71
+        bmi SkipTitleLine3
+        ; cpx #90
+        ; bpl SkipTitleLine3
+
+        txa
+        sbc #70
+        lsr
+        lsr
+        tay
+
+        
+        lda GA,y
+        sta PF1
+        
+        lda ME,y
+        sta PF2
+        nop
+        nop
+
+
+SkipTitleLine3
+        inx
+        lda #0                                          ; 2
+        sta PF0                                         ; 3
+        sta PF1                                         ; 3
+        sta PF2                                         ; 3
+        cpx #90
+        sta WSYNC
+        bne TitleContentLine3
+
+
+TitleBuffer
+        inx
+        sta WSYNC
+        cpx #94
+        bne TitleBuffer
+
 
 ;;;;;;;;;;;;;;;; Draw Playfield ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; X cycles to draw/erase the playfield
@@ -831,7 +914,7 @@ BottomOutline
         sty PF1                                         ; 3
 
         inx
-        cpx #114
+        cpx #102
         sta WSYNC
         bne BottomOutline
         ldy #0                                          ; 2
@@ -1194,11 +1277,11 @@ PA         .byte  #%11101110
            .byte  #%10001010
            .byte  #%10001010
 
-DD         .byte  #%01000100
-           .byte  #%01000100
-           .byte  #%01110111
+DD         .byte  #%00110011
            .byte  #%01010101
-           .byte  #%01110111
+           .byte  #%01010101
+           .byte  #%01010101
+           .byte  #%00110011
 
 BL         .byte  #%00010000
            .byte  #%00010000
@@ -1206,11 +1289,23 @@ BL         .byte  #%00010000
            .byte  #%00010000
            .byte  #%01110000
 
-LE         .byte  #%10001110
-           .byte  #%10001000
-           .byte  #%10001110
-           .byte  #%10001000
+LE         .byte  #%11100000
+           .byte  #%10000000
+           .byte  #%11100000
+           .byte  #%10000000
+           .byte  #%11100000
+
+GA         .byte  #%11101110
+           .byte  #%10001010
            .byte  #%11101110
+           .byte  #%10101010
+           .byte  #%11101010
+
+ME         .byte  #%01110101
+           .byte  #%00010111
+           .byte  #%01110101
+           .byte  #%00010101
+           .byte  #%01110101
 
 ;-------------------------------------------------------------------------------
         ORG $FFFA
