@@ -57,6 +57,7 @@ SkipGameFlag ds 1
 BallFired ds 1
 FrameCounter ds 1
 SkipInit ds 1
+GameMode ds 1
 
 TextBuffer1 ds 5
 TextBuffer2 ds 5
@@ -451,14 +452,27 @@ SkipP1Up
         bne SkipP1Down
         iny
 SkipP1Down
+        lda GameMode
+        beq TwoPlayerMode
+        ldy BlVPos
+        cpy P0VPos
+        bmi SkipCPUUp
+        dey
+SkipCPUUp
 
+        ldy BlVPos
+        cpy P0VPos
+        bpl SkipCPUDown
+        iny
+SkipCPUDown
+TwoPlayerMode
         cpy #24
         bne ZeroP1VPos
         ldy #25
 ZeroP1VPos
 
         cpy #148
-        bne MaxP1VPos
+        bmi MaxP1VPos
         ldy #147
 MaxP1VPos
         sty P1VPos       
@@ -513,6 +527,7 @@ BallNotFired
 
         lda #1
         sta BallFired
+        sta GameMode
         sec
         bcs BallNotFired2
 
@@ -782,8 +797,6 @@ TopOutline
 TitleContent 
         cpx #21
         bmi SkipTitle
-        ; cpx #40
-        ; bpl SkipTitle
 
         txa
         sbc #20
@@ -803,7 +816,6 @@ TitleContent
 
         lda IC,y
         sta PF1
-        ;lda 80
         nop
         nop
         nop
@@ -823,8 +835,6 @@ SkipTitle
 TitleContentLine2 
         cpx #46
         bmi SkipTitleLine2
-        ; cpx #65
-        ; bpl SkipTitleLine2
 
         txa
         sbc #45
@@ -863,8 +873,6 @@ SkipTitleLine2
 TitleContentLine3 
         cpx #71
         bmi SkipTitleLine3
-        ; cpx #90
-        ; bpl SkipTitleLine3
 
         txa
         sbc #70
@@ -885,7 +893,6 @@ TitleContentLine3
 SkipTitleLine3
         inx
         lda #0                                          ; 2
-        sta PF0                                         ; 3
         sta PF1                                         ; 3
         sta PF2                                         ; 3
         cpx #90
