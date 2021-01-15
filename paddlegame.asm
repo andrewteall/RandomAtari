@@ -738,7 +738,7 @@ VerticalBlankStartMenu
         ldx #10                                         ; 2
         stx COLUP0                                      ; 3
         stx COLUP1                                      ; 3
-        ldy #%00000001                                  ; 2
+        ldy #%00000000                                  ; 2
         sty CTRLPF                                      ; 3
         lda #%00000001                                  ; 2
         sta NUSIZ0                                      ; 3
@@ -757,7 +757,8 @@ StartMenuScreen
 ; X cycles to draw/erase the playfield
 ; X cycles to not draw/not erase the playfield
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        
+        lda #0000001
+        sta CTRLPF
 TopOutline  
         ldy #%11111111                                  ; 2
         sty PF2                                         ; 3
@@ -776,8 +777,42 @@ TopOutline
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 
-TitleContent
+        ldy #%0
+        sty CTRLPF
+TitleContent 
+        cpx #21
+        bmi SkipTitle
+        cpx #40
+        bpl SkipTitle
+
+        txa
+        sbc #20
+        lsr
+        lsr
+        tay
+
+        
+        lda PA,y
+        sta PF1
+        
+        lda DD,y
+        sta PF2
+
+        lda BL,y
+        sta PF0
+
+        lda LE,y
+        sta PF1
+        ;lda 80
+        nop
+
+
+SkipTitle        
         inx
+        lda #0                                          ; 2
+        sta PF0                                         ; 3
+        sta PF1                                         ; 3
+        sta PF2                                         ; 3
         cpx #106
         sta WSYNC
         bne TitleContent
@@ -786,6 +821,8 @@ TitleContent
 ; X cycles to draw/erase the playfield
 ; X cycles to not draw/not erase the playfield
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #0000001
+        sta CTRLPF
 BottomOutline  
 
         ldy #%11111111                                  ; 2
@@ -802,6 +839,8 @@ BottomOutline
         sty PF1                                         ; 3
         sty PF2                                         ; 3
 
+        lda #0000000
+        sta CTRLPF
 ;;;;;;;;;;;;;;;; End Draw Playfield ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
@@ -1124,6 +1163,54 @@ Y          .byte  #%10101010
            .byte  #%11101110
            .byte  #%01000100
            .byte  #%01000100
+
+GE         .byte  #%11101110
+           .byte  #%10001000
+           .byte  #%11101110
+           .byte  #%10101000
+           .byte  #%11101110
+
+NE         .byte  #%01110111
+           .byte  #%00010101
+           .byte  #%01110101
+           .byte  #%00010101
+           .byte  #%01110101
+
+IC         .byte  #%11101110
+           .byte  #%01001000
+           .byte  #%01001000
+           .byte  #%01001000
+           .byte  #%11101110
+
+BR         .byte  #%01110000
+           .byte  #%01010000
+           .byte  #%01110000
+           .byte  #%00110000
+           .byte  #%01010000
+
+PA         .byte  #%11101110
+           .byte  #%10101010
+           .byte  #%11101110
+           .byte  #%10001010
+           .byte  #%10001010
+
+DD         .byte  #%01000100
+           .byte  #%01000100
+           .byte  #%01110111
+           .byte  #%01010101
+           .byte  #%01110111
+
+BL         .byte  #%00010000
+           .byte  #%00010000
+           .byte  #%00010000
+           .byte  #%00010000
+           .byte  #%01110000
+
+LE         .byte  #%10001110
+           .byte  #%10001000
+           .byte  #%10001110
+           .byte  #%10001000
+           .byte  #%11101110
 
 ;-------------------------------------------------------------------------------
         ORG $FFFA
