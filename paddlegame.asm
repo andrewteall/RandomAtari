@@ -970,37 +970,6 @@ DrawText
         bne TextArea
 
 
-
-; TextArea2 
-;         txa                                             ; 2
-;         sbc #145                                        ; 2
-;         tay                                             ; 2 
-
-;         lda TextBuffer1,y                               ; 4
-;         sta GRP0                                        ; 3
-        
-;         lda TextBuffer2,y                               ; 4
-;         sta GRP1                                        ; 3
-
-;         SLEEP 20
-
-;         lda #0
-;         sta GRP0
-;         sta GRP1
-
-;         clc                                             ; 2
-;         bcc SkipDrawText2                               ; 2/3
-; SkipDrawText2
-;         lda #0                                          ; 2
-;         sta GRP0                                        ; 3
-;         sta GRP1                                        ; 3
-; DrawText2
-;         inx
-;         cpx #151
-;         sta WSYNC
-;         bne TextArea2
-
-
 ;;;;;;;;;;; Housekeeping ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 EndofScreenBuffer
         inx                                             ; 2
