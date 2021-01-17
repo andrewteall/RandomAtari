@@ -58,6 +58,7 @@ BallFired       ds 1
 FrameCounter    ds 1
 SkipInit        ds 1
 GameMode        ds 1
+GameSelect      ds 1     
 
 TextBuffer1     ds 5
 TextBuffer2     ds 5
@@ -933,7 +934,6 @@ BottomOutline
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 
 TitleSpace
-        ldy #0
         inx
         cpx #135
         sta WSYNC
@@ -968,6 +968,42 @@ DrawText
         cpx #141
         sta WSYNC
         bne TextArea
+
+TitleSpace2
+        inx
+        cpx #145
+        sta WSYNC
+        bne TitleSpace2
+        sec                                             ; 2     Not sure why this is needed
+        bcs SkipDrawText2                                ; 2/3   Not sure why this is needed
+
+TextArea2 
+        txa                                             ; 2
+        sbc #145                                        ; 2
+        tay                                             ; 2 
+        ;lda TextBuffer3,y                               ; 4
+        ;sta GRP0                                        ; 3
+        lda TextBuffer1,y                               ; 4
+        sta GRP1                                        ; 3
+        SLEEP 22
+        lda TextBuffer2,y                               ; 4
+        sta GRP0                                        ; 3
+
+        lda #0
+        sta GRP1
+        sta GRP0
+
+        clc                                             ; 2
+        bcc DrawText2                                    ; 2/3
+SkipDrawText2
+        lda #0                                          ; 2
+        sta GRP1                                        ; 3
+        sta GRP0                                        ; 3
+DrawText2
+        inx
+        cpx #151
+        sta WSYNC
+        bne TextArea2
 
 
 ;;;;;;;;;;; Housekeeping ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1034,7 +1070,7 @@ TextBuilder
 
         bne TextBuilder
 
-        ldx #26
+        ldx #24
 StartMenuOverscan
         sta WSYNC
         dex
