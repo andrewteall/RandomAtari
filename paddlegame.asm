@@ -5,65 +5,65 @@
         SEG.U vars
         ORG $80
 
-P0VPos ds 1             ; $80
-P0HPos ds 1             ; $81
+P0VPos          ds 1            ; $80
+P0HPos          ds 1            ; $81
 
-P1VPos ds 1             ; $82
-P1HPos ds 1             ; $83
+P1VPos          ds 1            ; $82
+P1HPos          ds 1            ; $83
 
-BlVPos ds 1             ; $84
-BlHPos ds 1             ; $85
-BLHDir ds 1             ; $86
-BLVDir ds 1             ; $87
+BlVPos          ds 1            ; $84
+BlHPos          ds 1            ; $85
+BLHDir          ds 1            ; $86
+BLVDir          ds 1            ; $87
 
-P0SpritePtr ds 2        ; $88
-P1SpritePtr ds 2        ; $86
+P0SpritePtr     ds 2            ; $88
+P1SpritePtr     ds 2            ; $86
 
-P0Height ds 1
-P1Height ds 1
+P0Height        ds 1
+P1Height        ds 1
 
-P0GREnd ds 1
-P1GREnd ds 1
+P0GREnd         ds 1
+P1GREnd         ds 1
 
-P0Score1 ds 1           ; $8b
-P0Score2 ds 1           ; $8c
+P0Score1        ds 1            ; $8b
+P0Score2        ds 1            ; $8c
 
-P1Score1 ds 1
-P1Score2 ds 1
+P1Score1        ds 1
+P1Score2        ds 1
 
-P0Score1idx ds 1        ; $8d
-P0Score2idx ds 1        ; $8e
-P1Score1idx ds 1        ; $8d
-P1Score2idx ds 1        ; $8e
+P0Score1idx     ds 1            ; $8d
+P0Score2idx     ds 1            ; $8e
+P1Score1idx     ds 1            ; $8d
+P1Score2idx     ds 1            ; $8e
 
-P0ScoreTmp ds 1
-P1ScoreTmp ds 1
+P0ScoreTmp      ds 1
+P1ScoreTmp      ds 1
 
-P0ScoreArr ds 5
-P1ScoreArr ds 5
+P0ScoreArr      ds 5
+P1ScoreArr      ds 5
 
-P0ScorePtr ds 2
-P1ScorePtr ds 2
+P0ScorePtr      ds 2
+P1ScorePtr      ds 2
 
 P0Score1DigitPtr ds 2
 P0Score2DigitPtr ds 2
 P1Score1DigitPtr ds 2
 P1Score2DigitPtr ds 2
 
-CoarseCounter ds 1      
-FineCounter ds 1        
+CoarseCounter   ds 1      
+FineCounter     ds 1        
 
-SkipGameFlag ds 1
-BallFired ds 1
-FrameCounter ds 1
-SkipInit ds 1
-GameMode ds 1
+SkipGameFlag    ds 1
+BallFired       ds 1
+FrameCounter    ds 1
+SkipInit        ds 1
+GameMode        ds 1
 
-TextBuffer1 ds 5
-TextBuffer2 ds 5
-TextBuffer3 ds 5
-TextBuffer4 ds 5
-TextBuffer5 ds 5
+TextBuffer1     ds 5
+TextBuffer2     ds 5
+TextBuffer3     ds 5
+TextBuffer4     ds 5
+TextBuffer5     ds 5
 
 TextTemp ds 1
 
@@ -721,7 +721,7 @@ Overscan
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 StartMenu
         ldx #1                                          ; 2
-        lda #75                                         ; 2
+        lda #67                                         ; 2
         jsr CalcXPos                                    ; 6
         sta WSYNC                                       ; 3
         sta HMOVE                                       ; 3
@@ -729,7 +729,7 @@ StartMenu
         sta HMCLR                                       ; 3
         
         ldx #0
-        lda #67                                         
+        lda #59                                         
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -791,9 +791,7 @@ TopOutline
 ;;;;;;;;;;;;;;;; End Draw Playfield ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-
-        ldy #%0
-        sty CTRLPF
+        sty CTRLPF                                      ; 3 Using Y from above
 TitleContent 
         cpx #21
         bmi SkipTitle
@@ -803,7 +801,6 @@ TitleContent
         lsr
         lsr
         tay
-
         
         lda GE,y
         sta PF1
@@ -911,7 +908,7 @@ TitleBuffer
 ; X cycles to draw/erase the playfield
 ; X cycles to not draw/not erase the playfield
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #0000001
+        lda #00000001
         sta CTRLPF
 BottomOutline  
 
@@ -936,6 +933,7 @@ BottomOutline
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 
 TitleSpace
+        ldy #0
         inx
         cpx #135
         sta WSYNC
@@ -947,30 +945,60 @@ TextArea
         txa                                             ; 2
         sbc #135                                        ; 2
         tay                                             ; 2 
-
-        lda TextBuffer1,y                               ; 4
+        lda TextBuffer3,y                               ; 4
         sta GRP0                                        ; 3
-        
-        lda TextBuffer2,y                               ; 4
+        lda TextBuffer1,y                               ; 4
         sta GRP1                                        ; 3
-
-        SLEEP 20
+        SLEEP 15
+        lda TextBuffer2,y                               ; 4
+        sta GRP0                                        ; 3
 
         lda #0
-        sta GRP0
         sta GRP1
+        sta GRP0
 
         clc                                             ; 2
         bcc DrawText                                    ; 2/3
 SkipDrawText
         lda #0                                          ; 2
-        sta GRP0                                        ; 3
         sta GRP1                                        ; 3
+        sta GRP0                                        ; 3
 DrawText
         inx
         cpx #141
         sta WSYNC
         bne TextArea
+
+
+
+; TextArea2 
+;         txa                                             ; 2
+;         sbc #145                                        ; 2
+;         tay                                             ; 2 
+
+;         lda TextBuffer1,y                               ; 4
+;         sta GRP0                                        ; 3
+        
+;         lda TextBuffer2,y                               ; 4
+;         sta GRP1                                        ; 3
+
+;         SLEEP 20
+
+;         lda #0
+;         sta GRP0
+;         sta GRP1
+
+;         clc                                             ; 2
+;         bcc SkipDrawText2                               ; 2/3
+; SkipDrawText2
+;         lda #0                                          ; 2
+;         sta GRP0                                        ; 3
+;         sta GRP1                                        ; 3
+; DrawText2
+;         inx
+;         cpx #151
+;         sta WSYNC
+;         bne TextArea2
 
 
 ;;;;;;;;;;; Housekeeping ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -996,12 +1024,10 @@ EndofScreenBuffer
 StartGameCheck
         lda INPT4
         bmi DontStartGame
-        ;lda #1
         sta SkipGameFlag
-
 DontStartGame
-
         ldx #0
+
 TextBuilder
         lda P,x
         and #%11110000
@@ -1022,6 +1048,18 @@ TextBuilder
 
         ora TextTemp
         sta TextBuffer2,x
+
+        lda Space,x
+        and #%11110000
+        sta TextTemp
+
+        lda Cursor,x
+        and #%00001111
+
+        ora TextTemp
+        sta TextBuffer3,x
+        
+        
         inx
         cpx #5
 
@@ -1223,6 +1261,18 @@ TITLE      .byte  #%11101110
            .byte  #%11101010
            .byte  #%10001010
            .byte  #%10001110
+
+Space      .byte  #%00000000
+           .byte  #%00000000
+           .byte  #%00000000
+           .byte  #%00000000
+           .byte  #%00000000
+
+Cursor     .byte  #%10001000
+           .byte  #%11001100
+           .byte  #%11101110
+           .byte  #%11001100
+           .byte  #%10001000
 
 O          .byte  #%11101110
            .byte  #%10101010
