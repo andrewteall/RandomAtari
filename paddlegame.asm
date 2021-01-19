@@ -58,7 +58,7 @@ BallFired       ds 1
 FrameCounter    ds 1
 SkipInit        ds 1
 GameMode        ds 1
-GameSelect      ds 1     
+GameSelectFlag  ds 1     
 
 TextBuffer1     ds 5
 TextBuffer2     ds 5
@@ -984,11 +984,11 @@ TextArea2
         txa                                             ; 2
         sbc #145                                        ; 2
         tay                                             ; 2 
-        ;lda TextBuffer3,y                               ; 4
-        ;sta GRP0                                        ; 3
+        lda TextBuffer4,y                               ; 4
+        sta GRP0                                        ; 3
         lda TextBuffer1,y                               ; 4
         sta GRP1                                        ; 3
-        SLEEP 22
+        SLEEP 15
         lda TextBuffer2,y                               ; 4
         sta GRP0                                        ; 3
 
@@ -1065,7 +1065,34 @@ TextBuilder
         and #%00001111
 
         ora TextTemp
+
+        ; if up pressed textBuffer3
+        ldy SWCHA
+        cpy #%11101111
+        bne skipTop
+        ldy #0
+        sty GameSelectFlag
+skipTop
+        ldy SWCHA
+        cpy #%11011111
+        bne skipBottom
+        ldy #1
+        sty GameSelectFlag
+skipBottom
+
+        ldy GameSelectFlag
+        cpy #0
+        beq onePlayer
+        sta TextBuffer4,x
+        lda #0
         sta TextBuffer3,x
+        sec 
+        bcs twoPlayer
+onePlayer
+        sta TextBuffer3,x
+        lda #0
+        sta TextBuffer4,x
+twoPlayer
         
         
         inx
@@ -1073,7 +1100,7 @@ TextBuilder
 
         bne TextBuilder
 
-        ldx #24
+        ldx #22
 StartMenuOverscan
         sta WSYNC
         dex
