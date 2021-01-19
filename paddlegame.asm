@@ -890,7 +890,7 @@ TitleContentLine3
         sta PF2
         nop
         nop
-
+        nop
 
 SkipTitleLine3
         inx
