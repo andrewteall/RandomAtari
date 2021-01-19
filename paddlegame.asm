@@ -58,13 +58,14 @@ BallFired       ds 1
 FrameCounter    ds 1
 SkipInit        ds 1
 GameMode        ds 1
-GameSelect      ds 1     
+GameSelectFlag  ds 1     
 
 TextBuffer1     ds 5
 TextBuffer2     ds 5
 TextBuffer3     ds 5
 TextBuffer4     ds 5
 TextBuffer5     ds 5
+TextBuffer6     ds 5
 
 TextTemp ds 1
 
@@ -456,7 +457,7 @@ SkipP1Up
         bne SkipP1Down
         iny
 SkipP1Down
-        lda GameMode
+        lda GameSelectFlag
         beq TwoPlayerMode
         ldy BlVPos
         cpy P0VPos
@@ -857,7 +858,7 @@ TitleContentLine2
         sta PF1        
         nop
         nop
-        nop
+        
 
 
 SkipTitleLine2        
@@ -977,19 +978,19 @@ TitleSpace2
         cpx #145
         sta WSYNC
         bne TitleSpace2
-        sec                                             ; 2     Not sure why this is needed
+        sec                                              ; 2     Not sure why this is needed
         bcs SkipDrawText2                                ; 2/3   Not sure why this is needed
 
 TextArea2 
         txa                                             ; 2
         sbc #145                                        ; 2
         tay                                             ; 2 
-        ;lda TextBuffer3,y                               ; 4
-        ;sta GRP0                                        ; 3
-        lda TextBuffer1,y                               ; 4
+        lda TextBuffer4,y                               ; 4
+        sta GRP0                                        ; 3
+        lda TextBuffer5,y                               ; 4
         sta GRP1                                        ; 3
-        SLEEP 22
-        lda TextBuffer2,y                               ; 4
+        SLEEP 15
+        lda TextBuffer6,y                               ; 4
         sta GRP0                                        ; 3
 
         lda #0
@@ -1037,25 +1038,45 @@ DontStartGame
         ldx #0
 
 TextBuilder
-        lda P,x
+        lda O,x
         and #%11110000
         sta TextTemp
 
-        lda L,x
+        lda N,x
         and #%00001111
 
         ora TextTemp
         sta TextBuffer1,x
 
-        lda A,x
+        lda E,x
         and #%11110000
         sta TextTemp
 
-        lda Y,x
+        lda Space,x
         and #%00001111
 
         ora TextTemp
         sta TextBuffer2,x
+
+        lda T,x
+        and #%11110000
+        sta TextTemp
+
+        lda W,x
+        and #%00001111
+
+        ora TextTemp
+        sta TextBuffer5,x
+
+        lda O,x
+        and #%11110000
+        sta TextTemp
+
+        lda Space,x
+        and #%00001111
+
+        ora TextTemp
+        sta TextBuffer6,x
 
         lda Space,x
         and #%11110000
@@ -1065,7 +1086,34 @@ TextBuilder
         and #%00001111
 
         ora TextTemp
+
+        ; if up pressed textBuffer3
+        ldy SWCHA
+        cpy #%11101111
+        bne skipTop
+        ldy #0
+        sty GameSelectFlag
+skipTop
+        ldy SWCHA
+        cpy #%11011111
+        bne skipBottom
+        ldy #1
+        sty GameSelectFlag
+skipBottom
+
+        ldy GameSelectFlag
+        cpy #0
+        beq onePlayer
+        sta TextBuffer4,x
+        lda #0
         sta TextBuffer3,x
+        sec 
+        bcs twoPlayer
+onePlayer
+        sta TextBuffer3,x
+        lda #0
+        sta TextBuffer4,x
+twoPlayer
         
         
         inx
@@ -1073,7 +1121,7 @@ TextBuilder
 
         bne TextBuilder
 
-        ldx #24
+        ldx #19
 StartMenuOverscan
         sta WSYNC
         dex
@@ -1311,6 +1359,12 @@ Y          .byte  #%10101010
            .byte  #%11101110
            .byte  #%01000100
            .byte  #%01000100
+
+W          .byte  #%10101010
+           .byte  #%10101010
+           .byte  #%11101110
+           .byte  #%11101110
+           .byte  #%11101110
 
 GE         .byte  #%11101110
            .byte  #%10001000
