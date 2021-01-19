@@ -96,6 +96,9 @@ Clear
         txs
         pha
         bne Clear
+        cld                                             ;       Clear Decimal. Seems to be an issue 
+                                                        ;       when the stack point is randomized 
+                                                        ;       in Stella
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;; Global Config ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
