@@ -417,16 +417,15 @@ BottomBar
 
 PlayerControl
         ldy P0VPos
-        lda SWCHA                
-        ora #%11101111
-        cmp #%11101111
+
+        lda #%00010000            
+        and SWCHA
         bne SkipUp
         dey
 SkipUp
 
-        lda SWCHA
-        ora #%11011111
-        cmp #%11011111
+        lda #%00100000
+        and SWCHA
         bne SkipDown
         iny
 SkipDown
@@ -444,16 +443,14 @@ MaxVPos
 
 ;;;;;;;;
         ldy P1VPos
-        lda SWCHA
-        ora #%11111110
-        cmp #%11111110
+        lda #%00000001
+        and SWCHA
         bne SkipP1Up
         dey
 SkipP1Up
 
-        lda SWCHA
-        ora #%11111101
-        cmp #%11111101
+        lda #%00000010
+        and SWCHA
         bne SkipP1Down
         iny
 SkipP1Down
