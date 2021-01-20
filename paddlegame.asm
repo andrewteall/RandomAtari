@@ -17,24 +17,24 @@ BLHDir          ds 1            ; $86
 BLVDir          ds 1            ; $87
 
 P0SpritePtr     ds 2            ; $88
-P1SpritePtr     ds 2            ; $86
+P1SpritePtr     ds 2            ; $8a
 
-P0Height        ds 1
-P1Height        ds 1
+P0Height        ds 1            ; $8c
+P1Height        ds 1            ; $8d
 
-P0GREnd         ds 1
-P1GREnd         ds 1
+P0GREnd         ds 1            ; $8e
+P1GREnd         ds 1            ; $8f
 
-P0Score1        ds 1            ; $8b
-P0Score2        ds 1            ; $8c
+P0Score1        ds 1            ; $90
+P0Score2        ds 1            ; $91
 
-P1Score1        ds 1
-P1Score2        ds 1
+P1Score1        ds 1            ; $92
+P1Score2        ds 1            ; $93
 
-P0Score1idx     ds 1            ; $8d
-P0Score2idx     ds 1            ; $8e
-P1Score1idx     ds 1            ; $8d
-P1Score2idx     ds 1            ; $8e
+P0Score1idx     ds 1            ; $94
+P0Score2idx     ds 1            ; $95
+P1Score1idx     ds 1            ; $96
+P1Score2idx     ds 1            ; $97
 
 P0ScoreTmp      ds 1
 P1ScoreTmp      ds 1
@@ -417,16 +417,15 @@ BottomBar
 
 PlayerControl
         ldy P0VPos
-        lda SWCHA                
-        ora #%11101111
-        cmp #%11101111
+
+        lda #%00010000            
+        and SWCHA
         bne SkipUp
         dey
 SkipUp
 
-        lda SWCHA
-        ora #%11011111
-        cmp #%11011111
+        lda #%00100000
+        and SWCHA
         bne SkipDown
         iny
 SkipDown
@@ -444,16 +443,14 @@ MaxVPos
 
 ;;;;;;;;
         ldy P1VPos
-        lda SWCHA
-        ora #%11111110
-        cmp #%11111110
+        lda #%00000001
+        and SWCHA
         bne SkipP1Up
         dey
 SkipP1Up
 
-        lda SWCHA
-        ora #%11111101
-        cmp #%11111101
+        lda #%00000010
+        and SWCHA
         bne SkipP1Down
         iny
 SkipP1Down
@@ -489,6 +486,13 @@ CollisionDetection
         bne SkipP0Collision
         lda #%11110000
         sta BLHDir
+        lda #%00001111
+        sta AUDV0
+        lda #%00001111
+        sta AUDC0
+        lda #%00001111
+        sta AUDF0
+
 SkipP0Collision
 
         lda CXP1FB
