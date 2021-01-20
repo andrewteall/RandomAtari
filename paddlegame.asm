@@ -486,6 +486,13 @@ CollisionDetection
         bne SkipP0Collision
         lda #%11110000
         sta BLHDir
+        lda #%00001111
+        sta AUDV0
+        lda #%00001111
+        sta AUDC0
+        lda #%00001111
+        sta AUDF0
+
 SkipP0Collision
 
         lda CXP1FB
