@@ -66,6 +66,10 @@ TextBuffer3     ds 5
 TextBuffer4     ds 5
 TextBuffer5     ds 5
 TextBuffer6     ds 5
+TextBuffer7     ds 5
+TextBuffer8     ds 5
+TextBuffer9     ds 5
+
 
 TextTemp ds 1
 
@@ -487,13 +491,6 @@ CollisionDetection
         bne SkipP0Collision
         lda #%11110000
         sta BLHDir
-        lda #%00001111
-        sta AUDV0
-        lda #%00001111
-        sta AUDC0
-        lda #%00001111
-        sta AUDF0
-
 SkipP0Collision
 
         lda CXP1FB
@@ -948,25 +945,18 @@ TitleSpace
         bne TitleSpace
         sec                                             ; 2     Not sure why this is needed
         bcs SkipDrawText                                ; 2/3   Not sure why this is needed
-
+        
 TextArea 
         txa                                             ; 2
         sbc #135                                        ; 2
-        tay                                             ; 2 
+        tay                                             ; 2
         lda TextBuffer3,y                               ; 4
         sta GRP0                                        ; 3
         lda TextBuffer1,y                               ; 4
         sta GRP1                                        ; 3
         SLEEP 15
         lda TextBuffer2,y                               ; 4
-        sta GRP0                                        ; 3
-
-        lda #0
-        sta GRP1
         sta GRP0
-
-        clc                                             ; 2
-        bcc DrawText                                    ; 2/3
 SkipDrawText
         lda #0                                          ; 2
         sta GRP1                                        ; 3
@@ -996,13 +986,6 @@ TextArea2
         SLEEP 15
         lda TextBuffer6,y                               ; 4
         sta GRP0                                        ; 3
-
-        lda #0
-        sta GRP1
-        sta GRP0
-
-        clc                                             ; 2
-        bcc DrawText2                                    ; 2/3
 SkipDrawText2
         lda #0                                          ; 2
         sta GRP1                                        ; 3
@@ -1013,7 +996,9 @@ DrawText2
         sta WSYNC
         bne TextArea2
 
-
+        ldy #0                                          ; 2
+        sty VDELP0
+        sty VDELP1
 ;;;;;;;;;;; Housekeeping ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 EndofScreenBuffer
         inx                                             ; 2
