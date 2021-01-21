@@ -455,6 +455,7 @@ SkipP1Up
         iny
 SkipP1Down
         lda GameSelectFlag
+        cmp #1
         beq TwoPlayerMode
         ldy BlVPos
         cpy P0VPos
@@ -940,7 +941,6 @@ BottomOutline
 ;;;;;;;;;;;;;;;; End Draw Playfield ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-
 TitleSpace
         inx
         cpx #135
