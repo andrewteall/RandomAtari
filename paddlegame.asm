@@ -491,6 +491,10 @@ CollisionDetection
         bne SkipP0Collision
         lda #%11110000
         sta BLHDir
+        lda #12
+        sta AUDC0
+        sta AUDV0
+        sta AUDF0
 SkipP0Collision
 
         lda CXP1FB
@@ -499,7 +503,13 @@ SkipP0Collision
         bne SkipP1Collision
         lda #%00010000
         sta BLHDir
+        lda #12
+        sta AUDC0
+        sta AUDV0
+        sta AUDF0
 SkipP1Collision
+
+        
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 BallInit                               
         lda BallFired
@@ -712,7 +722,10 @@ CalcScore
         ldx #0                                          ; 2
         stx COLUBK                                      ; 3
         stx CXCLR                                       ; 3
-
+        lda #0
+        sta AUDC0
+        sta AUDV0
+        sta AUDF0
 ; 30 scanlines of overscan...        
         ldx #19                                         ; 2
 Overscan
