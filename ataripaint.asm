@@ -7,6 +7,8 @@
 BlVPos          ds 1            ; $80
 BlHPos          ds 1            ; $81
 P0VPos          ds 1            ; $82
+
+P0VPosIdx       ds 1            ; $83
         SEG
         ORG $F000
 
@@ -61,7 +63,10 @@ Clear
         sta CTRLPF       
 
         lda #26
-        sta P0VPos       
+        sta P0VPos 
+
+        ldy P0VPos
+        sty P0VPosIdx      
 
 StartOfFrame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -111,23 +116,37 @@ CursorDisabled
 
 ;;;;;;;;;;;;;;;;; Determine if we Player Sprites ;;;;;;;;;;;;;;;;;;;; 
 ; XX Cycles to Player Sprite
-; XX Cycles to Not Player Sprite
+; 11 Cycles to Not Player Sprite
 ; X - Current line number
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #0
-        cpx P0VPos                                      ; 3     
-        bne PlayerDisabled                              ; 2/3 
-        ldy #0
-drawP0  
-        lda P0Grfx                                      ; 2     
+        lda #0                                          ; 2
+        cpx P0VPosIdx                                   ; 3
+        bne PlayerDisabled                              ; 2/3
+DrawP0
+
+        txa
+        clc
+        adc #2
+        sta P0VPosIdx
+
+        txa
+        sec
+        sbc #26
+        tay
+        lda P0Grfx,y
+
+        cpy P0Height
+        bne PlayerDisabled
+        ldy P0VPos
+        sty P0VPosIdx
 PlayerDisabled
         sta GRP0                                        ; 3
+
+
 
         sta WSYNC
         ldy #0                                          ; 2
         sty PF1   
-
-        
         lda #%00111111                                  ; 2
 ;;;;;;;;;;;;;;;;; --------------------------- ;;;;;;;;;;;;;;;;;;;;;;; 
 ; 11 Cycles to Draw the Button
@@ -264,28 +283,26 @@ CalcXPos:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Space      .byte  #%00000000
-           .byte  #%00000000
-           .byte  #%00000000
-           .byte  #%00000000
-           .byte  #%00000000
-
-Cursor     .byte  #%10001000
-           .byte  #%11001100
-           .byte  #%11101110
-           .byte  #%11001100
-           .byte  #%10001000
-
 P0Grfx     .byte  #%00011000
+           .byte  #%00000000
            .byte  #%00100100
+           .byte  #%00000000
            .byte  #%01000010
-           .byte  #%10000001
            .byte  #%00000000
            .byte  #%10000001
+           .byte  #%00000000
+           .byte  #%00000000
+           .byte  #%00000000
+           .byte  #%10000001
+           .byte  #%00000000
            .byte  #%01000010
+           .byte  #%00000000
            .byte  #%00100100
+           .byte  #%00000000
            .byte  #%00011000
            .byte  #0
+
+P0Height   .byte  #16
 ;-------------------------------------------------------------------------------
         ORG $FFFA
 InterruptVectors
