@@ -9,6 +9,8 @@ BlHPos          ds 1            ; $81
 P0VPos          ds 1            ; $82
 
 P0VPosIdx       ds 1            ; $83
+P0VPosArr       ds 6            ; $84
+P0VPosArrIdx    ds 1            ; $8a
         SEG
         ORG $F000
 
@@ -131,13 +133,15 @@ DrawP0
 
         txa
         sec
-        sbc #26
+        sbc P0VPos
         tay
         lda P0Grfx,y
 
         cpy P0Height
         bne PlayerDisabled
-        ldy P0VPos
+
+        ldy #86
+        sty P0VPos
         sty P0VPosIdx
 PlayerDisabled
         sta GRP0                                        ; 3
