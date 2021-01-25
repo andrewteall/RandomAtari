@@ -4,11 +4,14 @@
 ;Start Program
         SEG.U vars
         ORG $80
-
+BlVPos          ds 1            ; $80
+BlHPos          ds 1            ; $81
+P0VPos          ds 1            ; $82
         SEG
         ORG $F000
 
 ;PATTERN           = $80 ; storage Location (1st byte in RAM)
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -26,8 +29,22 @@ Clear
                                                         ;       when the processor status is 
                                                         ;       randomized in Stella
 
+        ldx #76
+        stx BlVPos
+
+        lda #80                                     ; Setting the starting count for the Cursor
+        sta BlHPos
+
         ldx #0
-        lda #40
+        lda #24
+        jsr CalcXPos
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
+
+        ldx #4
+        lda #80
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -40,13 +57,11 @@ Clear
         lda #9
         sta COLUPF
 
-        ; lda P0Grfx
-        ; sta GRP0
+        lda #%00100001
+        sta CTRLPF       
 
-        lda #%00000001
-        sta CTRLPF
-
-       
+        lda #26
+        sta P0VPos       
 
 StartOfFrame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -80,59 +95,77 @@ VerticalBlank
         lda #155
         sta COLUBK
 ViewableScreenStart
-        inx
-        sta WSYNC
-        cpx #20
-        bne ViewableScreenStart
 
+;;;;;;;;;;;;;;;;; Determine if we draw Cursor ;;;;;;;;;;;;;;;;;;;;;;; 
+; 12 Cycles to Draw the Cursor
+; 11 Cycles to Not Draw the Cursor
+; TODO: ADD Cursor Height
+; X - Current line number
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #0                                          ; 2     Load 0 to A to prepare to disable the Cursor
+        cpx BlVPos                                      ; 3     Determine whether or not we're going to draw the Cursor
+        bne CursorDisabled                              ; 2/3   Go to enabling the Cursor or not  
+        lda #2                                          ; 2     Load #2 to A to prepare to enable the Cursor
+CursorDisabled
+        sta ENABL                                       ; 3     14/15 cycles
+
+;;;;;;;;;;;;;;;;; Determine if we Player Sprites ;;;;;;;;;;;;;;;;;;;; 
+; XX Cycles to Player Sprite
+; XX Cycles to Not Player Sprite
+; X - Current line number
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #0
+        cpx P0VPos                                      ; 3     
+        bne PlayerDisabled                              ; 2/3 
+        ldy #0
+drawP0  
+        lda P0Grfx                                      ; 2     
+PlayerDisabled
+        sta GRP0                                        ; 3
+
+        sta WSYNC
+        ldy #0                                          ; 2
+        sty PF1   
+
+        
+        lda #%00111111                                  ; 2
+;;;;;;;;;;;;;;;;; --------------------------- ;;;;;;;;;;;;;;;;;;;;;;; 
+; 11 Cycles to Draw the Button
+; 5 or 9 Cycles to Not Draw the Button
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        cpx #60                                         ; 2
+        bpl Button1                                     ; 2/3
+        cpx #20                                         ; 2
+        bmi Button1                                     ; 2/3
+        sta PF1                                         ; 3
 Button1
-        ldy #%00111111
-        sty PF1
-        inx
-        sta WSYNC
-        cpx #60
-        bne Button1
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-MiddleBuffer1
-        ldy #%0
-        sty PF1
-        inx
-        sta WSYNC
-        cpx #80
-        bne MiddleBuffer1
-
+        cpx #120                                        ; 2
+        bpl Button2                                     ; 2/3
+        cpx #80                                         ; 2
+        bmi Button2                                     ; 2/3
+        sta PF1                                         ; 3
 Button2
-        ldy #%00111111
-        sty PF1
-        inx
-        sta WSYNC
-        cpx #120
-        bne Button2
 
-MiddleBuffer2
-        ldy #%0
-        sty PF1
-        inx
-        sta WSYNC
-        cpx #140
-        bne MiddleBuffer2
-
+        cpx #180                                        ; 2
+        bpl Button3                                     ; 2/3
+        cpx #140                                        ; 2
+        bmi Button3                                     ; 2/3
+        sta PF1                                         ; 3
 Button3
-        ldy #%00111111
-        sty PF1
-        inx
-        sta WSYNC
-        cpx #180
-        bne Button3
 
 EndofScreenBuffer
-        ldy #%0
-        sty PF1
-        inx
-        cpx #192
-        sta WSYNC
-        bne EndofScreenBuffer
         
+        inx
+        inx                                             ; 2
+        cpx #192                                        ; 2
+        sta WSYNC                                       ; 3
+        bne ViewableScreenStart                         ; 2/3
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;; End of Viewable Screen ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         lda #0
         sta PF0
@@ -142,9 +175,38 @@ EndofScreenBuffer
 ; end of screen - enter blanking
         lda #%00000010
         sta VBLANK
+
+        lda #%00010000            
+        bit SWCHA
+        bne CursorDown
+        dec BlVPos
+        dec BlVPos
+CursorDown
+        lda #%00100000            
+        bit SWCHA
+        bne CursorUp
+        inc BlVPos
+        inc BlVPos
+CursorUp
+
+        ldy #0 
+        lda #%01000000            
+        bit SWCHA
+        bne CursorLeft
+        ldy #%00010000 
+CursorLeft
+        lda #%10000000            
+        bit SWCHA
+        bne CursorRight
+        ldy #%11110000 
+CursorRight
+        sty HMBL
+
+        sta WSYNC
+        sta HMOVE   
           
 ; 30 scanlines of overscan...        
-        ldx #30                                         ; 2
+        ldx #29                                         ; 2
         lda #0
         sta COLUBK
 Overscan
@@ -214,15 +276,15 @@ Cursor     .byte  #%10001000
            .byte  #%11001100
            .byte  #%10001000
 
-P0Grfx     .byte  #%11111111
-           .byte  #%11111111
-           .byte  #%11111111
-           .byte  #%11111111
-           .byte  #%11111111
-           .byte  #%11111111
-           .byte  #%11111111
-           .byte  #%11111111
-           .byte  #%11111111
+P0Grfx     .byte  #%00011000
+           .byte  #%00100100
+           .byte  #%01000010
+           .byte  #%10000001
+           .byte  #%00000000
+           .byte  #%10000001
+           .byte  #%01000010
+           .byte  #%00100100
+           .byte  #%00011000
            .byte  #0
 ;-------------------------------------------------------------------------------
         ORG $FFFA
