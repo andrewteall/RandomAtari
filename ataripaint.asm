@@ -40,7 +40,15 @@ Clear
         sta BlHPos
 
         ldx #0
-        lda #24
+        lda #26
+        jsr CalcXPos
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
+
+        ldx #1
+        lda #114
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -57,6 +65,7 @@ Clear
 
         lda #132
         sta COLUP0
+        sta COLUP1
 
         lda #9
         sta COLUPF
@@ -140,18 +149,32 @@ DrawP0
         cpy P0Height
         bne PlayerDisabled
 
-        ldy #86
+        ldy #26
         sty P0VPos
         sty P0VPosIdx
 PlayerDisabled
-        sta GRP0                                        ; 3
+        tay
+        
 
+        cpx #66
+        bne SkipMoveP0
+        lda #86
+        sta P0VPos
+        sta P0VPosIdx
+SkipMoveP0
 
-
+        cpx #126
+        bne SkipMoveP02
+        lda #146
+        sta P0VPos
+        sta P0VPosIdx
+SkipMoveP02
+        sty GRP0                                        ; 3
+        sty GRP1                                        ; 3
         sta WSYNC
         ldy #0                                          ; 2
-        sty PF1   
-        lda #%00111111                                  ; 2
+        sty PF1
+        lda #%00111111
 ;;;;;;;;;;;;;;;;; --------------------------- ;;;;;;;;;;;;;;;;;;;;;;; 
 ; 11 Cycles to Draw the Button
 ; 5 or 9 Cycles to Not Draw the Button
@@ -198,6 +221,9 @@ EndofScreenBuffer
 ; end of screen - enter blanking
         lda #%00000010
         sta VBLANK
+
+        lda #26
+        sta P0VPos
 
         lda #%00010000            
         bit SWCHA
@@ -289,24 +315,35 @@ CalcXPos:
 
 P0Grfx     .byte  #%00011000
            .byte  #%00000000
-           .byte  #%00100100
+           .byte  #%00111100
            .byte  #%00000000
-           .byte  #%01000010
+           .byte  #%01111110
            .byte  #%00000000
-           .byte  #%10000001
+           .byte  #%11111111
            .byte  #%00000000
            .byte  #%00000000
            .byte  #%00000000
-           .byte  #%10000001
            .byte  #%00000000
-           .byte  #%01000010
            .byte  #%00000000
-           .byte  #%00100100
+           .byte  #%00000000
+           .byte  #%00000000
+           .byte  #%00000000
+           .byte  #%00000000
+           .byte  #%00000000
+           .byte  #%00000000
+           .byte  #%00000000
+           .byte  #%00000000
+           .byte  #%11111111
+           .byte  #%00000000
+           .byte  #%01111110
+           .byte  #%00000000
+           .byte  #%00111100
            .byte  #%00000000
            .byte  #%00011000
            .byte  #0
+           .byte  #0
 
-P0Height   .byte  #16
+P0Height   .byte  #28
 ;-------------------------------------------------------------------------------
         ORG $FFFA
 InterruptVectors
