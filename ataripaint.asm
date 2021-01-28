@@ -210,7 +210,8 @@ Button3
 
         lda INPT4
         bmi SkipCheckCollision
-        stx AudSelect
+        lda BlVPos
+        sta AudSelect
 SkipCheckCollision
 
 EndofScreenBuffer
