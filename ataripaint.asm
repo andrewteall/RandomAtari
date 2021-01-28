@@ -9,8 +9,15 @@ BlHPos          ds 1            ; $81
 P0VPos          ds 1            ; $82
 
 P0VPosIdx       ds 1            ; $83
-P0VPosArr       ds 6            ; $84
-P0VPosArrIdx    ds 1            ; $8a
+
+AudVol0         ds 1            ; $84
+AudVol1         ds 1            ; $85
+AudFrq0         ds 1            ; $86
+AudFrq1         ds 1            ; $87
+AudCtl0         ds 1            ; $88
+AudCtl1         ds 1            ; $89
+
+AudSelect       ds 1            ; $8a
         SEG
         ORG $F000
 
@@ -48,7 +55,7 @@ Clear
         sta HMCLR
 
         ldx #1
-        lda #114
+        lda #126
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -70,7 +77,7 @@ Clear
         lda #9
         sta COLUPF
 
-        lda #%00100001
+        lda #%00100101
         sta CTRLPF       
 
         lda #26
@@ -174,7 +181,7 @@ SkipMoveP02
         sta WSYNC
         ldy #0                                          ; 2
         sty PF1
-        lda #%00111111
+        lda #%0000111
 ;;;;;;;;;;;;;;;;; --------------------------- ;;;;;;;;;;;;;;;;;;;;;;; 
 ; 11 Cycles to Draw the Button
 ; 5 or 9 Cycles to Not Draw the Button
@@ -200,6 +207,11 @@ Button2
         bmi Button3                                     ; 2/3
         sta PF1                                         ; 3
 Button3
+
+        lda INPT4
+        bmi SkipCheckCollision
+        stx AudSelect
+SkipCheckCollision
 
 EndofScreenBuffer
         
@@ -252,13 +264,77 @@ CursorRight
         sty HMBL
 
         sta WSYNC
-        sta HMOVE   
+        sta HMOVE
+
+;;;;;;;;;;;;;;;;;;;;; Collision Detection ;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+CollisionDetection
+        lda CXP0FB
+        and #%01000000
+        cmp #%01000000
+        bne SkipP0Collision
+        ldx AudSelect
+        beq SkipAudChange
+        
+        cpx #40                                      
+        bpl SkipVol0Up                               
+        cpx #20                                      
+        bmi SkipVol0Up                               
+        inc AudVol0                                  
+SkipVol0Up
+        cpx #60                                      
+        bpl SkipVol0Down                               
+        cpx #40                                      
+        bmi SkipVol0Down                               
+        dec AudVol0                                  
+SkipVol0Down
+
+        cpx #100                                      
+        bpl SkipFrq0Up                               
+        cpx #80                                      
+        bmi SkipFrq0Up                               
+        inc AudFrq0                                  
+SkipFrq0Up
+        cpx #120                                      
+        bpl SkipFrq0Down                               
+        cpx #100                                      
+        bmi SkipFrq0Down                               
+        dec AudFrq0                                  
+SkipFrq0Down
+
+        cpx #160                                      
+        bpl SkipCtl0Up                               
+        cpx #140                                      
+        bmi SkipCtl0Up                               
+        inc AudCtl0                                  
+SkipCtl0Up
+        cpx #180                                      
+        bpl SkipCtl0Down                               
+        cpx #160                                      
+        bmi SkipCtl0Down                               
+        dec AudCtl0                                  
+SkipCtl0Down
+
+        lda AudVol0
+        sta AUDV0
+
+        lda AudCtl0
+        sta AUDC0
+
+        lda AudFrq0
+        sta AUDF0
+SkipP0Collision
+
+SkipAudChange
           
 ; 30 scanlines of overscan...        
-        ldx #29                                         ; 2
+        ldx #26                                         ; 2
         lda #0
         sta COLUBK
 Overscan
+        sta CXCLR
+        sta AudSelect
         sta WSYNC                                       ; 2
         dex                                             ; 3
         bne Overscan                                    ; 2/3
