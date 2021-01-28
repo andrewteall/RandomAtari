@@ -82,9 +82,7 @@ Clear
 
         lda #26
         sta P0VPos 
-
-        ldy P0VPos
-        sty P0VPosIdx      
+        sta P0VPosIdx      
 
 StartOfFrame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -160,24 +158,23 @@ DrawP0
         sty P0VPos
         sty P0VPosIdx
 PlayerDisabled
-        tay
-        
-
+ 
         cpx #66
         bne SkipMoveP0
-        lda #86
-        sta P0VPos
-        sta P0VPosIdx
+        ldy #86
+        sty P0VPos
+        sty P0VPosIdx
 SkipMoveP0
 
         cpx #126
         bne SkipMoveP02
-        lda #146
-        sta P0VPos
-        sta P0VPosIdx
+        ldy #146
+        sty P0VPos
+        sty P0VPosIdx
 SkipMoveP02
-        sty GRP0                                        ; 3
-        sty GRP1                                        ; 3
+        sta GRP0                                        ; 3
+        sta GRP1                                        ; 3
+
         sta WSYNC
         ldy #0                                          ; 2
         sty PF1
