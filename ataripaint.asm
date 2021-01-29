@@ -340,12 +340,18 @@ SkipP0Collision
 
 SkipAudChange
 
+
+;;;;;;;;;;;;;;;;;;;;;;;; Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldy #0
         lda (TrackPtr),y
         cmp FrameCtr
         beq NextNote
+        
         cmp #0
         bne SkipResetTrack
+
         lda #<Song
         sta TrackPtr
         lda #>Song
@@ -374,7 +380,10 @@ NextNote
         sta FrameCtr
         
 KeepPlaying
-        
+
+;;;;;;;;;;;;;;;;;;;;;; End Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
           
 ; 30 scanlines of overscan...        
         ldx #26                                         ; 2
