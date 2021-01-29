@@ -18,6 +18,12 @@ AudCtl0         ds 1            ; $88
 AudCtl1         ds 1            ; $89
 
 AudSelect       ds 1            ; $8a
+
+RecordTrack1    ds 40           ; $8b           {duration,volume,Frequency,control}
+FrameCtr        ds 1            ; $b3
+NoteDuration    ds 1            ; $b4
+
+TrackPtr        ds 2            ; $b5
         SEG
         ORG $F000
 
@@ -83,6 +89,14 @@ Clear
         lda #26
         sta P0VPos 
         sta P0VPosIdx      
+
+
+        lda #<Song
+        sta TrackPtr
+        lda #>Song
+        sta TrackPtr+1
+
+
 
 StartOfFrame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -325,6 +339,42 @@ SkipCtl0Down
 SkipP0Collision
 
 SkipAudChange
+
+        ldy #0
+        lda (TrackPtr),y
+        cmp FrameCtr
+        beq NextNote
+        cmp #0
+        bne SkipResetTrack
+        lda #<Song
+        sta TrackPtr
+        lda #>Song
+        sta TrackPtr+1
+
+SkipResetTrack
+
+        iny 
+        lda (TrackPtr),y
+        sta AUDV0
+        iny 
+        lda (TrackPtr),y
+        sta AUDF0
+        iny 
+        lda (TrackPtr),y
+        sta AUDC0
+        inc FrameCtr
+        sec
+        bcs KeepPlaying
+NextNote
+        lda TrackPtr+1
+        adc #4
+        sta TrackPtr+1
+
+        lda #0
+        sta FrameCtr
+        
+KeepPlaying
+        
           
 ; 30 scanlines of overscan...        
         ldx #26                                         ; 2
@@ -387,6 +437,9 @@ CalcXPos:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+Song       .byte  #120,#3,#1,#5,#120,#3,#2,#5,#120,#3,#3,#5,#120,#3,#4,#5,#120,#3,#5,#5,#120,#3,#6,#5,#120,#3,#7,#5,#120,#3,#8,#5,#120,#3,#9,#5,#0,#3,#10,#5
+
 P0Grfx     .byte  #%00011000
            .byte  #%00000000
            .byte  #%00111100
@@ -418,6 +471,66 @@ P0Grfx     .byte  #%00011000
            .byte  #0
 
 P0Height   .byte  #28
+
+Zero       .byte  #%11101110
+           .byte  #%10101010
+           .byte  #%10101010
+           .byte  #%10101010
+           .byte  #%11101110
+
+One        .byte  #%00100010
+           .byte  #%00100010
+           .byte  #%00100010
+           .byte  #%00100010
+           .byte  #%00100010
+
+Two        .byte  #%11101110
+           .byte  #%00100010
+           .byte  #%11101110
+           .byte  #%10001000
+           .byte  #%11101110
+
+Three      .byte  #%11101110
+           .byte  #%00100010
+           .byte  #%11101110
+           .byte  #%00100010
+           .byte  #%11101110
+
+Four       .byte  #%10101010
+           .byte  #%10101010
+           .byte  #%11101110
+           .byte  #%00100010
+           .byte  #%00100010
+
+Five       .byte  #%11101110
+           .byte  #%10001000
+           .byte  #%11101110
+           .byte  #%00100010
+           .byte  #%11101110
+
+Six        .byte  #%11101110
+           .byte  #%10001000
+           .byte  #%11101110
+           .byte  #%10101010
+           .byte  #%11101110
+
+Seven      .byte  #%11101110
+           .byte  #%00100010
+           .byte  #%00100010
+           .byte  #%00100010
+           .byte  #%00100010
+
+Eight      .byte  #%11101110
+           .byte  #%10101010
+           .byte  #%11101110
+           .byte  #%10101010
+           .byte  #%11101110
+
+Nine       .byte  #%11101110
+           .byte  #%10101010
+           .byte  #%11101110
+           .byte  #%00100010
+           .byte  #%11101110
 ;-------------------------------------------------------------------------------
         ORG $FFFA
 InterruptVectors
