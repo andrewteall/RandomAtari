@@ -385,14 +385,14 @@ KeepPlaying
 ;;;;;;;;;;;;;;;;;;;;;; End Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-          
-; 30 scanlines of overscan...        
-        ldx #25                                         ; 2
+; Reset Backgruond,Audio,Collisions,
         lda #0
         sta COLUBK
-Overscan
         sta CXCLR
         sta AudSelect
+; 25 scanlines of overscan...       
+        ldx #25                                         ; 2
+Overscan
         sta WSYNC                                       ; 2
         dex                                             ; 3
         bne Overscan                                    ; 2/3
