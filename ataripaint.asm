@@ -341,7 +341,8 @@ SkipP0Collision
 
 SkipAudChange
 
-
+        sec
+        bcs SkipMusicPlayer
 ;;;;;;;;;;;;;;;;;;;;;;;; Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ; TODO: Potentially Optimize Flow
 ; TODO: Add Second Channel
@@ -389,13 +390,15 @@ KeepPlaying
 ;;;;;;;;;;;;;;;;;;;;;; End Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+SkipMusicPlayer
+
 ; Reset Backgruond,Audio,Collisions,
         lda #0
         sta COLUBK
         sta CXCLR
         sta AudSelect
 ; 25 scanlines of overscan...       
-        ldx #27                                         ; 2
+        ldx #28                                         ; 2
 Overscan
         sta WSYNC                                       ; 2
         dex                                             ; 3
