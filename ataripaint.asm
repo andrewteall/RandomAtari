@@ -52,7 +52,7 @@ Clear
         sta BlHPos
 
         ldx #0
-        lda #26
+        lda #5
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -60,7 +60,7 @@ Clear
         sta HMCLR
 
         ldx #1
-        lda #126
+        lda #83
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -68,7 +68,7 @@ Clear
         sta HMCLR
 
         ldx #4
-        lda #80
+        lda BlHPos
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -87,7 +87,11 @@ Clear
 
         lda #26
         sta P0VPos 
-        sta P0VPosIdx      
+        sta P0VPosIdx     
+
+        lda #%00000100
+        sta NUSIZ0
+        sta NUSIZ1
 
 
         lda #<Track
@@ -98,9 +102,6 @@ Clear
 
 
 StartOfFrame
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Vertical Blank is the only section shared by screens
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ; Start of vertical blank processing
         lda #0
         sta VBLANK
@@ -172,26 +173,25 @@ DrawP0
         sty P0VPosIdx
 PlayerDisabled
  
-        cpx #66
-        bne SkipMoveP0
-        ldy #86
-        sty P0VPos
-        sty P0VPosIdx
-SkipMoveP0
+;         cpx #66
+;         bne SkipMoveP0
+;         ldy #86
+;         sty P0VPos
+;         sty P0VPosIdx
+; SkipMoveP0
 
-        cpx #126
-        bne SkipMoveP02
-        ldy #146
-        sty P0VPos
-        sty P0VPosIdx
-SkipMoveP02
+;         cpx #126
+;         bne SkipMoveP02
+;         ldy #146
+;         sty P0VPos
+;         sty P0VPosIdx
+; SkipMoveP02
+        ldy #0                                          ; 2
+        sta WSYNC
+        sty PF2
+        sty PF1
         sta GRP0                                        ; 3
         sta GRP1                                        ; 3
-
-        sta WSYNC
-        ldy #0                                          ; 2
-        sty PF1
-        lda #%0000111
 ;;;;;;;;;;;;;;;;; --------------------------- ;;;;;;;;;;;;;;;;;;;;;;; 
 ; 11 Cycles to Draw the Button
 ; 5 or 9 Cycles to Not Draw the Button
@@ -200,23 +200,28 @@ SkipMoveP02
         bpl Button1                                     ; 2/3
         cpx #20                                         ; 2
         bmi Button1                                     ; 2/3
+        lda #%11111000
         sta PF1                                         ; 3
+        lda #%00011111
+        sta PF2                                         ; 3
 Button1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        cpx #120                                        ; 2
-        bpl Button2                                     ; 2/3
-        cpx #80                                         ; 2
-        bmi Button2                                     ; 2/3
-        sta PF1                                         ; 3
-Button2
+;         cpx #120                                        ; 2
+;         bpl Button2                                     ; 2/3
+;         cpx #80                                         ; 2
+;         bmi Button2                                     ; 2/3
+;         lda #%00111111
+;         sta PF2                                         ; 3
+; Button2
 
-        cpx #180                                        ; 2
-        bpl Button3                                     ; 2/3
-        cpx #140                                        ; 2
-        bmi Button3                                     ; 2/3
-        sta PF1                                         ; 3
-Button3
+;         cpx #180                                        ; 2
+;         bpl Button3                                     ; 2/3
+;         cpx #140                                        ; 2
+;         bmi Button3                                     ; 2/3
+;         lda #%00111111
+;         sta PF2                                         ; 3
+; Button3
 
         lda INPT4
         bmi SkipCheckCollision
@@ -235,12 +240,6 @@ EndofScreenBuffer
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; End of Viewable Screen ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-        lda #0
-        sta PF0
-        sta PF1
-        sta PF2
-
 ; end of screen - enter blanking
 
         lda #%00000010
@@ -396,7 +395,7 @@ KeepPlaying
         sta CXCLR
         sta AudSelect
 ; 25 scanlines of overscan...       
-        ldx #24                                         ; 2
+        ldx #27                                         ; 2
 Overscan
         sta WSYNC                                       ; 2
         dex                                             ; 3
