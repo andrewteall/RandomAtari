@@ -242,8 +242,11 @@ EndofScreenBuffer
         sta PF2
 
 ; end of screen - enter blanking
+
         lda #%00000010
         sta VBLANK
+        
+        sta WSYNC
 
         lda #26
         sta P0VPos
@@ -393,7 +396,7 @@ KeepPlaying
         sta CXCLR
         sta AudSelect
 ; 25 scanlines of overscan...       
-        ldx #25                                         ; 2
+        ldx #24                                         ; 2
 Overscan
         sta WSYNC                                       ; 2
         dex                                             ; 3
