@@ -380,6 +380,8 @@ NextNote
 
         lda #0                                          ; 2     Load Zero to
         sta FrameCtr                                    ; 3     Reset the Frame counter
+
+        sta WSYNC
 KeepPlaying
 
 ;;;;;;;;;;;;;;;;;;;;;; End Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
