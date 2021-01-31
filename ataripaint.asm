@@ -19,11 +19,10 @@ AudCtl1         ds 1            ; $89
 
 AudSelect       ds 1            ; $8a
 
-RecordTrack1    ds 40           ; $8b           {duration,volume,Frequency,control}
-FrameCtr        ds 1            ; $b3
-NoteDuration    ds 1            ; $b4
+FrameCtr        ds 1            ; $8b
+NoteDuration    ds 1            ; $8c
 
-TrackPtr        ds 2            ; $b5
+NotePtr        ds 2            ; $b5
         SEG
         ORG $F000
 
@@ -91,10 +90,10 @@ Clear
         sta P0VPosIdx      
 
 
-        lda #<Song
-        sta TrackPtr
-        lda #>Song
-        sta TrackPtr+1
+        lda #<Track
+        sta NotePtr
+        lda #>Track
+        sta NotePtr+1
 
 
 
@@ -344,42 +343,40 @@ SkipAudChange
 ;;;;;;;;;;;;;;;;;;;;;;;; Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ldy #0
-        lda (TrackPtr),y
-        cmp FrameCtr
-        beq NextNote
-        
-        cmp #255
-        bne SkipResetTrack
+        ldy #0                                          ; 2     Initialize Y-Index to 0
+        lda (NotePtr),y                                 ; 5     Load first note duration to A
+        cmp FrameCtr                                    ; 3     See if it equals the Frame Counter
+        beq NextNote                                    ; 2/3   If so move the NotePtr to the next note
 
-        lda #<Song
-        sta TrackPtr
-        lda #>Song
-        sta TrackPtr+1
+        cmp #255                                        ; 2     See if the notes duration equals 255
+        bne SkipResetTrack                              ; 2/3   If so go back to the beginning of the track
 
+        lda #<Track                                     ; 4     Store the low byte of the track to 
+        sta NotePtr                                     ; 3     the Note Pointer
+        lda #>Track                                     ; 4     Store the High byte of the track to
+        sta NotePtr+1                                   ; 3     the Note Pointer + 1
 SkipResetTrack
 
-        iny 
-        lda (TrackPtr),y
-        sta AUDV0
-        iny 
-        lda (TrackPtr),y
-        sta AUDF0
-        iny 
-        lda (TrackPtr),y
-        sta AUDC0
-        inc FrameCtr
-        sec
-        bcs KeepPlaying
+        iny                                             ; 2     Increment Y (Y=1) to point to the Note Volume
+        lda (NotePtr),y                                 ; 5     Load Volume to A
+        sta AUDV0                                       ; 3     and set the Note Volume
+        iny                                             ; 2     Increment Y (Y=2) to point to the Note Frequency
+        lda (NotePtr),y                                 ; 5     Load Frequency to A
+        sta AUDF0                                       ; 3     and set the Note Frequency
+        iny                                             ; 2     Increment Y (Y=3) to point to the Note Control
+        lda (NotePtr),y                                 ; 5     Load Control to A
+        sta AUDC0                                       ; 3     and set the Note Control
+        inc FrameCtr                                    ; 5     Increment the Frame Counter to duration compare later
+        sec                                             ; 2     Set the carry to prepare to always branch
+        bcs KeepPlaying                                 ; 3     Branch to the end of the media player
 NextNote
-        lda TrackPtr
-        clc
-        adc #4
-        sta TrackPtr
+        lda NotePtr                                     ; 3     Load the Note Pointer to A
+        clc                                             ; 2     Clear the carry 
+        adc #4                                          ; 2     Add 4 to move the Notep pointer to the next note
+        sta NotePtr                                     ; 3     Store the new note pointer
 
-        lda #0
-        sta FrameCtr
-        
+        lda #0                                          ; 2     Load Zero to
+        sta FrameCtr                                    ; 3     Reset the Frame counter
 KeepPlaying
 
 ;;;;;;;;;;;;;;;;;;;;;; End Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
@@ -478,8 +475,8 @@ P0Grfx     .byte  #%00011000
            .byte  #0
 
 P0Height   .byte  #28
-; Song       .byte  #60,#3,#1,#7,#60,#3,#2,#7,#60,#3,#3,#7,#60,#3,#4,#7,#60,#3,#5,#7,#60,#3,#6,#7,#60,#3,#7,#7,#60,#3,#8,#7,#60,#3,#9,#7,#255,#3,#2,#5
-Song       .byte  #30,#3,#5,#7,#30,#3,#6,#7,#30,#3,#7,#7,#30,#3,#6,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#6,#7,#2,#0,#5,#7,#30,#3,#6,#7,#2,#0,#5,#7,#30,#3,#6,#7,#2,#0,#5,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#3,#7,#2,#0,#5,#7,#30,#3,#3,#7,#2,#0,#5,#7,#255,#3,#2,#5
+Track       .byte  #10,#3,#1,#7,#10,#3,#2,#7,#10,#3,#3,#7,#10,#3,#4,#7,#10,#3,#5,#7,#10,#3,#6,#7,#10,#3,#7,#7,#10,#3,#8,#7,#10,#3,#9,#7,#255,#3,#2,#5
+; Track       .byte  #30,#3,#5,#7,#30,#3,#6,#7,#30,#3,#7,#7,#30,#3,#6,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#6,#7,#2,#0,#5,#7,#30,#3,#6,#7,#2,#0,#5,#7,#30,#3,#6,#7,#2,#0,#5,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#3,#7,#2,#0,#5,#7,#30,#3,#3,#7,#2,#0,#5,#7,#255,#3,#2,#5
 
 
 
