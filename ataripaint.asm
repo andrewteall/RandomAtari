@@ -341,7 +341,10 @@ SkipAudChange
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;; Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-;
+; TODO: Potentially Optimize Flow
+; TODO: Add Second Channel
+; TODO: Add advanced Looping control. Repeat Track, Repeat whole song
+; TODO: Add Sub-Routine Option
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldy #0                                          ; 2     Initialize Y-Index to 0
         lda (NotePtr),y                                 ; 5     Load first note duration to A
