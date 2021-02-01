@@ -10,6 +10,8 @@ P0VPos          ds 1            ; $82
 
 P0VPosIdx       ds 1            ; $83
 
+AudDur0         ds 1            ; $84
+AudDur1         ds 1            ; $85
 AudVol0         ds 1            ; $84
 AudVol1         ds 1            ; $85
 AudFrq0         ds 1            ; $86
@@ -18,11 +20,29 @@ AudCtl0         ds 1            ; $88
 AudCtl1         ds 1            ; $89
 
 AudSelect       ds 1            ; $8a
+AudDir       ds 1            ; $8a
 
 FrameCtr        ds 1            ; $8b
 NoteDuration    ds 1            ; $8c
 
-NotePtr        ds 2            ; $b5
+NotePtr         ds 2            ; $8d
+
+DurGfxTemp      ds 1            ; $8f
+DurGfxValue     ds 5            ; $94
+
+VolGfxTemp      ds 1            ; $95
+VolGfxValue     ds 5            ; $9a
+
+FrqGfxTemp      ds 1            ; $9f
+FrqGfxValue     ds 5            ; $a0
+
+CtlGfxTemp      ds 1            ; $a5
+CtlGfxValue     ds 5            ; $a6
+
+NumberPtr       ds 2
+
+DebounceCtr     ds 1
+
         SEG
         ORG $F000
 
@@ -99,6 +119,12 @@ Clear
         lda #>Track
         sta NotePtr+1
 
+        lda #<(Zero)
+        sta NumberPtr
+
+        lda #>(Zero)
+        sta NumberPtr+1
+
 
 
 StartOfFrame
@@ -144,9 +170,9 @@ ViewableScreenStart
 CursorDisabled
         sta ENABL                                       ; 3     14/15 cycles
 
-;;;;;;;;;;;;;;;;; Determine if we Player Sprites ;;;;;;;;;;;;;;;;;;;; 
-; XX Cycles to Player Sprite
-; 11 Cycles to Not Player Sprite
+;;;;;;;;;;;;; Determine if we Draw Player Sprites ;;;;;;;;;;;;;;;;;;;
+; 48 Cycles to Player Sprite - 7 to disable
+; 14 Cycles to Not Player Sprite
 ; X - Current line number
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #0                                          ; 2
@@ -154,44 +180,53 @@ CursorDisabled
         bne PlayerDisabled                              ; 2/3
 DrawP0
 
-        txa
-        clc
-        adc #2
-        sta P0VPosIdx
+        txa                                             ; 2
+        clc                                             ; 2
+        adc #2                                          ; 2
+        sta P0VPosIdx                                   ; 3
 
-        txa
-        sec
-        sbc P0VPos
-        tay
-        lda P0Grfx,y
+        txa                                             ; 2
+        sec                                             ; 2
+        sbc P0VPos                                      ; 3
+        tay                                             ; 2
+        lda P0Grfx,y                                    ; 4
 
-        cpy P0Height
-        bne PlayerDisabled
+        cpy P0Height                                    ; 3
+        bne PlayerDisabled                              ; 2/3
 
-        ldy #26
-        sty P0VPos
-        sty P0VPosIdx
+        ldy #26                                         ; 2
+        sty P0VPos                                      ; 3
+        sty P0VPosIdx                                   ; 3
 PlayerDisabled
- 
-;         cpx #66
-;         bne SkipMoveP0
-;         ldy #86
-;         sty P0VPos
-;         sty P0VPosIdx
-; SkipMoveP0
-
-;         cpx #126
-;         bne SkipMoveP02
-;         ldy #146
-;         sty P0VPos
-;         sty P0VPosIdx
-; SkipMoveP02
-        ldy #0                                          ; 2
-        sta WSYNC
-        sty PF2
-        sty PF1
         sta GRP0                                        ; 3
         sta GRP1                                        ; 3
+
+;;;;;;;;;;;;;;;;; Setting up for Display Controls ;;;;;;;;;;;;;;;;;;; 
+; 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        txa                                             ; 2     Transfer X to the Accumulator so we can subtract
+        sbc #19                                         ; 2     Subtract 2 to account for starting on line 3
+        lsr                                             ; 2     Divide by 2 to get index twice for double height
+        lsr                                             ; 2     Divide by 2 to get index twice for double height
+        lsr                                             ; 2     Divide by 2 to get index twice for double height
+        tay                                             ; 2     Transfer A to Y so we can index off Y
+
+        lda DurGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
+        sta DurGfxTemp                                  ; 3     Store Score to PF1
+
+        lda VolGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
+        sta VolGfxTemp                                  ; 3     Store Score to PF1
+
+        lda FrqGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
+        sta FrqGfxTemp                                  ; 3     Store Score to PF1
+
+        lda CtlGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
+        sta CtlGfxTemp                                  ; 3     Store Score to PF1
+
+        ldy #0
+        sty PF2
+        sty PF1
+
 ;;;;;;;;;;;;;;;;; --------------------------- ;;;;;;;;;;;;;;;;;;;;;;; 
 ; 11 Cycles to Draw the Button
 ; 5 or 9 Cycles to Not Draw the Button
@@ -200,33 +235,24 @@ PlayerDisabled
         bpl Button1                                     ; 2/3
         cpx #20                                         ; 2
         bmi Button1                                     ; 2/3
-        lda #%11111000
+        lda DurGfxTemp
         sta PF1                                         ; 3
-        lda #%00011111
+        lda VolGfxTemp
         sta PF2                                         ; 3
-Button1
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;         cpx #120                                        ; 2
-;         bpl Button2                                     ; 2/3
-;         cpx #80                                         ; 2
-;         bmi Button2                                     ; 2/3
-;         lda #%00111111
-;         sta PF2                                         ; 3
-; Button2
-
-;         cpx #180                                        ; 2
-;         bpl Button3                                     ; 2/3
-;         cpx #140                                        ; 2
-;         bmi Button3                                     ; 2/3
-;         lda #%00111111
-;         sta PF2                                         ; 3
-; Button3
-
+        lda DebounceCtr
+        bne SkipCheckCollision
         lda INPT4
         bmi SkipCheckCollision
-        lda BlVPos
+        lda #15
+        sta DebounceCtr
+        lda BlHPos
         sta AudSelect
+        lda BlVPos
+        sta AudDir
+Button1
 SkipCheckCollision
 
 EndofScreenBuffer
@@ -268,11 +294,13 @@ CursorUp
         bit SWCHA
         bne CursorLeft
         ldy #%00010000 
+        dec BlHPos
 CursorLeft
         lda #%10000000            
         bit SWCHA
         bne CursorRight
-        ldy #%11110000 
+        ldy #%11110000
+        inc BlHPos
 CursorRight
         sty HMBL
 
@@ -287,59 +315,184 @@ CollisionDetection
         and #%01000000
         cmp #%01000000
         bne SkipP0Collision
-        ldx AudSelect
-        beq SkipAudChange
         
-        cpx #40                                      
+        ldy AudDir
+        ldx AudSelect
+         
+        cpy #40                                      
+        bpl SkipAud0Up                               
+        cpy #20                                      
+        bmi SkipAud0Up   
+        
+        cpx #14
+        bpl SkipDur0Up                               
+        cpx #2
+        bmi SkipDur0Up  
+
+        inc AudDur0                                  
+SkipDur0Up
+
+        cpx #78                                      
         bpl SkipVol0Up                               
-        cpx #20                                      
-        bmi SkipVol0Up                               
+        cpx #66                                     
+        bmi SkipVol0Up 
+
         inc AudVol0                                  
 SkipVol0Up
-        cpx #60                                      
+
+        cpx #92
+        bpl SkipFrq0Up                               
+        cpx #80
+        bmi SkipFrq0Up                               
+        inc AudFrq0                                  
+SkipFrq0Up
+
+        cpx #156                                      
+        bpl SkipCtl0Up                               
+        cpx #144                                      
+        bmi SkipCtl0Up                               
+        inc AudCtl0                                  
+SkipCtl0Up
+SkipAud0Up
+
+
+
+        cpy #60                    
+        bpl SkipAud0Down                               
+        cpy #40                                      
+        bmi SkipAud0Down                               
+                               
+
+        cpx #14
+        bpl SkipDur0Down                               
+        cpx #2
+        bmi SkipDur0Down                               
+        dec AudDur0                                  
+SkipDur0Down
+
+
+
+        cpx #78                                      
         bpl SkipVol0Down                               
-        cpx #40                                      
+        cpx #66                                      
         bmi SkipVol0Down                               
         dec AudVol0                                  
 SkipVol0Down
 
-        cpx #100                                      
-        bpl SkipFrq0Up                               
-        cpx #80                                      
-        bmi SkipFrq0Up                               
-        inc AudFrq0                                  
-SkipFrq0Up
-        cpx #120                                      
+
+        cpx #92
         bpl SkipFrq0Down                               
-        cpx #100                                      
+        cpx #80
         bmi SkipFrq0Down                               
         dec AudFrq0                                  
 SkipFrq0Down
 
-        cpx #160                                      
-        bpl SkipCtl0Up                               
-        cpx #140                                      
-        bmi SkipCtl0Up                               
-        inc AudCtl0                                  
-SkipCtl0Up
-        cpx #180                                      
+
+        cpx #156
         bpl SkipCtl0Down                               
-        cpx #160                                      
+        cpx #144
         bmi SkipCtl0Down                               
         dec AudCtl0                                  
 SkipCtl0Down
+SkipAud0Down
 
-        lda AudVol0
-        sta AUDV0
-
-        lda AudCtl0
-        sta AUDC0
-
-        lda AudFrq0
-        sta AUDF0
 SkipP0Collision
 
-SkipAudChange
+
+
+        lda AudDur0
+        asl
+        asl
+        clc
+        adc AudDur0
+
+        ldy #0
+        adc NumberPtr
+        sta NumberPtr
+GetDurIdx
+        lda (NumberPtr),y
+        asl
+        asl
+        asl
+        sta DurGfxValue,y
+        iny
+        cpy #5
+        bne GetDurIdx
+
+        lda #<(Zero)
+        sta NumberPtr
+
+        lda #>(Zero)
+        sta NumberPtr+1  
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda AudVol0
+        asl
+        asl
+        clc
+        adc AudVol0
+
+        ldy #0
+        adc NumberPtr
+        sta NumberPtr
+GetVolIdx
+        lda (NumberPtr),y
+        sta VolGfxValue,y
+        iny
+        cpy #5
+        bne GetVolIdx
+
+        lda #<(Zero)
+        sta NumberPtr
+
+        lda #>(Zero)
+        sta NumberPtr+1  
+ 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda AudFrq0
+        asl
+        asl
+        clc
+        adc AudFrq0
+
+        ldy #0
+        adc NumberPtr
+        sta NumberPtr
+GetFrqIdx
+        lda (NumberPtr),y
+        sta FrqGfxValue,y
+        iny
+        cpy #5
+        bne GetFrqIdx
+
+        lda #<(Zero)
+        sta NumberPtr
+
+        lda #>(Zero)
+        sta NumberPtr+1  
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda AudCtl0
+        asl
+        asl
+        clc
+        adc AudCtl0
+
+        ldy #0
+        adc NumberPtr
+        sta NumberPtr
+GetCtlIdx
+        lda (NumberPtr),y
+        sta CtlGfxValue,y
+        iny
+        cpy #5
+        bne GetCtlIdx
+
+        lda #<(Zero)
+        sta NumberPtr
+
+        lda #>(Zero)
+        sta NumberPtr+1 
+
+
 
         sec
         bcs SkipMusicPlayer
@@ -392,13 +545,19 @@ KeepPlaying
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 SkipMusicPlayer
 
+        lda DebounceCtr
+        beq SkipDecDebounceCtr
+        dec DebounceCtr
+SkipDecDebounceCtr
+
 ; Reset Backgruond,Audio,Collisions,
         lda #0
         sta COLUBK
         sta CXCLR
         sta AudSelect
-; 25 scanlines of overscan...       
-        ldx #28                                         ; 2
+        sta AudDir
+; overscan
+        ldx #26                                         ; 2
 Overscan
         sta WSYNC                                       ; 2
         dex                                             ; 3
@@ -490,17 +649,17 @@ Track       .byte  #10,#3,#1,#7,#10,#3,#2,#7,#10,#3,#3,#7,#10,#3,#4,#7,#10,#3,#5
 
 
 
-Zero       .byte  #%11101110
-           .byte  #%10101010
-           .byte  #%10101010
-           .byte  #%10101010
-           .byte  #%11101110
+Zero       .byte  #%00001110
+           .byte  #%00010001
+           .byte  #%00010001
+           .byte  #%00010001
+           .byte  #%00001110
 
-One        .byte  #%00100010
-           .byte  #%00100010
-           .byte  #%00100010
-           .byte  #%00100010
-           .byte  #%00100010
+One        .byte  #%00110
+           .byte  #%01010
+           .byte  #%00010
+           .byte  #%00010
+           .byte  #%00111
 
 Two        .byte  #%11101110
            .byte  #%00100010
