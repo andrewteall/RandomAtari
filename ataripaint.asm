@@ -174,8 +174,9 @@ ViewableScreenStart
 ;         sta ENABL                                       ; 3     14/15 cycles
 
 ;;;;;;;;;;;;; Determine if we Draw Player Sprites ;;;;;;;;;;;;;;;;;;;
-; 48 Cycles to Player Sprite - 7 to disable
-; 14 Cycles to Not Player Sprite
+; 39 Cycles to Player Sprite + 7 to disable
+; 11 Cycles to Not Player Sprite
+; + 3 from branch back to top
 ; X - Current line number
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #0                                          ; 2
@@ -193,7 +194,7 @@ DrawP0
         tay                                             ; 2
         lda P0Grfx,y                                    ; 4
 
-        cpy P0Height                                    ; 3
+        cpy P0Height                                    ; 4
         bne PlayerDisabled                              ; 2/3
 
         ldy #86                                         ; 2
@@ -202,27 +203,27 @@ DrawP0
 PlayerDisabled
         sta GRP0                                        ; 3
 
-;;;;;;;;;;;;;;;;; --------------------------- ;;;;;;;;;;;;;;;;;;;;;;; 
 ;
+;;;;;;;;;;;;;;;;; Setup Y index to draw PF ;;;;;;;;;;;;;;;;;;;;;;;;;
+; 20 cycles + WSYNC
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #19
+        txa
+        sbc #19                                         ; 2
         cpx #65                                         ; 2
-        bpl SetPFVPOS79                                   ; 2/3
-        bmi SetPFVPOS19
+        bpl SetPFVPOS79                                 ; 2/3
+        bmi SetPFVPOS19                                 ; 2/3
 SetPFVPOS79
-        lda #79
+        sbc #60                                         ; 2
 SetPFVPOS19
-        sta PFVPos
+        sta PFVPos                                      ; 3     12
 
-        txa                                             ; 2     Transfer X to the Accumulator so we can subtract
-        sbc PFVPos                                      ; 2     Subtract PFVPos to account for the
         lsr                                             ; 2     Divide by 2 to get index twice for double height
         lsr                                             ; 2     Divide by 2 to get index twice for double height
         lsr                                             ; 2     Divide by 2 to get index twice for double height
         tay                                             ; 2     Transfer A to Y so we can index off Y
 
         sta WSYNC
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         cpx #60                                         ; 2
         bpl Button1                                     ; 2/3
         cpx #20                                         ; 2
@@ -231,13 +232,11 @@ SetPFVPOS19
         lda DurGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
         sta PF1                                         ; 3
         sta DurGfxTemp                                  ; 3     Store Score to PF1
-        SLEEP 10
+        SLEEP 5
         lda VolGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
         sta PF2                                         ; 3
         sta VolGfxTemp                                  ; 3     Store Score to PF1
-        lda #0
-        sta PF1                                         ; 3
-        sta PF2                                         ; 3
+        
 Button1
 
 
@@ -254,10 +253,10 @@ Button1
         lda CtlGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
         sta PF2                                         ; 3     Store Score to PF2
         sta CtlGfxTemp                                  ; 3
-        lda #0
-        sta PF2                                         ; 3
-        sta PF1                                         ; 3
 Button2
+        lda #0
+        sta PF1                                         ; 3
+        sta PF2                                         ; 3
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         ; ldy DebounceCtr
@@ -280,8 +279,8 @@ EndofScreenBuffer
 
         cpx #192                                        ; 2
         sta WSYNC                                       ; 3
-        beq EndOfViewableScreen                         ; 2/3
-        jmp ViewableScreenStart
+        bne ViewableScreenStart                         ; 2/3
+        ;jmp ViewableScreenStart
 EndOfViewableScreen
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; End of Viewable Screen ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -453,10 +452,10 @@ GetDurIdx
         cpy #5
         bne GetDurIdx
 
-        lda #<(Zero)
+        lda #<(RZero)
         sta NumberPtr
 
-        lda #>(Zero)
+        lda #>(RZero)
         sta NumberPtr+1  
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda AudVol0
@@ -501,10 +500,10 @@ GetFrqIdx
         cpy #5
         bne GetFrqIdx
 
-        lda #<(Zero)
+        lda #<(RZero)
         sta NumberPtr
 
-        lda #>(Zero)
+        lda #>(RZero)
         sta NumberPtr+1  
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda AudCtl0
@@ -601,8 +600,8 @@ SkipDecDebounceCtr
 ; overscan
         ldx #26                                         ; 2
 Overscan
-        sta WSYNC                                       ; 2
         dex                                             ; 3
+        sta WSYNC                                       ; 2
         bne Overscan                                    ; 2/3
         jmp StartOfFrame                                ; 3
 
@@ -687,6 +686,7 @@ P0Grfx     .byte  #%00011000
 
 P0Height   .byte  #28
 
+        align 256
 Zero       .byte  #%01110
            .byte  #%10001
            .byte  #%10001
@@ -746,6 +746,66 @@ Nine       .byte  #%111
            .byte  #%111
            .byte  #%001
            .byte  #%111
+
+RZero       .byte  #%01110
+           .byte  #%10001
+           .byte  #%10001
+           .byte  #%10001
+           .byte  #%01110
+
+ROne       .byte  #%01100
+           .byte  #%01000
+           .byte  #%01000
+           .byte  #%01000
+           .byte  #%11100
+
+RTwo       .byte  #%11110
+           .byte  #%10000
+           .byte  #%11110
+           .byte  #%00010
+           .byte  #%11110
+
+RThree     .byte  #%11100
+           .byte  #%10000
+           .byte  #%11100
+           .byte  #%10000
+           .byte  #%11100
+
+RFour      .byte  #%10100
+           .byte  #%10100
+           .byte  #%11100
+           .byte  #%10000
+           .byte  #%10000
+
+RFive      .byte  #%11100
+           .byte  #%00100
+           .byte  #%11100
+           .byte  #%10000
+           .byte  #%11100
+
+RSix       .byte  #%11100
+           .byte  #%00100
+           .byte  #%11100
+           .byte  #%10100
+           .byte  #%11100
+
+RSeven     .byte  #%11100
+           .byte  #%10000
+           .byte  #%10000
+           .byte  #%10000
+           .byte  #%10000
+
+REight     .byte  #%11100
+           .byte  #%10100
+           .byte  #%11100
+           .byte  #%10100
+           .byte  #%11100
+
+RNine      .byte  #%11100
+           .byte  #%10100
+           .byte  #%11100
+           .byte  #%10000
+           .byte  #%11100
 
 Track       .byte  #10,#3,#1,#7,#10,#3,#2,#7,#10,#3,#3,#7,#10,#3,#4,#7,#10,#3,#5,#7,#10,#3,#6,#7,#10,#3,#7,#7,#10,#3,#8,#7,#10,#3,#9,#7,#255,#3,#2,#5
 ; Track       .byte  #30,#3,#5,#7,#30,#3,#6,#7,#30,#3,#7,#7,#30,#3,#6,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#6,#7,#2,#0,#5,#7,#30,#3,#6,#7,#2,#0,#5,#7,#30,#3,#6,#7,#2,#0,#5,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#3,#7,#2,#0,#5,#7,#30,#3,#3,#7,#2,#0,#5,#7,#255,#3,#2,#5
