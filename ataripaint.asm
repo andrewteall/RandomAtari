@@ -42,6 +42,7 @@ CtlGfxValue     ds 5            ; $a6
 NumberPtr       ds 2
 
 DebounceCtr     ds 1
+PFVPos          ds 1
 
         SEG
         ORG $F000
@@ -125,6 +126,8 @@ Clear
         lda #>(Zero)
         sta NumberPtr+1
 
+        lda #19
+        sta PFVPos
 
 
 StartOfFrame
@@ -163,12 +166,12 @@ ViewableScreenStart
 ; TODO: ADD Cursor Height
 ; X - Current line number
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #0                                          ; 2     Load 0 to A to prepare to disable the Cursor
-        cpx BlVPos                                      ; 3     Determine whether or not we're going to draw the Cursor
-        bne CursorDisabled                              ; 2/3   Go to enabling the Cursor or not  
-        lda #2                                          ; 2     Load #2 to A to prepare to enable the Cursor
-CursorDisabled
-        sta ENABL                                       ; 3     14/15 cycles
+;         lda #0                                          ; 2     Load 0 to A to prepare to disable the Cursor
+;         cpx BlVPos                                      ; 3     Determine whether or not we're going to draw the Cursor
+;         bne CursorDisabled                              ; 2/3   Go to enabling the Cursor or not  
+;         lda #2                                          ; 2     Load #2 to A to prepare to enable the Cursor
+; CursorDisabled
+;         sta ENABL                                       ; 3     14/15 cycles
 
 ;;;;;;;;;;;;; Determine if we Draw Player Sprites ;;;;;;;;;;;;;;;;;;;
 ; 48 Cycles to Player Sprite - 7 to disable
@@ -179,7 +182,6 @@ CursorDisabled
         cpx P0VPosIdx                                   ; 3
         bne PlayerDisabled                              ; 2/3
 DrawP0
-
         txa                                             ; 2
         clc                                             ; 2
         adc #2                                          ; 2
@@ -194,75 +196,93 @@ DrawP0
         cpy P0Height                                    ; 3
         bne PlayerDisabled                              ; 2/3
 
-        ldy #26                                         ; 2
+        ldy #86                                         ; 2
         sty P0VPos                                      ; 3
         sty P0VPosIdx                                   ; 3
 PlayerDisabled
         sta GRP0                                        ; 3
-        sta GRP1                                        ; 3
 
-;;;;;;;;;;;;;;;;; Setting up for Display Controls ;;;;;;;;;;;;;;;;;;; 
-; 
+;;;;;;;;;;;;;;;;; --------------------------- ;;;;;;;;;;;;;;;;;;;;;;; 
+;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #19
+        cpx #65                                         ; 2
+        bpl SetPFVPOS79                                   ; 2/3
+        bmi SetPFVPOS19
+SetPFVPOS79
+        lda #79
+SetPFVPOS19
+        sta PFVPos
+
         txa                                             ; 2     Transfer X to the Accumulator so we can subtract
-        sbc #19                                         ; 2     Subtract 2 to account for starting on line 3
+        sbc PFVPos                                      ; 2     Subtract PFVPos to account for the
         lsr                                             ; 2     Divide by 2 to get index twice for double height
         lsr                                             ; 2     Divide by 2 to get index twice for double height
         lsr                                             ; 2     Divide by 2 to get index twice for double height
         tay                                             ; 2     Transfer A to Y so we can index off Y
 
-        lda DurGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
-        sta DurGfxTemp                                  ; 3     Store Score to PF1
+        sta WSYNC
 
-        lda VolGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
-        sta VolGfxTemp                                  ; 3     Store Score to PF1
-
-        lda FrqGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
-        sta FrqGfxTemp                                  ; 3     Store Score to PF1
-
-        lda CtlGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
-        sta CtlGfxTemp                                  ; 3     Store Score to PF1
-
-        ldy #0
-        sty PF2
-        sty PF1
-
-;;;;;;;;;;;;;;;;; --------------------------- ;;;;;;;;;;;;;;;;;;;;;;; 
-; 11 Cycles to Draw the Button
-; 5 or 9 Cycles to Not Draw the Button
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         cpx #60                                         ; 2
         bpl Button1                                     ; 2/3
         cpx #20                                         ; 2
         bmi Button1                                     ; 2/3
-        lda DurGfxTemp
-        sta PF1                                         ; 3
-        lda VolGfxTemp
-        sta PF2                                         ; 3
 
+        lda DurGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
+        sta PF1                                         ; 3
+        sta DurGfxTemp                                  ; 3     Store Score to PF1
+        SLEEP 10
+        lda VolGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
+        sta PF2                                         ; 3
+        sta VolGfxTemp                                  ; 3     Store Score to PF1
+        lda #0
+        sta PF1                                         ; 3
+        sta PF2                                         ; 3
+Button1
+
+
+
+        cpx #120                                        ; 2
+        bpl Button2                                     ; 2/3
+        cpx #80                                         ; 2
+        bmi Button2                                     ; 2/3   ;42
+
+        lda FrqGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
+        sta PF1                                         ; 3     Store Score to PF1
+        sta FrqGfxTemp                                  ; 3
+        SLEEP 5
+        lda CtlGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
+        sta PF2                                         ; 3     Store Score to PF2
+        sta CtlGfxTemp                                  ; 3
+        lda #0
+        sta PF2                                         ; 3
+        sta PF1                                         ; 3
+Button2
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda DebounceCtr
-        bne SkipCheckCollision
-        lda INPT4
-        bmi SkipCheckCollision
-        lda #15
-        sta DebounceCtr
-        lda BlHPos
-        sta AudSelect
-        lda BlVPos
-        sta AudDir
-Button1
+        ; ldy DebounceCtr
+        ; bne SkipCheckCollision
+        ; ldy INPT4
+        ; bmi SkipCheckCollision
+        ; ldy #15
+        ; sty DebounceCtr
+        ; ldy BlHPos
+        ; sty AudSelect
+        ; ldy BlVPos
+        ; sty AudDir
+
 SkipCheckCollision
 
 EndofScreenBuffer
         
         inx
         inx                                             ; 2
+
         cpx #192                                        ; 2
         sta WSYNC                                       ; 3
-        bne ViewableScreenStart                         ; 2/3
-
+        beq EndOfViewableScreen                         ; 2/3
+        jmp ViewableScreenStart
+EndOfViewableScreen
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; End of Viewable Screen ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -276,17 +296,24 @@ EndofScreenBuffer
         lda #26
         sta P0VPos
 
+        lda DebounceCtr
+        bne CollisionDetection
+        lda #15
+        sta DebounceCtr
+
         lda #%00010000            
         bit SWCHA
         bne CursorDown
         dec BlVPos
         dec BlVPos
+        inc AudVol0
 CursorDown
         lda #%00100000            
         bit SWCHA
         bne CursorUp
         inc BlVPos
         inc BlVPos
+        inc AudDur0
 CursorUp
 
         ldy #0 
@@ -295,12 +322,14 @@ CursorUp
         bne CursorLeft
         ldy #%00010000 
         dec BlHPos
+        inc AudFrq0
 CursorLeft
         lda #%10000000            
         bit SWCHA
         bne CursorRight
         ldy #%11110000
         inc BlHPos
+        inc AudCtl0
 CursorRight
         sty HMBL
 
@@ -312,9 +341,13 @@ CursorRight
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 CollisionDetection
         lda CXP0FB
+        eor CXP1FB
         and #%01000000
         cmp #%01000000
         bne SkipP0Collision
+
+        
+
         
         ldy AudDir
         ldx AudSelect
@@ -407,6 +440,7 @@ SkipP0Collision
         adc AudDur0
 
         ldy #0
+        clc
         adc NumberPtr
         sta NumberPtr
 GetDurIdx
@@ -459,6 +493,9 @@ GetVolIdx
         sta NumberPtr
 GetFrqIdx
         lda (NumberPtr),y
+        asl
+        asl
+        asl
         sta FrqGfxValue,y
         iny
         cpy #5
@@ -556,6 +593,11 @@ SkipDecDebounceCtr
         sta CXCLR
         sta AudSelect
         sta AudDir
+        ; lda #19
+        ; sta PFVPos
+        ldy #26                                         ; 2
+        sty P0VPos                                      ; 3
+        sty P0VPosIdx                                   ; 3
 ; overscan
         ldx #26                                         ; 2
 Overscan
@@ -644,70 +686,69 @@ P0Grfx     .byte  #%00011000
            .byte  #0
 
 P0Height   .byte  #28
-Track       .byte  #10,#3,#1,#7,#10,#3,#2,#7,#10,#3,#3,#7,#10,#3,#4,#7,#10,#3,#5,#7,#10,#3,#6,#7,#10,#3,#7,#7,#10,#3,#8,#7,#10,#3,#9,#7,#255,#3,#2,#5
-; Track       .byte  #30,#3,#5,#7,#30,#3,#6,#7,#30,#3,#7,#7,#30,#3,#6,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#6,#7,#2,#0,#5,#7,#30,#3,#6,#7,#2,#0,#5,#7,#30,#3,#6,#7,#2,#0,#5,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#3,#7,#2,#0,#5,#7,#30,#3,#3,#7,#2,#0,#5,#7,#255,#3,#2,#5
 
-
-
-Zero       .byte  #%00001110
-           .byte  #%00010001
-           .byte  #%00010001
-           .byte  #%00010001
-           .byte  #%00001110
+Zero       .byte  #%01110
+           .byte  #%10001
+           .byte  #%10001
+           .byte  #%10001
+           .byte  #%01110
 
 One        .byte  #%00110
-           .byte  #%01010
+           .byte  #%00010
            .byte  #%00010
            .byte  #%00010
            .byte  #%00111
 
-Two        .byte  #%11101110
-           .byte  #%00100010
-           .byte  #%11101110
-           .byte  #%10001000
-           .byte  #%11101110
+Two        .byte  #%01111
+           .byte  #%00001
+           .byte  #%01111
+           .byte  #%01000
+           .byte  #%01111
 
-Three      .byte  #%11101110
-           .byte  #%00100010
-           .byte  #%11101110
-           .byte  #%00100010
-           .byte  #%11101110
+Three      .byte  #%00111
+           .byte  #%00001
+           .byte  #%00111
+           .byte  #%00001
+           .byte  #%00111
 
-Four       .byte  #%10101010
-           .byte  #%10101010
-           .byte  #%11101110
-           .byte  #%00100010
-           .byte  #%00100010
+Four       .byte  #%00101
+           .byte  #%00101
+           .byte  #%00111
+           .byte  #%00001
+           .byte  #%00001
 
-Five       .byte  #%11101110
-           .byte  #%10001000
-           .byte  #%11101110
-           .byte  #%00100010
-           .byte  #%11101110
+Five       .byte  #%111
+           .byte  #%100
+           .byte  #%111
+           .byte  #%001
+           .byte  #%111
 
-Six        .byte  #%11101110
-           .byte  #%10001000
-           .byte  #%11101110
-           .byte  #%10101010
-           .byte  #%11101110
+Six        .byte  #%111
+           .byte  #%100
+           .byte  #%111
+           .byte  #%101
+           .byte  #%111
 
-Seven      .byte  #%11101110
-           .byte  #%00100010
-           .byte  #%00100010
-           .byte  #%00100010
-           .byte  #%00100010
+Seven      .byte  #%111
+           .byte  #%001
+           .byte  #%001
+           .byte  #%001
+           .byte  #%001
 
-Eight      .byte  #%11101110
-           .byte  #%10101010
-           .byte  #%11101110
-           .byte  #%10101010
-           .byte  #%11101110
+Eight      .byte  #%111
+           .byte  #%101
+           .byte  #%111
+           .byte  #%101
+           .byte  #%111
 
-Nine       .byte  #%11101110
-           .byte  #%10101010
-           .byte  #%11101110
-           .byte  #%00100010
-           .byte  #%11101110
+Nine       .byte  #%111
+           .byte  #%101
+           .byte  #%111
+           .byte  #%001
+           .byte  #%111
+
+Track       .byte  #10,#3,#1,#7,#10,#3,#2,#7,#10,#3,#3,#7,#10,#3,#4,#7,#10,#3,#5,#7,#10,#3,#6,#7,#10,#3,#7,#7,#10,#3,#8,#7,#10,#3,#9,#7,#255,#3,#2,#5
+; Track       .byte  #30,#3,#5,#7,#30,#3,#6,#7,#30,#3,#7,#7,#30,#3,#6,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#6,#7,#2,#0,#5,#7,#30,#3,#6,#7,#2,#0,#5,#7,#30,#3,#6,#7,#2,#0,#5,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#3,#7,#2,#0,#5,#7,#30,#3,#3,#7,#2,#0,#5,#7,#255,#3,#2,#5
 ;-------------------------------------------------------------------------------
         ORG $FFFA
 InterruptVectors
