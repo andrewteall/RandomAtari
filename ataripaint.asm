@@ -224,6 +224,9 @@ SetPFVPOS19
 
         sta WSYNC
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 41 cycles
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
         cpx #60                                         ; 2
         bpl Button1                                     ; 2/3
         cpx #20                                         ; 2
@@ -232,14 +235,11 @@ SetPFVPOS19
         lda DurGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
         sta PF1                                         ; 3
         sta DurGfxTemp                                  ; 3     Store Score to PF1
-        SLEEP 5
+        SLEEP 3
         lda VolGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
         sta PF2                                         ; 3
         sta VolGfxTemp                                  ; 3     Store Score to PF1
-        
 Button1
-
-
 
         cpx #120                                        ; 2
         bpl Button2                                     ; 2/3
@@ -249,26 +249,29 @@ Button1
         lda FrqGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
         sta PF1                                         ; 3     Store Score to PF1
         sta FrqGfxTemp                                  ; 3
-        SLEEP 5
+        SLEEP 3
         lda CtlGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
         sta PF2                                         ; 3     Store Score to PF2
         sta CtlGfxTemp                                  ; 3
 Button2
+
         lda #0
         sta PF1                                         ; 3
         sta PF2                                         ; 3
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 26 cycles
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        ; ldy DebounceCtr
-        ; bne SkipCheckCollision
-        ; ldy INPT4
-        ; bmi SkipCheckCollision
-        ; ldy #15
-        ; sty DebounceCtr
-        ; ldy BlHPos
-        ; sty AudSelect
-        ; ldy BlVPos
-        ; sty AudDir
+        ldy DebounceCtr                                 ; 2
+        bne SkipCheckCollision                          ; 2/3
+        ldy INPT4                                       ; 3
+        bmi SkipCheckCollision                          ; 2/3
+        ldy #15                                         ; 2
+        sty DebounceCtr                                 ; 3
+        ldy BlHPos                                      ; 3
+        sty AudSelect                                   ; 3
+        ldy BlVPos                                      ; 3
+        sty AudDir                                      ; 3
 
 SkipCheckCollision
 
@@ -279,8 +282,8 @@ EndofScreenBuffer
 
         cpx #192                                        ; 2
         sta WSYNC                                       ; 3
-        bne ViewableScreenStart                         ; 2/3
-        ;jmp ViewableScreenStart
+        beq EndOfViewableScreen                         ; 2/3
+        jmp ViewableScreenStart
 EndOfViewableScreen
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; End of Viewable Screen ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -296,7 +299,7 @@ EndOfViewableScreen
         sta P0VPos
 
         lda DebounceCtr
-        bne CollisionDetection
+        bne SkipCursorMove
         lda #15
         sta DebounceCtr
 
@@ -334,10 +337,14 @@ CursorRight
 
         sta WSYNC
         sta HMOVE
+        sec
+        bcs CollisionDetection
 
 ;;;;;;;;;;;;;;;;;;;;; Collision Detection ;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+SkipCursorMove
+        sta WSYNC
 CollisionDetection
         lda CXP0FB
         eor CXP1FB
@@ -592,13 +599,11 @@ SkipDecDebounceCtr
         sta CXCLR
         sta AudSelect
         sta AudDir
-        ; lda #19
-        ; sta PFVPos
         ldy #26                                         ; 2
         sty P0VPos                                      ; 3
         sty P0VPosIdx                                   ; 3
 ; overscan
-        ldx #26                                         ; 2
+        ldx #21                                         ; 2
 Overscan
         dex                                             ; 3
         sta WSYNC                                       ; 2
