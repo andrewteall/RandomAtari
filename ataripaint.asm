@@ -48,6 +48,7 @@ PFVPos          ds 1
         ORG $F000
 
 ;PATTERN           = $80 ; storage Location (1st byte in RAM)
+P0HEIGHT   =  #28
 
 
 
@@ -155,9 +156,9 @@ VerticalBlank
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; 192 scanlines of picture...
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldx #155
+        stx COLUBK
         ldx #0
-        lda #155
-        sta COLUBK
 ViewableScreenStart
 
 ;;;;;;;;;;;;;;;;; Determine if we draw Cursor ;;;;;;;;;;;;;;;;;;;;;;; 
@@ -174,12 +175,12 @@ ViewableScreenStart
 ;         sta ENABL                                       ; 3     14/15 cycles
 
 ;;;;;;;;;;;;; Determine if we Draw Player Sprites ;;;;;;;;;;;;;;;;;;;
-; 39 Cycles to Player Sprite + 7 to disable
-; 11 Cycles to Not Player Sprite
+; 41 Cycles to Player Sprite + 7 to disable
+; 10 Cycles to Not Player Sprite
 ; + 3 from branch back to top
 ; X - Current line number
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #0                                          ; 2
+        ldy #0                                          ; 2
         cpx P0VPosIdx                                   ; 3
         bne PlayerDisabled                              ; 2/3
 DrawP0
@@ -193,17 +194,15 @@ DrawP0
         sbc P0VPos                                      ; 3
         tay                                             ; 2
         lda P0Grfx,y                                    ; 4
-
-        cpy P0Height                                    ; 4
+        cpy #P0HEIGHT                                   ; 4
         bne PlayerDisabled                              ; 2/3
 
         ldy #86                                         ; 2
         sty P0VPos                                      ; 3
         sty P0VPosIdx                                   ; 3
 PlayerDisabled
-        sta GRP0                                        ; 3
+        tay                                             ; 2
 
-;
 ;;;;;;;;;;;;;;;;; Setup Y index to draw PF ;;;;;;;;;;;;;;;;;;;;;;;;;
 ; 20 cycles + WSYNC
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -216,15 +215,17 @@ SetPFVPOS79
         sbc #60                                         ; 2
 SetPFVPOS19
         sta PFVPos                                      ; 3     12
-
         lsr                                             ; 2     Divide by 2 to get index twice for double height
         lsr                                             ; 2     Divide by 2 to get index twice for double height
         lsr                                             ; 2     Divide by 2 to get index twice for double height
+        sty GRP0
         tay                                             ; 2     Transfer A to Y so we can index off Y
 
         sta WSYNC
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; 41 cycles
+; 35 cycles to draw either button
+; 22 cycles < 20; > 120
+; 18 cycles >60; < 80
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         cpx #60                                         ; 2
@@ -234,28 +235,29 @@ SetPFVPOS19
 
         lda DurGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
         sta PF1                                         ; 3
-        sta DurGfxTemp                                  ; 3     Store Score to PF1
-        SLEEP 3
+        ;sta DurGfxTemp                                  ; 3     Store Score to PF1
+        
         lda VolGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
         sta PF2                                         ; 3
-        sta VolGfxTemp                                  ; 3     Store Score to PF1
+        ;sta VolGfxTemp                                  ; 3     Store Score to PF1
 Button1
 
-        cpx #120                                        ; 2
-        bpl Button2                                     ; 2/3
         cpx #80                                         ; 2
         bmi Button2                                     ; 2/3   ;42
+        cpx #120                                        ; 2
+        bpl Button2                                     ; 2/3
 
         lda FrqGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
         sta PF1                                         ; 3     Store Score to PF1
-        sta FrqGfxTemp                                  ; 3
-        SLEEP 3
+        ;sta FrqGfxTemp                                  ; 3
+        
         lda CtlGfxValue,y                               ; 4     Get the Score From our Player 0 Score Array
         sta PF2                                         ; 3     Store Score to PF2
-        sta CtlGfxTemp                                  ; 3
+        ;sta CtlGfxTemp                                  ; 3
 Button2
+        SLEEP 10
 
-        lda #0
+        lda #%0                                         ; 2
         sta PF1                                         ; 3
         sta PF2                                         ; 3
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -279,11 +281,11 @@ EndofScreenBuffer
         
         inx
         inx                                             ; 2
-
         cpx #192                                        ; 2
         sta WSYNC                                       ; 3
-        beq EndOfViewableScreen                         ; 2/3
-        jmp ViewableScreenStart
+        ; beq EndOfViewableScreen                         ; 2/3
+        ; jmp ViewableScreenStart
+        bne ViewableScreenStart
 EndOfViewableScreen
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; End of Viewable Screen ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -688,8 +690,6 @@ P0Grfx     .byte  #%00011000
            .byte  #%00011000
            .byte  #0
            .byte  #0
-
-P0Height   .byte  #28
 
         align 256
 Zero       .byte  #%01110
