@@ -175,53 +175,54 @@ ViewableScreenStart
 ;         sta ENABL                                       ; 3     14/15 cycles
 
 ;;;;;;;;;;;;; Determine if we Draw Player Sprites ;;;;;;;;;;;;;;;;;;;
-; 41 Cycles to Player Sprite + 7 to disable
-; 10 Cycles to Not Player Sprite
-; + 3 from branch back to top
+; 37 Cycles to Player Sprite + 7 to disable
+; 8 Cycles to Not Player Sprite
+; + 5 from jmp back to top
 ; X - Current line number
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ldy #0                                          ; 2
-        cpx P0VPosIdx                                   ; 3
-        bne PlayerDisabled                              ; 2/3
+        ldy #0                                          ; 2     2/2
+        cpx P0VPosIdx                                   ; 3     3/3
+        bne PlayerDisabled                              ; 2/3   6/5
 DrawP0
-        txa                                             ; 2
-        clc                                             ; 2
-        adc #2                                          ; 2
-        sta P0VPosIdx                                   ; 3
+        txa                                             ; 2     7
+        clc                                             ; 2     9
+        adc #2                                          ; 2     11
+        sta P0VPosIdx                                   ; 3     14
 
-        txa                                             ; 2
-        sec                                             ; 2
-        sbc P0VPos                                      ; 3
-        tay                                             ; 2
-        lda P0Grfx,y                                    ; 4
-        cpy #P0HEIGHT                                   ; 4
-        bne PlayerDisabled                              ; 2/3
+        txa                                             ; 2     16
+        sec                                             ; 2     18
+        sbc P0VPos                                      ; 3     21
+        tay                                             ; 2     23
+        lda P0Grfx,y                                    ; 4     27
+        cpy #P0HEIGHT                                   ; 4     31
+        bne PlayerDisabled                              ; 2/3   34/33
 
-        ldy #86                                         ; 2
-        sty P0VPos                                      ; 3
-        sty P0VPosIdx                                   ; 3
+        ldy #86                                         ; 2     35
+        sty P0VPos                                      ; 3     38
+        sty P0VPosIdx                                   ; 3     41
 PlayerDisabled
-        tay                                             ; 2
+        tay                                             ; 2     8/37/44
 
 ;;;;;;;;;;;;;;;;; Setup Y index to draw PF ;;;;;;;;;;;;;;;;;;;;;;;;;
-; 20 cycles + WSYNC
+; 23 cycles + WSYNC
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         txa
-        sbc #19                                         ; 2
-        cpx #65                                         ; 2
-        bpl SetPFVPOS79                                 ; 2/3
-        bmi SetPFVPOS19                                 ; 2/3
+        sbc #19                                         ; 2     2
+        cpx #65                                         ; 2     4
+        bpl SetPFVPOS79                                 ; 2/3   7/6
+        bmi SetPFVPOS19                                 ; 2/3   9
 SetPFVPOS79
-        sbc #60                                         ; 2
+        sbc #60                                         ; 2     9
 SetPFVPOS19
         sta PFVPos                                      ; 3     12
-        lsr                                             ; 2     Divide by 2 to get index twice for double height
-        lsr                                             ; 2     Divide by 2 to get index twice for double height
-        lsr                                             ; 2     Divide by 2 to get index twice for double height
-        sty GRP0
-        tay                                             ; 2     Transfer A to Y so we can index off Y
+        lsr                                             ; 2     14      Divide by 2 to get index twice for double height
+        lsr                                             ; 2     16      Divide by 2 to get index twice for double height
+        lsr                                             ; 2     18      Divide by 2 to get index twice for double height
+        sty GRP0                                        ; 3     21
+        tay                                             ; 2     23      Transfer A to Y so we can index off Y
 
-        sta WSYNC
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        sta WSYNC                                       ; 3     75 max total
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; 35 cycles to draw either button
 ; 22 cycles < 20; > 120
@@ -264,16 +265,16 @@ Button2
 ; 26 cycles
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        ldy DebounceCtr                                 ; 2
-        bne SkipCheckCollision                          ; 2/3
-        ldy INPT4                                       ; 3
-        bmi SkipCheckCollision                          ; 2/3
-        ldy #15                                         ; 2
-        sty DebounceCtr                                 ; 3
-        ldy BlHPos                                      ; 3
-        sty AudSelect                                   ; 3
-        ldy BlVPos                                      ; 3
-        sty AudDir                                      ; 3
+        ; ldy DebounceCtr                                 ; 2
+        ; bne SkipCheckCollision                          ; 2/3
+        ; ldy INPT4                                       ; 3
+        ; bmi SkipCheckCollision                          ; 2/3
+        ; ldy #15                                         ; 2
+        ; sty DebounceCtr                                 ; 3
+        ; ldy BlHPos                                      ; 3
+        ; sty AudSelect                                   ; 3
+        ; ldy BlVPos                                      ; 3
+        ; sty AudDir                                      ; 3
 
 SkipCheckCollision
 
@@ -283,9 +284,9 @@ EndofScreenBuffer
         inx                                             ; 2
         cpx #192                                        ; 2
         sta WSYNC                                       ; 3
-        ; beq EndOfViewableScreen                         ; 2/3
-        ; jmp ViewableScreenStart
-        bne ViewableScreenStart
+        beq EndOfViewableScreen                         ; 2/3
+        jmp ViewableScreenStart                         ; 3
+        ;bne ViewableScreenStart
 EndOfViewableScreen
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; End of Viewable Screen ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
