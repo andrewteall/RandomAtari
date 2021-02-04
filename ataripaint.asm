@@ -4,49 +4,59 @@
 ;Start Program
         SEG.U vars
         ORG $80
-BlVPos          ds 1            ; $80
-BlHPos          ds 1            ; $81
-P0VPos          ds 1            ; $82
+BlVPos                  ds 1            ; $80
+BlHPos                  ds 1            ; $81
+P0VPos                  ds 1            ; $82
 
-P0VPosIdx       ds 1            ; $83
+P0VPosIdx               ds 1            ; $83
 
-AudDur0         ds 1            ; $84
-AudDur1         ds 1            ; $85
-AudVol0         ds 1            ; $84
-AudVol1         ds 1            ; $85
-AudFrq0         ds 1            ; $86
-AudFrq1         ds 1            ; $87
-AudCtl0         ds 1            ; $88
-AudCtl1         ds 1            ; $89
+AudDur0                 ds 1            ; $84
+AudDur1                 ds 1            ; $85
+AudVol0                 ds 1            ; $84
+AudVol1                 ds 1            ; $85
+AudFrq0                 ds 1            ; $86
+AudFrq1                 ds 1            ; $87
+AudCtl0                 ds 1            ; $88
+AudCtl1                 ds 1            ; $89
+AudChannel              ds 1
 
-AudSelect       ds 1            ; 
-AudDir          ds 1            ; 
+AudSelect               ds 1            ; 
+AudDir                  ds 1            ; 
 
-FrameCtr        ds 1            ; 
-NoteDuration    ds 1            ; 
+FrameCtr                ds 1            ; 
+NoteDuration            ds 1            ; 
 
-NotePtr         ds 2            ; 
+NotePtr                 ds 2            ; 
 
-DurGfxSelect    ds 1            ; 
-DurGfxValue     ds 5            ; 
+DurGfxSelect            ds 1            ; 
+DurGfxValue             ds 5            ; 
 
 
-VolGfxSelect    ds 1            ; 
-VolGfxValue     ds 5            ; 
+VolGfxSelect            ds 1            ; 
+VolGfxValue             ds 5            ; 
 
-FrqGfxSelect    ds 1            ; 
-FrqGfxValue     ds 5            ; 
+FrqGfxSelect            ds 1            ; 
+FrqGfxValue             ds 5            ; 
 
-CtlGfxSelect    ds 1            ; 
-CtlGfxValue     ds 5            ; 
+CtlGfxSelect            ds 1            ; 
+CtlGfxValue             ds 5            ; 
 
-PlayGfxValue    ds 5            ; 
-PlayGfxSelect   ds 1
+PlayGfxValue            ds 5            ; 
+PlayGfxSelect           ds 1
 
-NumberPtr       ds 2
+PlayAllGfxValue         ds 5            ; 
+PlayAllGfxSelect        ds 1
 
-DebounceCtr     ds 1
-PFVPos          ds 1
+ChannelGfxValue         ds 5            ; 
+ChannelGfxSelect        ds 1
+
+AddGfxSelect            ds 1
+RemoveGfxSelect         ds 1
+
+NumberPtr               ds 2
+
+DebounceCtr             ds 1
+PFVPos                  ds 1
 
 CurrentSelect   ds 1
 
@@ -297,7 +307,7 @@ ControlRow
         lda MinusBtn,y                               ; 4     38      Get the Score From our Player 0 Score Array
         sta PF2                                         ; 3     41
         
-        lda FrqGfxValue,y                               ; 4     45      Get the Score From our Player 0 Score Array
+        lda ChannelGfxValue,y                               ; 4     45      Get the Score From our Player 0 Score Array
         sta PF2                                         ; 3     48      Store Score to PF2
         
         SLEEP 6                                         ; 7     62
@@ -314,6 +324,58 @@ ControlRow
         cpx #120                                         ; 2     6
         sta WSYNC                                       ; 3     9
         bne ControlRow                                     ; 2/3   2/3
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Control Selection - 1-Line Kernel 
+; Line 1 - 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        inx                                             ; 2     4
+        inx                                             ; 2     6
+        lda #123
+        sta COLUPF
+        sta WSYNC                                       ; 3     9
+        sta WSYNC                                       ; 3     3
+        SLEEP 3                                         ; 3     3
+ControlSelection
+        lda PlayAllGfxSelect                               ; 3     6
+        sta PF0                                         ; 3     9
+        lda AddGfxSelect                                ; 3     12
+        sta PF1                                         ; 3     15         
+        lda RemoveGfxSelect                                ; 3     18
+        sta PF2                                         ; 3     21
+
+        SLEEP 22                                        ; 5  
+
+        lda ChannelGfxSelect                                ; 3     45
+        sta PF2                                         ; 3     48
+        
+        
+        SLEEP 5                                         ; 7     62
+        
+        lda #0                                          ; 2     64
+        sta PF1
+        sta PF0                                         ; 3     67
+
+
+
+        inx                                             ; 2     4
+        cpx #128                                         ; 2     6
+        sta WSYNC                                       ; 3     9
+        bne ControlSelection                               ; 2/3   2/3
+
+        
+        lda #0                                          ; 2     64
+        sta PF1                                         ; 3     67
+        sta PF2                                         ; 3     67
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Spacer - 1-Line Kernel 
+; Line 1 - 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #9
+        sta COLUPF
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; 26 cycles
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -328,7 +390,6 @@ ControlRow
         ; sty AudSelect                                   ; 3
         ; ldy BlVPos                                      ; 3
         ; sty AudDir                                      ; 3
-
 ; SkipCheckCollision
 
 EndofScreenBuffer
@@ -348,9 +409,6 @@ EndOfViewableScreen
         lda #%00000010
         sta VBLANK
         
-        lda #26
-        sta P0VPos
-
         lda DebounceCtr
         bne SkipCursorMove
         
@@ -371,15 +429,23 @@ CursorRight
 CursorMove
 
 SkipCursorMove
+        lda CurrentSelect
+        bpl SkipSelectionResetDown
+        lda #8
+        sta CurrentSelect
+SkipSelectionResetDown
+
+        lda CurrentSelect
+        cmp #9
+        bne SkipSelectionResetUp
+        lda #0
+        sta CurrentSelect
+SkipSelectionResetUp
 
 
 ;;;;;;;;;;;;;;;;;;;;; Selection Detection ;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-       
-        lda DebounceCtr
-        beq Selection
-        jmp SkipSelectionSet
 Selection
         lda #0
         sta PlayGfxSelect
@@ -387,118 +453,159 @@ Selection
         sta VolGfxSelect
         sta FrqGfxSelect
         sta CtlGfxSelect
+        sta PlayAllGfxSelect
+        sta AddGfxSelect
+        sta RemoveGfxSelect
+        sta ChannelGfxSelect
 
         lda CurrentSelect
         cmp #0
         bne Selection0
         lda #%11100000
         sta PlayGfxSelect
-        jmp SelectionSet
+
 Selection0
         cmp #1
         bne Selection1
         lda #%00011111
         sta DurGfxSelect
 
+        lda DebounceCtr
+        beq AllowBtn1
+        jmp SkipSelectionSet
+AllowBtn1
         lda #%00010000            
         bit SWCHA
         bne Dur0Down
         inc AudDur0
+        jmp SelectionSet
 Dur0Down
         lda #%00100000            
         bit SWCHA
         bne Dur0Up
         dec AudDur0
-Dur0Up
-
         jmp SelectionSet
+Dur0Up
 Selection1
         cmp #2
         bne Selection2
         lda #%11111000
         sta VolGfxSelect
 
+        lda DebounceCtr
+        beq AllowBtn2
+        jmp SkipSelectionSet
+AllowBtn2
         lda #%00010000            
         bit SWCHA
         bne Vol0Down
         inc AudVol0
+        jmp SelectionSet
 Vol0Down
         lda #%00100000            
         bit SWCHA
         bne Vol0Up
         dec AudVol0
+        jmp SelectionSet
 Vol0Up
 
-        jmp SelectionSet
+        
 Selection2
         cmp #3
         bne Selection3
         lda #%00011111
         sta FrqGfxSelect
 
+        lda DebounceCtr
+        beq AllowBtn3
+        jmp SkipSelectionSet
+AllowBtn3
         lda #%00010000            
         bit SWCHA
         bne Frq0Down
         inc AudFrq0
+        jmp SelectionSet
 Frq0Down
         lda #%00100000            
         bit SWCHA
         bne Frq0Up
         dec AudFrq0
+        jmp SelectionSet
 Frq0Up
 
-        jmp SelectionSet
+        
 Selection3
         cmp #4
         bne Selection4
         lda #%11111000
         sta CtlGfxSelect
 
+        lda DebounceCtr
+        beq AllowBtn4
+        jmp SkipSelectionSet
+AllowBtn4
         lda #%00010000            
         bit SWCHA
         bne Ctl0Down
         inc AudCtl0
+        jmp SelectionSet
 Ctl0Down
         lda #%00100000            
         bit SWCHA
         bne Ctl0Up
         dec AudCtl0
-Ctl0Up        
-
         jmp SelectionSet
+Ctl0Up        
+        
 Selection4
         cmp #5
         bne Selection5
-
-        jmp SelectionSet
+        lda #%11100000
+        sta PlayAllGfxSelect
 Selection5
         cmp #6
         bne Selection6
-
-        jmp SelectionSet
+        lda #%00011111
+        sta AddGfxSelect
 Selection6
         cmp #7
         bne Selection7
-
-        jmp SelectionSet
+        lda #%11111000
+        sta RemoveGfxSelect
 Selection7
         cmp #8
         bne Selection8
+        lda #%00011111
+        sta ChannelGfxSelect
 
+        lda DebounceCtr
+        beq AllowBtn8
+        jmp SkipSelectionSet
+AllowBtn8
+        lda #%00010000            
+        bit SWCHA
+        bne Chl0Down
+        lda #1
+        sta AudChannel
         jmp SelectionSet
+Chl0Down
+        lda #%00100000            
+        bit SWCHA
+        bne Chl0Up
+        lda #0
+        sta AudChannel
+        jmp SelectionSet
+Chl0Up
+
 Selection8
-        cmp #9
-        bne Selection9
 
-        jmp SelectionSet
-Selection9
-        jmp SelectionSet
+        jmp SkipSelectionSet
 SelectionSet
         lda #10
         sta DebounceCtr
 SkipSelectionSet
 
-;;;;;;;;;;;;;;;;;;;;; Collision Detection ;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;;;;;;;;;;;;;;;;;;;;;;;; Number Drawing ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -599,6 +706,29 @@ GetCtlIdx
 
         lda #>(Zero)
         sta NumberPtr+1 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda AudChannel
+        asl
+        asl
+        clc
+        adc AudChannel
+
+        ldy #0
+        adc NumberPtr
+        sta NumberPtr
+GetChannelIdx
+        lda (NumberPtr),y
+        sta ChannelGfxValue,y
+        iny
+        cpy #5
+        bne GetChannelIdx
+
+        lda #<(Zero)
+        sta NumberPtr
+
+        lda #>(Zero)
+        sta NumberPtr+1  
 
 
 
