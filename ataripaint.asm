@@ -53,6 +53,8 @@ ChannelGfxSelect        ds 1
 AddGfxSelect            ds 1
 RemoveGfxSelect         ds 1
 
+PlayButtonMask          ds 5
+
 NumberPtr               ds 2
 
 DebounceCtr             ds 1
@@ -211,7 +213,7 @@ NoteRow
         lsr                                             ; 2     13      Divide by 2 to get index twice for double height
         tay                                             ; 2     15      Transfer A to Y so we can index off Y
         
-        lda PlayButton,y                                ; 4     19      Get the Score From our Player 0 Score Array
+        lda PlayButtonMask,y                                ; 4     19      Get the Score From our Player 0 Score Array
         sta PF0                                         ; 3     22      
 
         lda DurGfxValue,y                               ; 4     26      Get the Score From our Player 0 Score Array
@@ -228,18 +230,23 @@ NoteRow
         lda CtlGfxValue,y                               ; 4     52      Get the Score From our Player 0 Score Array
         
         sta PF1                                         ; 3     55      Store Score to PF1        
-        SLEEP 7                                         ; 7     62
+        ;SLEEP 7                                         ; 7     62
+        inx                                             ; 2     2
+        ;inx                                             ; 2     4
+        SLEEP 3                                         ; 7     62
+        
         
         lda #0                                          ; 2     64
+        cpx #60                                         ; 2     6
         sta PF0                                         ; 3     67
         sta PF1                                         ; 3     70
         sta PF2                                         ; 3     73
         sta WSYNC                                       ; 3     76
 
-        inx                                             ; 2     2
-        inx                                             ; 2     4
-        cpx #60                                         ; 2     6
-        sta WSYNC                                       ; 3     9
+        ; inx                                             ; 2     2
+        ; inx                                             ; 2     4
+        ; cpx #60                                         ; 2     6
+        ; sta WSYNC                                       ; 3     9
         bne NoteRow                                     ; 2/3   2/3
 
 
@@ -307,7 +314,7 @@ ControlRow
         lsr                                             ; 2     13      Divide by 2 to get index twice for double height
         tay                                             ; 2     15      Transfer A to Y so we can index off Y
         
-        lda PlayButton,y                                ; 4     19      Get the Score From our Player 0 Score Array
+        lda PlayAllButton,y                                ; 4     19      Get the Score From our Player 0 Score Array
         sta PF0                                         ; 3     22      
 
         lda PlusBtn,y                               ; 4     26      Get the Score From our Player 0 Score Array
@@ -833,6 +840,15 @@ GetChannelIdx
         sta AUDC0
         inc FrameCtr
 
+        ldy #0
+LoadPauseButton
+        lda PauseButton,y
+        sta PlayButtonMask,y
+        iny
+        cpy #5
+        bne LoadPauseButton
+
+
         sec
         bcs SkipPlayNote
 TurnOffNote
@@ -843,6 +859,14 @@ TurnOffNote
         sta FrameCtr
         lda #1
         sta PlayNote
+
+        ldy #0
+LoadPlayButton
+        lda PlayButton,y
+        sta PlayButtonMask,y
+        iny
+        cpy #5
+        bne LoadPlayButton
 SkipPlayNote
         
 
@@ -1292,6 +1316,19 @@ PlayButton .byte  #%00100000
            .byte  #%01100000
            .byte  #%00100000
            .byte  #0
+
+PlayAllButton .byte  #%00100000
+           .byte  #%01100000
+           .byte  #%11100000
+           .byte  #%01100000
+           .byte  #%00100000
+           .byte  #0
+
+PauseButton     .byte  #%10100000
+                .byte  #%10100000
+                .byte  #%10100000
+                .byte  #%10100000
+                .byte  #%10100000
 
 PlusBtn    .byte  #%00000100
            .byte  #%00000100
