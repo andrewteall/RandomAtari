@@ -486,7 +486,11 @@ Selection0
         bne Selection1
         lda #%00011111
         sta DurGfxSelect
-        
+        ldy INPT4
+        bmi PlayNote1
+        lda #0
+        sta PlayNote
+PlayNote1
         lda DebounceCtr
         beq AllowBtn1
         jmp SkipSelectionSet
@@ -508,7 +512,11 @@ Selection1
         bne Selection2
         lda #%11111000
         sta VolGfxSelect
-
+        ldy INPT4
+        bmi PlayNote2
+        lda #0
+        sta PlayNote
+PlayNote2
         lda DebounceCtr
         beq AllowBtn2
         jmp SkipSelectionSet
@@ -531,7 +539,11 @@ Selection2
         bne Selection3
         lda #%00011111
         sta FrqGfxSelect
-
+        ldy INPT4
+        bmi PlayNote3
+        lda #0
+        sta PlayNote
+PlayNote3
         lda DebounceCtr
         beq AllowBtn3
         jmp SkipSelectionSet
@@ -555,7 +567,11 @@ Selection3
         bne Selection4
         lda #%11111000
         sta CtlGfxSelect
-
+        ldy INPT4
+        bmi PlayNote4
+        lda #0
+        sta PlayNote
+PlayNote4
         lda DebounceCtr
         beq AllowBtn4
         jmp SkipSelectionSet
