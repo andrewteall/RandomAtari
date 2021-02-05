@@ -58,7 +58,9 @@ NumberPtr               ds 2
 DebounceCtr             ds 1
 PFVPos                  ds 1
 
-CurrentSelect   ds 1
+CurrentSelect           ds 1
+
+PlayNote                ds 1
 
         SEG
         ORG $F000
@@ -90,7 +92,7 @@ Clear
         sta BlHPos
 
         ldx #0
-        lda #5
+        lda #32
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -98,15 +100,7 @@ Clear
         sta HMCLR
 
         ldx #1
-        lda #83
-        jsr CalcXPos
-        sta WSYNC
-        sta HMOVE
-        SLEEP 24
-        sta HMCLR
-
-        ldx #4
-        lda BlHPos
+        lda #40
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -127,7 +121,7 @@ Clear
         sta P0VPos 
         sta P0VPosIdx     
 
-        lda #%00000111
+        lda #%00000000
         sta NUSIZ0
         sta NUSIZ1
 
@@ -145,6 +139,10 @@ Clear
 
         lda #19
         sta PFVPos
+        
+        lda #%00000001
+        sta VDELP0
+        sta VDELP1
 
 
 StartOfFrame
@@ -175,17 +173,30 @@ VerticalBlank
         ldx #155
         stx COLUBK
         ldx #0
+        ldy #0
 ViewableScreenStart
-        inx                                             ; 2     5
-        cpx #18                                         ; 2     7
-        sta WSYNC                                       ; 3     10
-        bne ViewableScreenStart                         ; 2/3   2/3
+;         cpx #12
+;         bmi SkipDrawTopTxt
+;         cpx #19
+;         bpl SkipDrawTopTxt
+;         lda DU,y                                        ; 4     
+;         sta GRP0                                        ; 3
+
+;         lda R,y                                        ; 4     
+;         sta GRP1                                        ; 3
+;         iny
+
+; SkipDrawTopTxt
+        inx                                             ; 2
+        cpx #18                                         ; 2
+        sta WSYNC                                       ; 3
+        bne ViewableScreenStart                         ; 2/3
         
-        inx                                             ; 2     4
-        inx                                             ; 2     6
-        sta WSYNC                                       ; 3     9
-        sta WSYNC                                       ; 3     3
-        SLEEP 3                                         ; 3     3
+        inx                                             ; 2
+        inx                                             ; 2
+        sta WSYNC                                       ; 3
+        sta WSYNC                                       ; 3
+        SLEEP 3                                         ; 3
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Note Row - 2-Line Kernel 
 ; Line 1 - 76 Cycles
@@ -463,7 +474,13 @@ Selection
         bne Selection0
         lda #%11100000
         sta PlayGfxSelect
+        
         sta WSYNC
+
+        ldy INPT4
+        bmi Selection0
+        lda #0
+        sta PlayNote
 Selection0
         cmp #1
         bne Selection1
@@ -509,7 +526,6 @@ Vol0Down
         jmp SelectionSet
 Vol0Up
 
-        
 Selection2
         cmp #3
         bne Selection3
@@ -603,6 +619,59 @@ Selection8
 SelectionSet
         lda #10
         sta DebounceCtr
+
+        ldx AudVol0
+        bpl SkipVol0ResetDown
+        ldx #15
+        stx AudVol0
+SkipVol0ResetDown
+
+        ldx AudVol0
+        cpx #16
+        bne SkipVol0ResetUp
+        ldx #0
+        stx AudVol0
+SkipVol0ResetUp
+
+        ldx AudCtl0
+        bpl SkipCtl0ResetDown
+        ldx #15
+        stx AudCtl0
+SkipCtl0ResetDown
+
+        ldx AudCtl0
+        cpx #16
+        bne SkipCtl0ResetUp
+        ldx #0
+        stx AudCtl0
+SkipCtl0ResetUp
+
+        ldx AudFrq0
+        bpl SkipFrq0ResetDown
+        ldx #31
+        stx AudFrq0
+SkipFrq0ResetDown
+
+        ldx AudFrq0
+        cpx #32
+        bne SkipFrq0ResetUp
+        ldx #0
+        stx AudFrq0
+SkipFrq0ResetUp
+
+        ldx AudDur0
+        bpl SkipDur0ResetDown
+        ldx #254
+        stx AudDur0
+SkipDur0ResetDown
+
+        ldx AudDur0
+        cpx #255
+        bne SkipDur0ResetUp
+        ldx #0
+        stx AudDur0
+SkipDur0ResetUp
+
 SkipSelectionSet
 
 ;;;;;;;;;;;;;;;;;;;;;;;; Number Drawing ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
@@ -731,6 +800,35 @@ GetChannelIdx
         sta NumberPtr+1  
 
 
+;;;;;;;;;;;;;; Note Player
+        lda PlayNote
+        bne SkipPlayNote
+        lda AudDur0
+        cmp FrameCtr
+        beq TurnOffNote
+        
+        lda AudVol0
+        sta AUDV0
+
+        lda AudFrq0
+        sta AUDF0
+
+        lda AudCtl0
+        sta AUDC0
+        inc FrameCtr
+
+        sec
+        bcs SkipPlayNote
+TurnOffNote
+        lda #0
+        sta AUDV0
+        sta AUDF0
+        sta AUDC0
+        sta FrameCtr
+        lda #1
+        sta PlayNote
+SkipPlayNote
+        
 
         sec
         bcs SkipMusicPlayer
@@ -942,6 +1040,139 @@ Nine       .byte  #%111
            .byte  #%001
            .byte  #%111
 
+A          .byte  #%111
+           .byte  #%101
+           .byte  #%111
+           .byte  #%101
+           .byte  #%101
+
+B          .byte  #%110
+           .byte  #%101
+           .byte  #%110
+           .byte  #%101
+           .byte  #%110
+
+C          .byte  #%111
+           .byte  #%100
+           .byte  #%100
+           .byte  #%100
+           .byte  #%111
+
+D          .byte  #%110
+           .byte  #%101
+           .byte  #%101
+           .byte  #%101
+           .byte  #%110
+
+E          .byte  #%111
+           .byte  #%100
+           .byte  #%111
+           .byte  #%100
+           .byte  #%111
+
+F          .byte  #%111
+           .byte  #%100
+           .byte  #%111
+           .byte  #%100
+           .byte  #%100
+
+OneZero    .byte  #%10010
+           .byte  #%10101
+           .byte  #%10101
+           .byte  #%10101
+           .byte  #%10010
+
+OneOne        .byte  #%10010
+           .byte  #%10010
+           .byte  #%10010
+           .byte  #%10010
+           .byte  #%10010
+
+OneTwo        .byte  #%10111
+           .byte  #%10001
+           .byte  #%10111
+           .byte  #%10100
+           .byte  #%10111
+
+OneThree      .byte  #%10111
+           .byte  #%10001
+           .byte  #%10111
+           .byte  #%10001
+           .byte  #%10111
+
+OneFour       .byte  #%10101
+           .byte  #%10101
+           .byte  #%10111
+           .byte  #%10001
+           .byte  #%10001
+
+OneFive       .byte  #%10111
+           .byte  #%10100
+           .byte  #%10111
+           .byte  #%10001
+           .byte  #%10111
+
+OneSix        .byte  #%10111
+           .byte  #%10100
+           .byte  #%10111
+           .byte  #%10101
+           .byte  #%10111
+
+OneSeven      .byte  #%10111
+           .byte  #%10001
+           .byte  #%10001
+           .byte  #%10001
+           .byte  #%10001
+
+OneEight      .byte  #%10111
+           .byte  #%10101
+           .byte  #%10111
+           .byte  #%10101
+           .byte  #%10111
+
+OneNine       .byte  #%10111
+           .byte  #%10101
+           .byte  #%10111
+           .byte  #%10001
+           .byte  #%10111
+
+OneA          .byte  #%10111
+           .byte  #%10101
+           .byte  #%10111
+           .byte  #%10101
+           .byte  #%10101
+
+OneB          .byte  #%10110
+           .byte  #%10101
+           .byte  #%10110
+           .byte  #%10101
+           .byte  #%10110
+
+OneC          .byte  #%10111
+           .byte  #%10100
+           .byte  #%10100
+           .byte  #%10100
+           .byte  #%10111
+
+OneD          .byte  #%10110
+           .byte  #%10101
+           .byte  #%10101
+           .byte  #%10101
+           .byte  #%10110
+
+OneE          .byte  #%10111
+           .byte  #%10100
+           .byte  #%10111
+           .byte  #%10100
+           .byte  #%10111
+
+OneF          .byte  #%10111
+           .byte  #%10100
+           .byte  #%10111
+           .byte  #%10100
+           .byte  #%10100
+
+
         align 256
 RZero      .byte  #%01110
            .byte  #%10001
@@ -1003,6 +1234,42 @@ RNine      .byte  #%11100
            .byte  #%10000
            .byte  #%11100
 
+RA         .byte  #%11100
+           .byte  #%10100
+           .byte  #%11100
+           .byte  #%10100
+           .byte  #%10100
+
+RB         .byte  #%01100
+           .byte  #%10100
+           .byte  #%01100
+           .byte  #%10100
+           .byte  #%01100
+
+RC         .byte  #%11100
+           .byte  #%00100
+           .byte  #%00100
+           .byte  #%00100
+           .byte  #%11100
+
+RD         .byte  #%01100
+           .byte  #%10100
+           .byte  #%10100
+           .byte  #%10100
+           .byte  #%01100
+
+RE         .byte  #%11100
+           .byte  #%00100
+           .byte  #%11100
+           .byte  #%00100
+           .byte  #%11100
+
+RF         .byte  #%11100
+           .byte  #%00100
+           .byte  #%11100
+           .byte  #%00100
+           .byte  #%00100
+
 PlayButton .byte  #%00100000
            .byte  #%01100000
            .byte  #%11100000
@@ -1021,6 +1288,27 @@ MinusBtn   .byte  #%00000000
            .byte  #%11111110
            .byte  #%00000000
            .byte  #%00000000
+
+FR         .byte  #%11101110
+           .byte  #%10001010
+           .byte  #%11101110
+           .byte  #%10001100
+           .byte  #%10001010
+           .byte  #0
+
+DU         .byte  #%11001010
+           .byte  #%10101010
+           .byte  #%10101010
+           .byte  #%10101010
+           .byte  #%11001110
+           .byte  #0
+
+R          .byte  #%11100000
+           .byte  #%10100000
+           .byte  #%11100000
+           .byte  #%11000000
+           .byte  #%10100000
+           .byte  #0
 
 Track       .byte  #10,#3,#1,#7,#10,#3,#2,#7,#10,#3,#3,#7,#10,#3,#4,#7,#10,#3,#5,#7,#10,#3,#6,#7,#10,#3,#7,#7,#10,#3,#8,#7,#10,#3,#9,#7,#255,#3,#2,#5
 ; Track       .byte  #30,#3,#5,#7,#30,#3,#6,#7,#30,#3,#7,#7,#30,#3,#6,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#6,#7,#2,#0,#5,#7,#30,#3,#6,#7,#2,#0,#5,#7,#30,#3,#6,#7,#2,#0,#5,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#3,#7,#2,#0,#5,#7,#30,#3,#3,#7,#2,#0,#5,#7,#255,#3,#2,#5
