@@ -463,13 +463,13 @@ Selection
         bne Selection0
         lda #%11100000
         sta PlayGfxSelect
-
+        sta WSYNC
 Selection0
         cmp #1
         bne Selection1
         lda #%00011111
         sta DurGfxSelect
-
+        
         lda DebounceCtr
         beq AllowBtn1
         jmp SkipSelectionSet
@@ -785,6 +785,7 @@ SkipMusicPlayer
 
         lda DebounceCtr
         beq SkipDecDebounceCtr
+        sta WSYNC
         dec DebounceCtr
 SkipDecDebounceCtr
 
@@ -792,13 +793,9 @@ SkipDecDebounceCtr
         lda #0
         sta COLUBK
         sta CXCLR
-        sta AudSelect
-        sta AudDir
         ldy #26                                         ; 2
-        sty P0VPos                                      ; 3
-        sty P0VPosIdx                                   ; 3
 ; overscan
-        ldx #22                                         ; 2
+        ldx #19                                         ; 2
 Overscan
         dex                                             ; 3
         sta WSYNC                                       ; 2
