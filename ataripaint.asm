@@ -19,6 +19,7 @@ AudFrq1                 ds 1            ; $87
 AudCtl0                 ds 1            ; $88
 AudCtl1                 ds 1            ; $89
 AudChannel              ds 1
+AudTmp                  ds 1
 
 AudSelect               ds 1            ; 
 AudDir                  ds 1            ; 
@@ -196,57 +197,51 @@ ViewableScreenStart
         
         inx                                             ; 2
         inx                                             ; 2
+        txa                                             ; 2
         sta WSYNC                                       ; 3
         sta WSYNC                                       ; 3
         SLEEP 3                                         ; 3
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Note Row - 2-Line Kernel 
-; Line 1 - 76 Cycles
+; Line 1 - 75 Cycles
 ; Line 2 - 9 Cycles
 ; Improvement: Could save cycles by starting at 0 vs 20 
+; Improvement: Extra 10 cycles from sleep and removing WSYNC 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-NoteRow
-        txa                                             ; 2     5
-        sbc #19                                         ; 2     7
+NoteRow 
+        sbc #19                                         ; 2     5
+        lsr                                             ; 2     7       Divide by 2 to get index twice for double height
         lsr                                             ; 2     9       Divide by 2 to get index twice for double height
         lsr                                             ; 2     11      Divide by 2 to get index twice for double height
-        lsr                                             ; 2     13      Divide by 2 to get index twice for double height
-        tay                                             ; 2     15      Transfer A to Y so we can index off Y
+        tay                                             ; 2     13      Transfer A to Y so we can index off Y
         
-        lda PlayButtonMask,y                                ; 4     19      Get the Score From our Player 0 Score Array
-        sta PF0                                         ; 3     22      
+        lda PlayButtonMask,y                            ; 4     17      Get the Score From our Player 0 Score Array
+        sta PF0                                         ; 3     20      
 
-        lda DurGfxValue,y                               ; 4     26      Get the Score From our Player 0 Score Array
-        sta PF1                                         ; 3     29      
+        lda DurGfxValue,y                               ; 4     24      Get the Score From our Player 0 Score Array
+        sta PF1                                         ; 3     27      
         
-        SLEEP 5                                         ; 5     34
-        
-        lda VolGfxValue,y                               ; 4     38      Get the Score From our Player 0 Score Array
-        sta PF2                                         ; 3     41
-        
+        lda VolGfxValue,y                               ; 4     31      Get the Score From our Player 0 Score Array
+        sta PF2                                         ; 3     34
+
+        SLEEP 7                                         ; 7     41
+
         lda FrqGfxValue,y                               ; 4     45      Get the Score From our Player 0 Score Array
         sta PF2                                         ; 3     48      Store Score to PF2
         
-        lda CtlGfxValue,y                               ; 4     52      Get the Score From our Player 0 Score Array
-        
-        sta PF1                                         ; 3     55      Store Score to PF1        
-        ;SLEEP 7                                         ; 7     62
-        inx                                             ; 2     2
-        ;inx                                             ; 2     4
-        SLEEP 3                                         ; 7     62
-        
-        
-        lda #0                                          ; 2     64
-        cpx #60                                         ; 2     6
-        sta PF0                                         ; 3     67
-        sta PF1                                         ; 3     70
-        sta PF2                                         ; 3     73
-        sta WSYNC                                       ; 3     76
+        lda CtlGfxValue,y                               ; 4     51      Get the Score From our Player 0 Score Array        
+        sta PF1                                         ; 3     54      Store Score to PF1        
 
-        ; inx                                             ; 2     2
-        ; inx                                             ; 2     4
-        ; cpx #60                                         ; 2     6
-        ; sta WSYNC                                       ; 3     9
+        inx                                             ; 2     56
+        
+        ldy #0                                          ; 2     58
+        txa                                             ; 2     60
+        sty PF0                                         ; 3     63
+        sty PF2                                         ; 3     66
+        sty PF1                                         ; 3     69 
+        
+        cpx #60                                         ; 2     71
+        sta WSYNC                                       ; 3     74
         bne NoteRow                                     ; 2/3   2/3
 
 
@@ -491,7 +486,7 @@ Selection
 Selection0
         cmp #1
         bne Selection1
-        lda #%00011111
+        lda #%01111111
         sta DurGfxSelect
         ldy INPT4
         bmi PlayNote1
@@ -681,20 +676,6 @@ SkipFrq0ResetDown
         ldx #0
         stx AudFrq0
 SkipFrq0ResetUp
-
-        ldx AudDur0
-        bpl SkipDur0ResetDown
-        ldx #254
-        stx AudDur0
-SkipDur0ResetDown
-
-        ldx AudDur0
-        cpx #255
-        bne SkipDur0ResetUp
-        ldx #0
-        stx AudDur0
-SkipDur0ResetUp
-
 SkipSelectionSet
 
 ;;;;;;;;;;;;;;;;;;;;;;;; Number Drawing ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
@@ -704,21 +685,57 @@ SkipSelectionSet
         sta WSYNC
 
         lda AudDur0
+        and #$0F
+        sta AudTmp
         asl
         asl
         clc
-        adc AudDur0
+        adc AudTmp
 
         ldy #0
         clc
         adc NumberPtr
         sta NumberPtr
-GetDurIdx
+GetDurLoIdx
         lda (NumberPtr),y
         sta DurGfxValue,y
         iny
         cpy #5
-        bne GetDurIdx
+        bne GetDurLoIdx
+
+        lda #<(Zero)
+        sta NumberPtr
+
+        lda #>(Zero)
+        sta NumberPtr+1
+
+        lda AudDur0
+        and #$F0
+        lsr
+        lsr
+        lsr
+        lsr
+        sta AudTmp
+        asl
+        asl
+        clc
+        adc AudTmp
+
+        ldy #0
+        clc
+        adc NumberPtr
+        sta NumberPtr
+GetDurHiIdx
+        lda (NumberPtr),y
+        asl
+        asl
+        asl
+        asl
+        ora DurGfxValue,y
+        sta DurGfxValue,y
+        iny
+        cpy #5
+        bne GetDurHiIdx
 
         lda #<(RZero)
         sta NumberPtr
@@ -1020,35 +1037,35 @@ P0Grfx     .byte  #%00011000
            .byte  #0
 
         align 256
-Zero       .byte  #%01110
-           .byte  #%10001
-           .byte  #%10001
-           .byte  #%10001
-           .byte  #%01110
+Zero       .byte  #%010
+           .byte  #%101
+           .byte  #%101
+           .byte  #%101
+           .byte  #%010
 
-One        .byte  #%00110
-           .byte  #%00010
-           .byte  #%00010
-           .byte  #%00010
-           .byte  #%00111
+One        .byte  #%110
+           .byte  #%010
+           .byte  #%010
+           .byte  #%010
+           .byte  #%111
 
-Two        .byte  #%01111
-           .byte  #%00001
-           .byte  #%01111
-           .byte  #%01000
-           .byte  #%01111
+Two        .byte  #%0111
+           .byte  #%0001
+           .byte  #%0111
+           .byte  #%0100
+           .byte  #%0111
 
-Three      .byte  #%00111
-           .byte  #%00001
-           .byte  #%00111
-           .byte  #%00001
-           .byte  #%00111
+Three      .byte  #%111
+           .byte  #%001
+           .byte  #%111
+           .byte  #%001
+           .byte  #%111
 
-Four       .byte  #%00101
-           .byte  #%00101
-           .byte  #%00111
-           .byte  #%00001
-           .byte  #%00001
+Four       .byte  #%101
+           .byte  #%101
+           .byte  #%111
+           .byte  #%001
+           .byte  #%001
 
 Five       .byte  #%111
            .byte  #%100
@@ -1214,11 +1231,11 @@ OneF          .byte  #%10111
 
 
         align 256
-RZero      .byte  #%01110
-           .byte  #%10001
-           .byte  #%10001
-           .byte  #%10001
-           .byte  #%01110
+RZero      .byte  #%01000
+           .byte  #%10100
+           .byte  #%10100
+           .byte  #%10100
+           .byte  #%01000
 
 ROne       .byte  #%01100
            .byte  #%01000
