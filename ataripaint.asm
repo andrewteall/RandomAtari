@@ -65,6 +65,12 @@ CurrentSelect           ds 1
 
 PlayNote                ds 1
 
+TrackBuilder            ds 64
+TrackBuilderPtr          ds 1
+AddNoteFlag             ds 1
+RemoveNoteFlag          ds 1
+
+
         SEG
         ORG $F000
 
@@ -95,7 +101,7 @@ Clear
         sta BlHPos
 
         ldx #0
-        lda #32
+        lda #48
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -103,7 +109,7 @@ Clear
         sta HMCLR
 
         ldx #1
-        lda #40
+        lda #56
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -124,7 +130,7 @@ Clear
         sta P0VPos 
         sta P0VPosIdx     
 
-        lda #%00000000
+        lda #%00000011
         sta NUSIZ0
         sta NUSIZ1
 
@@ -140,13 +146,15 @@ Clear
         lda #>(Zero)
         sta NumberPtr+1
 
+        ; lda #<TrackBuilder
+        ; sta TrackBuilderPtr
+
         lda #19
         sta PFVPos
-        
+
         lda #%00000001
         sta VDELP0
         sta VDELP1
-
 
 StartOfFrame
         ; Start of vertical blank processing
@@ -178,22 +186,40 @@ VerticalBlank
         ldx #0
         ldy #0
 ViewableScreenStart
-;         cpx #12
+        
+;         cpx #14
 ;         bmi SkipDrawTopTxt
-;         cpx #19
+;         cpx #20
 ;         bpl SkipDrawTopTxt
-;         lda DU,y                                        ; 4     
+        
+;         lda MU,y                                        ; 4     
 ;         sta GRP0                                        ; 3
+        
+;         lda SI,y                                        ; 4     
+;         sta GRP1                                        ; 3
+        
+;         lda CSpace,y                                    ; 4     
+;         sta GRP0                                        ; 3
+;         lda MA,y                                        ; 4     
+;         SLEEP 2
 
-;         lda R,y                                        ; 4     
+;         sta GRP1                                        ; 3        
+;         lda KE,y                                        ; 4     
+;         sta GRP0                                        ; 3
+;         lda RSpace,y                                        ; 4     
 ;         sta GRP1                                        ; 3
 ;         iny
 
 ; SkipDrawTopTxt
         inx                                             ; 2
-        cpx #18                                         ; 2
+        cpx #20                                         ; 2
         sta WSYNC                                       ; 3
         bne ViewableScreenStart                         ; 2/3
+        lda #0
+        ; sta VDELP0
+        ; sta VDELP1
+        sta GRP0
+        sta GRP1
         
         inx                                             ; 2
         inx                                             ; 2
@@ -885,7 +911,63 @@ LoadPlayButton
         cpy #5
         bne LoadPlayButton
 SkipPlayNote
+
+
+; ;;;;;;;;;;;;;;;;;;;;;;;; Add Note ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+
+;         lda AddNoteFlag
+;         beq SkipAddNote
+;         ldy #0        
+
+;         lda AudDur0
+;         sta TrackBuilderPtr,y
+;         iny
+;         lda AudVol0
+;         sta TrackBuilderPtr,y
+;         iny
+;         lda AudFrq0
+;         sta TrackBuilderPtr,y
+;         iny
+;         lda AudCtl0
+;         sta TrackBuilderPtr,y
+;         iny
+;         ; lda #255
+;         ; sta TrackBuilderPtr,y
         
+;         lda TrackBuilderPtr
+;         clc
+;         adc #4
+;         sta TrackBuilderPtr
+
+;         lda #0
+;         sta AddNoteFlag        
+; SkipAddNote
+
+; ;;;;;;;;;;;;;;;;;;;;;;;; Remove Note ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+
+;         lda RemoveNoteFlag
+;         beq SkipRemoveNote
+;         ldy #$FF        
+
+;         lda #0
+;         sta TrackBuilderPtr,y
+;         dey
+;         sta TrackBuilderPtr,y
+;         dey
+;         sta TrackBuilderPtr,y
+;         dey
+;         lda #255
+;         sta TrackBuilderPtr,y
+        
+;         lda TrackBuilderPtr
+;         sec
+;         sbc #4
+;         sta TrackBuilderPtr
+
+;         lda #0
+;         sta RemoveNoteFlag        
+; SkipRemoveNote
+
 
         sec
         bcs SkipMusicPlayer
@@ -949,6 +1031,7 @@ SkipDecDebounceCtr
         sta COLUBK
         sta CXCLR
         ldy #26                                         ; 2
+        
 ; overscan
         ldx #19                                         ; 2
 Overscan
@@ -1037,11 +1120,11 @@ P0Grfx     .byte  #%00011000
            .byte  #0
 
         align 256
-Zero       .byte  #%010
+Zero       .byte  #%111
            .byte  #%101
            .byte  #%101
            .byte  #%101
-           .byte  #%010
+           .byte  #%111
 
 One        .byte  #%110
            .byte  #%010
@@ -1133,11 +1216,11 @@ F          .byte  #%111
            .byte  #%100
            .byte  #%100
 
-OneZero    .byte  #%10010
+OneZero    .byte  #%10111
            .byte  #%10101
            .byte  #%10101
            .byte  #%10101
-           .byte  #%10010
+           .byte  #%10111
 
 OneOne        .byte  #%10010
            .byte  #%10010
@@ -1231,11 +1314,11 @@ OneF          .byte  #%10111
 
 
         align 256
-RZero      .byte  #%01000
+RZero      .byte  #%11100
            .byte  #%10100
            .byte  #%10100
            .byte  #%10100
-           .byte  #%01000
+           .byte  #%11100
 
 ROne       .byte  #%01100
            .byte  #%01000
@@ -1366,14 +1449,42 @@ FR         .byte  #%11101110
            .byte  #%10001010
            .byte  #0
 
-DU         .byte  #%11001010
+MU         .byte  #%10101010
+           .byte  #%11101010
            .byte  #%10101010
            .byte  #%10101010
-           .byte  #%10101010
-           .byte  #%11001110
+           .byte  #%10101110
            .byte  #0
 
-R          .byte  #%11100000
+SI         .byte  #%11101110
+           .byte  #%10000100
+           .byte  #%11100100
+           .byte  #%00100100
+           .byte  #%11101110
+           .byte  #0
+
+CSpace     .byte  #%11100000
+           .byte  #%10000000
+           .byte  #%10000000
+           .byte  #%10000000
+           .byte  #%11100000
+           .byte  #0
+
+MA         .byte  #%10101110
+           .byte  #%11101010
+           .byte  #%10101110
+           .byte  #%10101010
+           .byte  #%10101010
+           .byte  #0
+
+KE         .byte  #%10101110
+           .byte  #%11001000
+           .byte  #%11001110
+           .byte  #%11001000
+           .byte  #%10101110
+           .byte  #0
+
+RSpace     .byte  #%11100000
            .byte  #%10100000
            .byte  #%11100000
            .byte  #%11000000
