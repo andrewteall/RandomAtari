@@ -4,12 +4,6 @@
 ;Start Program
         SEG.U vars
         ORG $80
-BlVPos                  ds 1            ; $80
-BlHPos                  ds 1            ; $81
-P0VPos                  ds 1            ; $82
-
-P0VPosIdx               ds 1            ; $83
-
 AudDur0                 ds 1            ; $84
 AudDur1                 ds 1            ; $85
 AudVol0                 ds 1            ; $84
@@ -31,7 +25,6 @@ NotePtr                 ds 2            ;
 
 DurGfxSelect            ds 1            ; 
 DurGfxValue             ds 5            ; 
-
 
 VolGfxSelect            ds 1            ; 
 VolGfxValue             ds 5            ; 
@@ -59,7 +52,6 @@ PlayButtonMask          ds 5
 NumberPtr               ds 2
 
 DebounceCtr             ds 1
-PFVPos                  ds 1
 
 CurrentSelect           ds 1
 
@@ -94,12 +86,6 @@ Clear
                                                         ;       when the processor status is 
                                                         ;       randomized in Stella
 
-        ldx #76
-        stx BlVPos
-
-        lda #80                                     ; Setting the starting count for the Cursor
-        sta BlHPos
-
         ldx #0
         lda #48
         jsr CalcXPos
@@ -120,37 +106,25 @@ Clear
         sta COLUP0
         sta COLUP1
 
-        lda #9
-        sta COLUPF
-
         lda #%00100101
         sta CTRLPF       
-
-        lda #26
-        sta P0VPos 
-        sta P0VPosIdx     
 
         lda #%00000011
         sta NUSIZ0
         sta NUSIZ1
-
 
         lda #<Track
         sta NotePtr
         lda #>Track
         sta NotePtr+1
 
-        lda #<(Zero)
+        lda #<Zero
         sta NumberPtr
-
-        lda #>(Zero)
+        lda #>Zero
         sta NumberPtr+1
 
         ; lda #<TrackBuilder
         ; sta TrackBuilderPtr
-
-        lda #19
-        sta PFVPos
 
         lda #%00000001
         sta VDELP0
@@ -222,9 +196,7 @@ ViewableScreenStart
         sta GRP1
         
         inx                                             ; 2
-        inx                                             ; 2
         txa                                             ; 2
-        sta WSYNC                                       ; 3
         sta WSYNC                                       ; 3
         SLEEP 3                                         ; 3
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
