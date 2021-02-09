@@ -228,58 +228,58 @@ ViewableScreenStart
         sta WSYNC                                       ; 3
         SLEEP 3                                         ; 3
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Note Row - 2-Line Kernel 
+; Note Row - 1-Line Kernel 
 ; Line 1 - 75 Cycles
-; Line 2 - 9 Cycles
-; Improvement: Could save cycles by starting at 0 vs 20 
 ; Improvement: Extra 10 cycles from sleep and removing WSYNC 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 NoteRow 
-        sbc #19                                         ; 2     5
+        sbc #19                                         ; 2     5       Subtract #19 since teh carry is cleared above   
+                                                        ;               and we want to start on line 20
         lsr                                             ; 2     7       Divide by 2 to get index twice for double height
-        lsr                                             ; 2     9       Divide by 2 to get index twice for double height
-        lsr                                             ; 2     11      Divide by 2 to get index twice for double height
+        lsr                                             ; 2     9       Divide by 2 to get index twice for quadruple height
+        lsr                                             ; 2     11      Divide by 2 to get index twice for octuple height
         tay                                             ; 2     13      Transfer A to Y so we can index off Y
         
-        lda PlayButtonMask,y                            ; 4     17      Get the Score From our Player 0 Score Array
+        lda PlayButtonMask,y                            ; 4     17      Get the Score From our Play Button Mask Array
         sta PF0                                         ; 3     20      
 
-        lda DurGfxValue,y                               ; 4     24      Get the Score From our Player 0 Score Array
+        lda DurGfxValue,y                               ; 4     24      Get the Score From our Duration Gfx Array
         sta PF1                                         ; 3     27      
         
-        lda VolGfxValue,y                               ; 4     31      Get the Score From our Player 0 Score Array
+        lda VolGfxValue,y                               ; 4     31      Get the Score From our Volume Gfx Array
         sta PF2                                         ; 3     34
 
-        SLEEP 7                                         ; 7     41
+        SLEEP 7                                         ; 7     41      Waste 7 cycles to line up the next Pf draw
 
-        lda FrqGfxValue,y                               ; 4     45      Get the Score From our Player 0 Score Array
-        sta PF2                                         ; 3     48      Store Score to PF2
+        lda FrqGfxValue,y                               ; 4     45      Get the Score From our Frequency Gfx Array
+        sta PF2                                         ; 3     48      Store the value to PF2
         
-        lda CtlGfxValue,y                               ; 4     51      Get the Score From our Player 0 Score Array        
-        sta PF1                                         ; 3     54      Store Score to PF1        
+        lda CtlGfxValue,y                               ; 4     51      Get the Score From our Control Gfx Array        
+        sta PF1                                         ; 3     54      Store the value to PF1        
 
-        inx                                             ; 2     56
+        inx                                             ; 2     56      Increment our line number
         
-        ldy #0                                          ; 2     58
-        txa                                             ; 2     60
-        sty PF0                                         ; 3     63
-        sty PF2                                         ; 3     66
-        sty PF1                                         ; 3     69 
+        ldy #0                                          ; 2     58      Reset and clear the playfield
+        txa                                             ; 2     60      Transfer the line number in preparation
+                                                        ;               for the next line
+        sty PF0                                         ; 3     63      Reset and clear the playfield
+        sty PF2                                         ; 3     66      Reset and clear the playfield
+        sty PF1                                         ; 3     69      Reset and clear the playfield
         
-        cpx #60                                         ; 2     71
-        sta WSYNC                                       ; 3     74
-        bne NoteRow                                     ; 2/3   2/3
+        cpx #60                                         ; 2     71      Have we reached line #60
+        sta WSYNC                                       ; 3     74      Wait for New line
+        bne NoteRow                                     ; 2/3   2/3     No then repeat
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Note Selection - 1-Line Kernel 
 ; Line 1 - 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        sta WSYNC                                       ; 3     9
         inx                                             ; 2     4
         inx                                             ; 2     6
         lda #123
         sta COLUPF
-        sta WSYNC                                       ; 3     9
         sta WSYNC                                       ; 3     3
         SLEEP 3                                         ; 3     3
 NoteSelection
