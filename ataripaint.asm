@@ -1447,21 +1447,21 @@ MU         .byte  #%10101010
            .byte  #%10101110
            .byte  #0
 
-SI         .byte  #%11101110
+SI         .byte  #%01101110
            .byte  #%10000100
            .byte  #%11100100
            .byte  #%00100100
-           .byte  #%11101110
+           .byte  #%11001110
            .byte  #0
 
-CSpace     .byte  #%11100000
+CSpace     .byte  #%01100000
            .byte  #%10000000
            .byte  #%10000000
            .byte  #%10000000
-           .byte  #%11100000
+           .byte  #%01100000
            .byte  #0
 
-MA         .byte  #%10101110
+MA         .byte  #%10100100
            .byte  #%11101010
            .byte  #%10101110
            .byte  #%10101010
@@ -1469,13 +1469,13 @@ MA         .byte  #%10101110
            .byte  #0
 
 KE         .byte  #%10101110
-           .byte  #%11001000
-           .byte  #%11001110
-           .byte  #%11001000
+           .byte  #%10101000
+           .byte  #%11001100
+           .byte  #%10101000
            .byte  #%10101110
            .byte  #0
 
-RSpace     .byte  #%11100000
+RSpace     .byte  #%11000000
            .byte  #%10100000
            .byte  #%11100000
            .byte  #%11000000
