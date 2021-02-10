@@ -57,10 +57,13 @@ CurrentSelect           ds 1
 
 PlayNote                ds 1
 
-TrackBuilder            ds 64
+TrackBuilder            ds 32
 TrackBuilderPtr          ds 1
 AddNoteFlag             ds 1
 RemoveNoteFlag          ds 1
+LetterBuffer              ds 1
+LineTemp                ds 1
+YTemp                   ds 1
 
 
         SEG
@@ -87,7 +90,7 @@ Clear
                                                         ;       randomized in Stella
 
         ldx #0
-        lda #48
+        lda #72
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -95,7 +98,7 @@ Clear
         sta HMCLR
 
         ldx #1
-        lda #56
+        lda #80
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -104,6 +107,7 @@ Clear
 
         lda #132
         sta COLUP0
+        ;lda #32
         sta COLUP1
 
         lda #%00100101
@@ -158,54 +162,68 @@ VerticalBlank
         ldx #155
         stx COLUBK
         ldx #0
-        ldy #0
 ViewableScreenStart
+        inx                                             ; 2     59
+        ldy #0
+        cpx #4                                          ; 2     61
+        sta WSYNC                                       ; 3     64
+        bne ViewableScreenStart                         ; 2/3   2/3
         
-;         cpx #14
-;         bmi SkipDrawTopTxt
-;         cpx #20
-;         bpl SkipDrawTopTxt
+; Works from P0 XPos 72-76
+DrawText                                                
+        stx LineTemp                                    ; 3     6
+        sty YTemp                                       ; 3     9
         
-;         lda MU,y                                        ; 4     
-;         sta GRP0                                        ; 3
+        ldx RSpace,y                                    ; 4     13
+        stx LetterBuffer                                ; 3     16
         
-;         lda SI,y                                        ; 4     
-;         sta GRP1                                        ; 3
-        
-;         lda CSpace,y                                    ; 4     
-;         sta GRP0                                        ; 3
-;         lda MA,y                                        ; 4     
-;         SLEEP 2
+        ldx KE,y                                        ; 4     20
 
-;         sta GRP1                                        ; 3        
-;         lda KE,y                                        ; 4     
-;         sta GRP0                                        ; 3
-;         lda RSpace,y                                        ; 4     
-;         sta GRP1                                        ; 3
-;         iny
+        lda MU,y                                        ; 4     24
+        sta GRP0                                        ; 3     27      MU -> [GRP0]
+        
+        lda SI,y                                        ; 4     31
+        sta GRP1                                        ; 3     34      SI -> [GRP1], [GRP0] -> GRP0
+        
+        lda CSpace,y                                    ; 4     38
+        sta GRP0                                        ; 3     41      C  -> [GRP0]. [GRP1] -> GRP1
+        
+        lda MA,y                                        ; 4     45
+        ldy LetterBuffer                                ; 3     48
+        sta GRP1                                        ; 3     51      MA -> [GRP1], [GRP0] -> GRP0
+        stx GRP0                                        ; 3     54      KE -> [GRP0], [GRP1] -> GRP1
+        sty GRP1                                        ; 3     57      R  -> [GRP1], [GRP0] -> GRP0
+        stx GRP0                                        ; 3     60      ?? -> [GRP0], [GRP1] -> GRP1
+        
+        ldx LineTemp                                    ; 3     63
+        ldy YTemp                                       ; 3     66
+        iny                                             ; 2     68
+SkipDrawTopTxt
+        inx                                             ; 2     70
+        cpx #10                                         ; 2     72
+        sta WSYNC                                       ; 3     75
+        bne DrawText                                    ; 2/3   2/3
 
-; SkipDrawTopTxt
-        inx                                             ; 2
-        cpx #20                                         ; 2
-        sta WSYNC                                       ; 3
-        bne ViewableScreenStart                         ; 2/3
+
+TopBuffer
+        inx                                             ; 2     59
+        cpx #20                                         ; 2     61
+        sta WSYNC                                       ; 3     64
+        bne TopBuffer                         ; 2/3   2/3
+
         lda #0
-        ; sta VDELP0
-        ; sta VDELP1
         sta GRP0
         sta GRP1
-        
         inx                                             ; 2
-        txa                                             ; 2
         sta WSYNC                                       ; 3
         SLEEP 3                                         ; 3
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Note Row - 1-Line Kernel 
-; Line 1 - 75 Cycles
+; Line 1 - 74 Cycles
 ; Improvement: Extra 10 cycles from sleep and removing WSYNC 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 NoteRow 
-        sbc #19                                         ; 2     5       Subtract #19 since teh carry is cleared above   
+        sbc #19                                         ; 2     5       Subtract #19 since the carry is cleared above   
                                                         ;               and we want to start on line 20
         lsr                                             ; 2     7       Divide by 2 to get index twice for double height
         lsr                                             ; 2     9       Divide by 2 to get index twice for quadruple height
@@ -221,7 +239,8 @@ NoteRow
         lda VolGfxValue,y                               ; 4     31      Get the Score From our Volume Gfx Array
         sta PF2                                         ; 3     34
 
-        SLEEP 7                                         ; 7     41      Waste 7 cycles to line up the next Pf draw
+        SLEEP 6                                         ; 7     41      Waste 7 cycles to line up the next Pf draw
+        ;sta COLUPF
 
         lda FrqGfxValue,y                               ; 4     45      Get the Score From our Frequency Gfx Array
         sta PF2                                         ; 3     48      Store the value to PF2
@@ -1278,7 +1297,7 @@ OneE          .byte  #%10111
            .byte  #%10100
            .byte  #%10111
 
-OneF          .byte  #%10111
+OneF       .byte  #%10111
            .byte  #%10100
            .byte  #%10111
            .byte  #%10100
@@ -1298,11 +1317,11 @@ ROne       .byte  #%01100
            .byte  #%01000
            .byte  #%11100
 
-RTwo       .byte  #%11110
+RTwo       .byte  #%11100
            .byte  #%10000
-           .byte  #%11110
-           .byte  #%00010
-           .byte  #%11110
+           .byte  #%11100
+           .byte  #%00100
+           .byte  #%11100
 
 RThree     .byte  #%11100
            .byte  #%10000
