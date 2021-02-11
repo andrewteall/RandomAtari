@@ -222,7 +222,9 @@ TopBuffer
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Note Row - 1-Line Kernel 
 ; Line 1 - 74 Cycles
-; Improvement: Extra 6 cycles from sleep and removing WSYNC 
+; Improvement: Extra 6 cycles from sleep and removing WSYNC
+; Improvement: Relocate Code away from away from Page boundary
+;              to skip extra cycle needed
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 NoteRow 
         sbc #19                                         ; 2     5       Subtract #19 since the carry is cleared above   
