@@ -211,9 +211,9 @@ TopBuffer
         sta WSYNC                                       ; 3     64
         bne TopBuffer                                   ; 2/3   2/3
 
-        lda #0
-        sta GRP0
-        sta GRP1
+        lda #0                                          ; 2     This isn't needed but pushes the next NoteRow
+        sta GRP0                                        ; 3     section branch over the oage boundary
+        sta GRP1                                        ; 3     " "    " "    " "   
         inx                                             ; 2
         txa
         sta WSYNC                                       ; 3
