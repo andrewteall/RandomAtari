@@ -209,18 +209,20 @@ TopBuffer
         inx                                             ; 2     59
         cpx #20                                         ; 2     61
         sta WSYNC                                       ; 3     64
-        bne TopBuffer                         ; 2/3   2/3
+        bne TopBuffer                                   ; 2/3   2/3
 
         lda #0
         sta GRP0
         sta GRP1
         inx                                             ; 2
+        txa
         sta WSYNC                                       ; 3
-        SLEEP 3                                         ; 3
+        SLEEP 4                                         ; 3     4       Set to 4 because our branch below crosses the
+                                                        ;               page boundary so it takes an extra cycle
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Note Row - 1-Line Kernel 
 ; Line 1 - 74 Cycles
-; Improvement: Extra 10 cycles from sleep and removing WSYNC 
+; Improvement: Extra 6 cycles from sleep and removing WSYNC 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 NoteRow 
         sbc #19                                         ; 2     5       Subtract #19 since the carry is cleared above   
@@ -231,35 +233,35 @@ NoteRow
         tay                                             ; 2     13      Transfer A to Y so we can index off Y
         
         lda PlayButtonMask,y                            ; 4     17      Get the Score From our Play Button Mask Array
-        sta PF0                                         ; 3     20      
+        sta PF0                                         ; 3     20      Store the value to PF0
 
         lda DurGfxValue,y                               ; 4     24      Get the Score From our Duration Gfx Array
-        sta PF1                                         ; 3     27      
+        sta PF1                                         ; 3     27      Store the value to PF1
         
         lda VolGfxValue,y                               ; 4     31      Get the Score From our Volume Gfx Array
-        sta PF2                                         ; 3     34
+        sta PF2                                         ; 3     34      Store the value to PF2
 
-        SLEEP 6                                         ; 7     41      Waste 7 cycles to line up the next Pf draw
-        ;sta COLUPF
+        SLEEP 6                                         ; 6     40      Waste 6 cycles to line up the next Pf draw
 
-        lda FrqGfxValue,y                               ; 4     45      Get the Score From our Frequency Gfx Array
-        sta PF2                                         ; 3     48      Store the value to PF2
+        lda FrqGfxValue,y                               ; 4     44      Get the Score From our Frequency Gfx Array
+        sta PF2                                         ; 3     47      Store the value to PF2
         
-        lda CtlGfxValue,y                               ; 4     51      Get the Score From our Control Gfx Array        
-        sta PF1                                         ; 3     54      Store the value to PF1        
+        lda CtlGfxValue,y                               ; 4     50      Get the Score From our Control Gfx Array        
+        sta PF1                                         ; 3     53      Store the value to PF1        
 
-        inx                                             ; 2     56      Increment our line number
+        inx                                             ; 2     55      Increment our line number
         
-        ldy #0                                          ; 2     58      Reset and clear the playfield
-        txa                                             ; 2     60      Transfer the line number in preparation
+        ldy #0                                          ; 2     57      Reset and clear the playfield
+        txa                                             ; 2     59      Transfer the line number in preparation
                                                         ;               for the next line
-        sty PF0                                         ; 3     63      Reset and clear the playfield
-        sty PF2                                         ; 3     66      Reset and clear the playfield
-        sty PF1                                         ; 3     69      Reset and clear the playfield
+        sty PF0                                         ; 3     62      Reset and clear the playfield
+        sty PF2                                         ; 3     65      Reset and clear the playfield
+        sty PF1                                         ; 3     68      Reset and clear the playfield
         
-        cpx #60                                         ; 2     71      Have we reached line #60
-        sta WSYNC                                       ; 3     74      Wait for New line
-        bne NoteRow                                     ; 2/3   2/3     No then repeat
+        cpx #60                                         ; 2     70      Have we reached line #60
+        sta WSYNC                                       ; 3     73      Wait for New line
+        bne NoteRow                                     ; 2/3+1 2/3+1   No then repeat,Currently Crossing Page Boundary 
+                                                        ;               So Add one cycle
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -763,7 +765,7 @@ GetDurHiIdx
         lda AudVol0
         asl
         asl
-        clc
+        ;clc
         adc AudVol0
 
         ldy #0
