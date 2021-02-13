@@ -21,7 +21,7 @@ AudDir                  ds 1            ;
 FrameCtr                ds 1            ; 
 NoteDuration            ds 1            ; 
 
-NotePtr                 ds 2            ; 
+NotePtr                 ds 2            ; 16
 
 DurGfxSelect            ds 1            ; 
 DurGfxValue             ds 5            ; 
@@ -33,7 +33,7 @@ FrqGfxSelect            ds 1            ;
 FrqGfxValue             ds 5            ; 
 
 CtlGfxSelect            ds 1            ; 
-CtlGfxValue             ds 5            ; 
+CtlGfxValue             ds 5            ; 40
 
 PlayGfxValue            ds 5            ; 
 PlayGfxSelect           ds 1
@@ -42,7 +42,7 @@ PlayAllGfxValue         ds 5            ;
 PlayAllGfxSelect        ds 1
 
 ChannelGfxValue         ds 5            ; 
-ChannelGfxSelect        ds 1
+ChannelGfxSelect        ds 1            ; 58
 
 AddGfxSelect            ds 1
 RemoveGfxSelect         ds 1
@@ -55,16 +55,16 @@ DebounceCtr             ds 1
 
 CurrentSelect           ds 1
 
-PlayNote                ds 1
+PlayNoteFlag                ds 1
 
-TrackBuilder            ds 32
-TrackBuilderPtr          ds 1
+TrackBuilder            ds 32           ; 102
+TrackBuilderPtr         ds 1
 AddNoteFlag             ds 1
 RemoveNoteFlag          ds 1
-LetterBuffer              ds 1
+LetterBuffer            ds 1
 LineTemp                ds 1
-YTemp                   ds 1
-
+YTemp                   ds 1            ; 108
+;TODO Optimize Memory Usage
 
         SEG
         ORG $F000
@@ -169,7 +169,9 @@ ViewableScreenStart
         sta WSYNC                                       ; 3     64
         bne ViewableScreenStart                         ; 2/3   2/3
         
-; Works from P0 XPos 72-76
+; Works from P0 XPos 64 - decreased from 72-75 because of page boundaries
+;                         and now moved back to 72
+; TODO: Multiline/Multiplex to draw more charecters
 DrawText                                                
         stx LineTemp                                    ; 3     6
         sty YTemp                                       ; 3     9
@@ -373,16 +375,16 @@ ControlRow
         sta WSYNC                                       ; 3     3
         SLEEP 3                                         ; 3     3
 ControlSelection
-        lda PlayAllGfxSelect                               ; 3     6
+        lda PlayAllGfxSelect                            ; 3     6
         sta PF0                                         ; 3     9
         lda AddGfxSelect                                ; 3     12
         sta PF1                                         ; 3     15         
-        lda RemoveGfxSelect                                ; 3     18
+        lda RemoveGfxSelect                             ; 3     18
         sta PF2                                         ; 3     21
 
         SLEEP 22                                        ; 5  
 
-        lda ChannelGfxSelect                                ; 3     45
+        lda ChannelGfxSelect                            ; 3     45
         sta PF2                                         ; 3     48
         
         
@@ -395,9 +397,9 @@ ControlSelection
 
 
         inx                                             ; 2     4
-        cpx #128                                         ; 2     6
+        cpx #128                                        ; 2     6
         sta WSYNC                                       ; 3     9
-        bne ControlSelection                               ; 2/3   2/3
+        bne ControlSelection                            ; 2/3   2/3
 
         
         lda #0                                          ; 2     64
@@ -442,11 +444,12 @@ EndOfViewableScreen
 
         lda #%00000010
         sta VBLANK
-        
+; TODO: Fix timing back to 262 lines
+; Left and Right Selector Movement
         lda DebounceCtr
         bne SkipCursorMove
         
-        lda #%01000000            
+        lda #%01000000
         bit SWCHA
         bne CursorLeft
         lda #10
@@ -460,8 +463,6 @@ CursorLeft
         sta DebounceCtr
         inc CurrentSelect
 CursorRight
-CursorMove
-
 SkipCursorMove
         lda CurrentSelect
         bpl SkipSelectionResetDown
@@ -493,17 +494,16 @@ Selection
         sta ChannelGfxSelect
 
         lda CurrentSelect
+        
         cmp #0
         bne Selection0
         lda #%11100000
         sta PlayGfxSelect
         
-        sta WSYNC
-
         ldy INPT4
         bmi Selection0
         lda #0
-        sta PlayNote
+        sta PlayNoteFlag
 Selection0
         cmp #1
         bne Selection1
@@ -512,7 +512,7 @@ Selection0
         ldy INPT4
         bmi PlayNote1
         lda #0
-        sta PlayNote
+        sta PlayNoteFlag
 PlayNote1
         lda DebounceCtr
         beq AllowBtn1
@@ -533,12 +533,12 @@ Dur0Up
 Selection1
         cmp #2
         bne Selection2
-        lda #%11111000
+        lda #%00111110
         sta VolGfxSelect
         ldy INPT4
         bmi PlayNote2
         lda #0
-        sta PlayNote
+        sta PlayNoteFlag
 PlayNote2
         lda DebounceCtr
         beq AllowBtn2
@@ -560,12 +560,12 @@ Vol0Up
 Selection2
         cmp #3
         bne Selection3
-        lda #%00011111
+        lda #%11111111
         sta FrqGfxSelect
         ldy INPT4
         bmi PlayNote3
         lda #0
-        sta PlayNote
+        sta PlayNoteFlag
 PlayNote3
         lda DebounceCtr
         beq AllowBtn3
@@ -593,7 +593,7 @@ Selection3
         ldy INPT4
         bmi PlayNote4
         lda #0
-        sta PlayNote
+        sta PlayNoteFlag
 PlayNote4
         lda DebounceCtr
         beq AllowBtn4
@@ -622,11 +622,21 @@ Selection5
         bne Selection6
         lda #%00011111
         sta AddGfxSelect
+
+        ldy INPT4
+        bmi PlayNote4
+        lda #1
+        sta AddNoteFlag
 Selection6
         cmp #7
         bne Selection7
         lda #%11111000
         sta RemoveGfxSelect
+
+        ldy INPT4
+        bmi PlayNote4
+        lda #1
+        sta RemoveNoteFlag
 Selection7
         cmp #8
         bne Selection8
@@ -776,8 +786,8 @@ GetDurHiIdx
 GetVolIdx
         lda (NumberPtr),y
         asl
-        asl
-        asl
+        ;asl
+        ;asl
         sta VolGfxValue,y
         iny
         cpy #5
@@ -790,21 +800,74 @@ GetVolIdx
         sta NumberPtr+1  
  
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;         lda AudFrq0
+;         asl
+;         asl
+;         clc
+;         adc AudFrq0
+
+;         ldy #0
+;         adc NumberPtr
+;         sta NumberPtr
+; GetFrqIdx
+;         lda (NumberPtr),y
+;         sta FrqGfxValue,y
+;         iny
+;         cpy #5
+;         bne GetFrqIdx
         lda AudFrq0
+        and #$0F
+        sta AudTmp
         asl
         asl
         clc
-        adc AudFrq0
+        adc AudTmp
 
         ldy #0
+        clc
         adc NumberPtr
         sta NumberPtr
-GetFrqIdx
+GetFrqLoIdx
         lda (NumberPtr),y
         sta FrqGfxValue,y
         iny
         cpy #5
-        bne GetFrqIdx
+        bne GetFrqLoIdx
+
+        lda #<(Zero)
+        sta NumberPtr
+
+        lda #>(Zero)
+        sta NumberPtr+1 
+
+
+        lda AudFrq0
+        and #$F0
+        lsr
+        lsr
+        lsr
+        lsr
+        sta AudTmp
+        asl
+        asl
+        clc
+        adc AudTmp
+
+        ldy #0
+        clc
+        adc NumberPtr
+        sta NumberPtr
+GetFrqHiIdx
+        lda (NumberPtr),y
+        asl
+        asl
+        asl
+        asl
+        ora FrqGfxValue,y
+        sta FrqGfxValue,y
+        iny
+        cpy #5
+        bne GetFrqHiIdx
 
         lda #<(RZero)
         sta NumberPtr
@@ -862,7 +925,7 @@ GetChannelIdx
 
 
 ;;;;;;;;;;;;;; Note Player
-        lda PlayNote
+        lda PlayNoteFlag
         bne SkipPlayNote
         lda AudDur0
         cmp FrameCtr
@@ -886,7 +949,6 @@ LoadPauseButton
         cpy #5
         bne LoadPauseButton
 
-
         sec
         bcs SkipPlayNote
 TurnOffNote
@@ -896,7 +958,7 @@ TurnOffNote
         sta AUDC0
         sta FrameCtr
         lda #1
-        sta PlayNote
+        sta PlayNoteFlag
 
         ldy #0
 LoadPlayButton
@@ -910,58 +972,58 @@ SkipPlayNote
 
 ; ;;;;;;;;;;;;;;;;;;;;;;;; Add Note ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 
-;         lda AddNoteFlag
-;         beq SkipAddNote
-;         ldy #0        
+        lda AddNoteFlag
+        beq SkipAddNote
+        ldy #0        
 
-;         lda AudDur0
-;         sta TrackBuilderPtr,y
-;         iny
-;         lda AudVol0
-;         sta TrackBuilderPtr,y
-;         iny
-;         lda AudFrq0
-;         sta TrackBuilderPtr,y
-;         iny
-;         lda AudCtl0
-;         sta TrackBuilderPtr,y
-;         iny
-;         ; lda #255
-;         ; sta TrackBuilderPtr,y
+        lda AudDur0
+        sta TrackBuilderPtr,y
+        iny
+        lda AudVol0
+        sta TrackBuilderPtr,y
+        iny
+        lda AudFrq0
+        sta TrackBuilderPtr,y
+        iny
+        lda AudCtl0
+        sta TrackBuilderPtr,y
+        iny
+        lda #255
+        sta TrackBuilderPtr,y
         
-;         lda TrackBuilderPtr
-;         clc
-;         adc #4
-;         sta TrackBuilderPtr
+        lda TrackBuilderPtr
+        clc
+        adc #4
+        sta TrackBuilderPtr
 
-;         lda #0
-;         sta AddNoteFlag        
-; SkipAddNote
+        lda #0
+        sta AddNoteFlag        
+SkipAddNote
 
 ; ;;;;;;;;;;;;;;;;;;;;;;;; Remove Note ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 
-;         lda RemoveNoteFlag
-;         beq SkipRemoveNote
-;         ldy #$FF        
+        lda RemoveNoteFlag
+        beq SkipRemoveNote
+        ldy #$FF        
 
-;         lda #0
-;         sta TrackBuilderPtr,y
-;         dey
-;         sta TrackBuilderPtr,y
-;         dey
-;         sta TrackBuilderPtr,y
-;         dey
-;         lda #255
-;         sta TrackBuilderPtr,y
+        lda #0
+        sta TrackBuilderPtr,y
+        dey
+        sta TrackBuilderPtr,y
+        dey
+        sta TrackBuilderPtr,y
+        dey
+        lda #255
+        sta TrackBuilderPtr,y
         
-;         lda TrackBuilderPtr
-;         sec
-;         sbc #4
-;         sta TrackBuilderPtr
+        lda TrackBuilderPtr
+        sec
+        sbc #4
+        sta TrackBuilderPtr
 
-;         lda #0
-;         sta RemoveNoteFlag        
-; SkipRemoveNote
+        lda #0
+        sta RemoveNoteFlag        
+SkipRemoveNote
 
 
         sec
@@ -1084,35 +1146,35 @@ CalcXPos:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-P0Grfx     .byte  #%00011000
-           .byte  #%00000000
-           .byte  #%00111100
-           .byte  #%00000000
-           .byte  #%01111110
-           .byte  #%00000000
-           .byte  #%11111111
-           .byte  #%00000000
-           .byte  #%00000000
-           .byte  #%00000000
-           .byte  #%00000000
-           .byte  #%00000000
-           .byte  #%00000000
-           .byte  #%00000000
-           .byte  #%00000000
-           .byte  #%00000000
-           .byte  #%00000000
-           .byte  #%00000000
-           .byte  #%00000000
-           .byte  #%00000000
-           .byte  #%11111111
-           .byte  #%00000000
-           .byte  #%01111110
-           .byte  #%00000000
-           .byte  #%00111100
-           .byte  #%00000000
-           .byte  #%00011000
-           .byte  #0
-           .byte  #0
+; P0Grfx     .byte  #%00011000
+;            .byte  #%00000000
+;            .byte  #%00111100
+;            .byte  #%00000000
+;            .byte  #%01111110
+;            .byte  #%00000000
+;            .byte  #%11111111
+;            .byte  #%00000000
+;            .byte  #%00000000
+;            .byte  #%00000000
+;            .byte  #%00000000
+;            .byte  #%00000000
+;            .byte  #%00000000
+;            .byte  #%00000000
+;            .byte  #%00000000
+;            .byte  #%00000000
+;            .byte  #%00000000
+;            .byte  #%00000000
+;            .byte  #%00000000
+;            .byte  #%00000000
+;            .byte  #%11111111
+;            .byte  #%00000000
+;            .byte  #%01111110
+;            .byte  #%00000000
+;            .byte  #%00111100
+;            .byte  #%00000000
+;            .byte  #%00011000
+;            .byte  #0
+;            .byte  #0
 
         align 256
 Zero       .byte  #%111
@@ -1211,101 +1273,101 @@ F          .byte  #%111
            .byte  #%100
            .byte  #%100
 
-OneZero    .byte  #%10111
-           .byte  #%10101
-           .byte  #%10101
-           .byte  #%10101
-           .byte  #%10111
+; OneZero    .byte  #%10111
+;            .byte  #%10101
+;            .byte  #%10101
+;            .byte  #%10101
+;            .byte  #%10111
 
-OneOne        .byte  #%10010
-           .byte  #%10010
-           .byte  #%10010
-           .byte  #%10010
-           .byte  #%10010
+; OneOne        .byte  #%10010
+;            .byte  #%10010
+;            .byte  #%10010
+;            .byte  #%10010
+;            .byte  #%10010
 
-OneTwo        .byte  #%10111
-           .byte  #%10001
-           .byte  #%10111
-           .byte  #%10100
-           .byte  #%10111
+; OneTwo        .byte  #%10111
+;            .byte  #%10001
+;            .byte  #%10111
+;            .byte  #%10100
+;            .byte  #%10111
 
-OneThree      .byte  #%10111
-           .byte  #%10001
-           .byte  #%10111
-           .byte  #%10001
-           .byte  #%10111
+; OneThree      .byte  #%10111
+;            .byte  #%10001
+;            .byte  #%10111
+;            .byte  #%10001
+;            .byte  #%10111
 
-OneFour       .byte  #%10101
-           .byte  #%10101
-           .byte  #%10111
-           .byte  #%10001
-           .byte  #%10001
+; OneFour       .byte  #%10101
+;            .byte  #%10101
+;            .byte  #%10111
+;            .byte  #%10001
+;            .byte  #%10001
 
-OneFive       .byte  #%10111
-           .byte  #%10100
-           .byte  #%10111
-           .byte  #%10001
-           .byte  #%10111
+; OneFive       .byte  #%10111
+;            .byte  #%10100
+;            .byte  #%10111
+;            .byte  #%10001
+;            .byte  #%10111
 
-OneSix        .byte  #%10111
-           .byte  #%10100
-           .byte  #%10111
-           .byte  #%10101
-           .byte  #%10111
+; OneSix        .byte  #%10111
+;            .byte  #%10100
+;            .byte  #%10111
+;            .byte  #%10101
+;            .byte  #%10111
 
-OneSeven      .byte  #%10111
-           .byte  #%10001
-           .byte  #%10001
-           .byte  #%10001
-           .byte  #%10001
+; OneSeven      .byte  #%10111
+;            .byte  #%10001
+;            .byte  #%10001
+;            .byte  #%10001
+;            .byte  #%10001
 
-OneEight      .byte  #%10111
-           .byte  #%10101
-           .byte  #%10111
-           .byte  #%10101
-           .byte  #%10111
+; OneEight      .byte  #%10111
+;            .byte  #%10101
+;            .byte  #%10111
+;            .byte  #%10101
+;            .byte  #%10111
 
-OneNine       .byte  #%10111
-           .byte  #%10101
-           .byte  #%10111
-           .byte  #%10001
-           .byte  #%10111
+; OneNine       .byte  #%10111
+;            .byte  #%10101
+;            .byte  #%10111
+;            .byte  #%10001
+;            .byte  #%10111
 
-OneA          .byte  #%10111
-           .byte  #%10101
-           .byte  #%10111
-           .byte  #%10101
-           .byte  #%10101
+; OneA          .byte  #%10111
+;            .byte  #%10101
+;            .byte  #%10111
+;            .byte  #%10101
+;            .byte  #%10101
 
-OneB          .byte  #%10110
-           .byte  #%10101
-           .byte  #%10110
-           .byte  #%10101
-           .byte  #%10110
+; OneB          .byte  #%10110
+;            .byte  #%10101
+;            .byte  #%10110
+;            .byte  #%10101
+;            .byte  #%10110
 
-OneC          .byte  #%10111
-           .byte  #%10100
-           .byte  #%10100
-           .byte  #%10100
-           .byte  #%10111
+; OneC          .byte  #%10111
+;            .byte  #%10100
+;            .byte  #%10100
+;            .byte  #%10100
+;            .byte  #%10111
 
-OneD          .byte  #%10110
-           .byte  #%10101
-           .byte  #%10101
-           .byte  #%10101
-           .byte  #%10110
+; OneD          .byte  #%10110
+;            .byte  #%10101
+;            .byte  #%10101
+;            .byte  #%10101
+;            .byte  #%10110
 
-OneE          .byte  #%10111
-           .byte  #%10100
-           .byte  #%10111
-           .byte  #%10100
-           .byte  #%10111
+; OneE          .byte  #%10111
+;            .byte  #%10100
+;            .byte  #%10111
+;            .byte  #%10100
+;            .byte  #%10111
 
-OneF       .byte  #%10111
-           .byte  #%10100
-           .byte  #%10111
-           .byte  #%10100
-           .byte  #%10100
+; OneF       .byte  #%10111
+;            .byte  #%10100
+;            .byte  #%10111
+;            .byte  #%10100
+;            .byte  #%10100
 
 
         align 256
@@ -1436,14 +1498,8 @@ MinusBtn   .byte  #%00000000
            .byte  #%11111110
            .byte  #%00000000
            .byte  #%00000000
-
-FR         .byte  #%11101110
-           .byte  #%10001010
-           .byte  #%11101110
-           .byte  #%10001100
-           .byte  #%10001010
-           .byte  #0
-
+        
+        align 256
 MU         .byte  #%10101010
            .byte  #%11101010
            .byte  #%10101010
