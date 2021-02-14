@@ -442,95 +442,98 @@ EndOfViewableScreen
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; end of screen - enter blanking
 
-        lda #%00000010
-        sta VBLANK
-; TODO: Fix timing back to 262 lines
+        lda #%00000010                                  ; 2     4
+        sta VBLANK                                      ; 3     7
 ; Left and Right Selector Movement
-        lda DebounceCtr
-        bne SkipCursorMove
+        lda DebounceCtr                                 ; 3     10
+        bne SkipCursorMove                              ; 2/3   12/13
         
-        lda #%01000000
-        bit SWCHA
-        bne CursorLeft
-        lda #10
-        sta DebounceCtr
-        dec CurrentSelect
+        lda #%01000000                                  ; 2     14
+        bit SWCHA                                       ; 4     16
+        bne CursorLeft                                  ; 2/3   18/19
+        lda #10                                         ; 2     20
+        sta DebounceCtr                                 ; 3     23
+        dec CurrentSelect                               ; 5     28
 CursorLeft
-        lda #%10000000            
-        bit SWCHA
-        bne CursorRight
-        lda #10
-        sta DebounceCtr
-        inc CurrentSelect
+        lda #%10000000                                  ; 2     30
+        bit SWCHA                                       ; 4     34
+        bne CursorRight                                 ; 2/3   36/37
+        lda #10                                         ; 2     38
+        sta DebounceCtr                                 ; 3     41
+        inc CurrentSelect                               ; 5     46
 CursorRight
 SkipCursorMove
-        lda CurrentSelect
-        bpl SkipSelectionResetDown
-        lda #8
-        sta CurrentSelect
+
+        lda CurrentSelect                               ; 3     49
+        bpl SkipSelectionResetDown                      ; 2/3   51/52
+        lda #8                                          ; 2     53
+        sta CurrentSelect                               ; 3     56
 SkipSelectionResetDown
-
-        lda CurrentSelect
-        cmp #9
-        bne SkipSelectionResetUp
-        lda #0
-        sta CurrentSelect
+        lda CurrentSelect                               ; 3     59
+        cmp #9                                          ; 2     61
+        bne SkipSelectionResetUp                        ; 2/3   63/64
+        lda #0                                          ; 2     65
+        sta CurrentSelect                               ; 3     68
 SkipSelectionResetUp
-
+        sta WSYNC
 
 ;;;;;;;;;;;;;;;;;;;;; Selection Detection ;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #23
+        sta TIM64T
 Selection
-        lda #0
-        sta PlayGfxSelect
-        sta DurGfxSelect
-        sta VolGfxSelect
-        sta FrqGfxSelect
-        sta CtlGfxSelect
-        sta PlayAllGfxSelect
-        sta AddGfxSelect
-        sta RemoveGfxSelect
-        sta ChannelGfxSelect
+        lda #0                                          ; 2     2
+        sta PlayGfxSelect                               ; 3     5
+        sta DurGfxSelect                                ; 3     8
+        sta VolGfxSelect                                ; 3     11
+        sta FrqGfxSelect                                ; 3     14
+        sta CtlGfxSelect                                ; 3     17
+        sta PlayAllGfxSelect                            ; 3     20
+        sta AddGfxSelect                                ; 3     23
+        sta RemoveGfxSelect                             ; 3     26
+        sta ChannelGfxSelect                            ; 3     29
 
-        lda CurrentSelect
+        lda CurrentSelect                               ; 3     32
         
-        cmp #0
-        bne Selection0
-        lda #%11100000
-        sta PlayGfxSelect
+        cmp #0                                          ; 2     34
+        bne Selection0                                  ; 2/3   36/37
+        lda #%11100000                                  ; 2     38
+        sta PlayGfxSelect                               ; 3     41
         
-        ldy INPT4
-        bmi Selection0
-        lda #0
-        sta PlayNoteFlag
+        ldy INPT4                                       ; 3     44
+        bmi Selection0                                  ; 2/3   46/47
+        lda #0                                          ; 2     48
+        sta PlayNoteFlag                                ; 3     51
 Selection0
-        cmp #1
-        bne Selection1
-        lda #%01111111
-        sta DurGfxSelect
-        ldy INPT4
-        bmi PlayNote1
-        lda #0
-        sta PlayNoteFlag
+        sta WSYNC                                       ; 3     54
+        cmp #1                                          ; 2     2
+        bne Selection1                                  ; 2/3   4/5
+        lda #%01111111                                  ; 2     6
+        sta DurGfxSelect                                ; 3     9
+        ldy INPT4                                       ; 3     12
+        bmi PlayNote1                                   ; 2/3   14/15
+        lda #0                                          ; 2     16
+        sta PlayNoteFlag                                ; 3     19
 PlayNote1
-        lda DebounceCtr
-        beq AllowBtn1
-        jmp SkipSelectionSet
+        lda DebounceCtr                                 ; 3     22
+        beq AllowBtn1                                   ; 2/3   24/25
+        jmp SkipSelectionSet                            ; 3     27
 AllowBtn1
-        lda #%00010000            
-        bit SWCHA
-        bne Dur0Down
-        inc AudDur0
-        jmp SelectionSet
+        lda #%00010000                                  ; 2
+        bit SWCHA                                       ; 3
+        bne Dur0Down                                    ; 2/3
+        inc AudDur0                                     ; 5
+        jmp SelectionSet                                ; 3
 Dur0Down
-        lda #%00100000            
-        bit SWCHA
-        bne Dur0Up
-        dec AudDur0
-        jmp SelectionSet
+        lda #%00100000                                  ; 2
+        bit SWCHA                                       ; 3
+        bne Dur0Up                                      ; 2/3
+        dec AudDur0                                     ; 5
+        jmp SelectionSet                                ; 3
 Dur0Up
 Selection1
+
         cmp #2
         bne Selection2
         lda #%00111110
@@ -642,7 +645,7 @@ Selection7
         bne Selection8
         lda #%00011111
         sta ChannelGfxSelect
-
+        
         lda DebounceCtr
         beq AllowBtn8
         jmp SkipSelectionSet
@@ -668,6 +671,8 @@ Selection8
 SelectionSet
         lda #10
         sta DebounceCtr
+SkipSelectionSet
+
 
         ldx AudVol0
         bpl SkipVol0ResetDown
@@ -707,8 +712,6 @@ SkipFrq0ResetDown
         ldx #0
         stx AudFrq0
 SkipFrq0ResetUp
-SkipSelectionSet
-
 ;;;;;;;;;;;;;;;;;;;;;;;; Number Drawing ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1089,8 +1092,11 @@ SkipDecDebounceCtr
         sta CXCLR
         ldy #26                                         ; 2
         
+WaitLoop
+        lda INTIM
+        bne WaitLoop
 ; overscan
-        ldx #19                                         ; 2
+        ldx #11                                         ; 2
 Overscan
         dex                                             ; 3
         sta WSYNC                                       ; 2
