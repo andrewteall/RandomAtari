@@ -171,7 +171,8 @@ ViewableScreenStart
         
 ; Works from P0 XPos 64 - decreased from 72-75 because of page boundaries
 ;                         and now moved back to 72
-; TODO: Multiline/Multiplex to draw more charecters
+; TODO: Be able to set text anywhere
+; TODO: Multiline/Multiplex to draw more characters
 DrawText                                                
         stx LineTemp                                    ; 3     6
         sty YTemp                                       ; 3     9
