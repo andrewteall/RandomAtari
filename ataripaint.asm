@@ -181,8 +181,8 @@ DrawText
         stx LineTemp                                    ; 3     6
         sty YTemp                                       ; 3     9
         
-        ldx RSpace,y                                    ; 4     13
-        stx LetterBuffer                                ; 3     16
+        ; ldx RSpace,y                                    ; 4     13
+        ; stx LetterBuffer                                ; 3     16
         
         ldx KE,y                                        ; 4     20
 
@@ -534,7 +534,7 @@ SkipSelectionResetUp
 ;;;;;;;;;;;;;;;;;;;;; Selection Detection ;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #23
+        lda #30
         sta TIM64T
 Selection
         lda #0                                          ; 2     2
@@ -1082,15 +1082,48 @@ SkipAddNote
         sta RemoveNoteFlag        
 SkipRemoveNote
 
+
+; Frame Toggle
         lda FrameShifter
         bne ToggleFrame0
         lda #1
         sta FrameShifter
+        ldx #0
+        lda #72
+        jsr CalcXPos
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
+
+        ldx #1
+        lda #80
+        jsr CalcXPos
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
+
         sec
         bcs ToggleFrame1
 ToggleFrame0        
         lda #0
         sta FrameShifter
+        ldx #0
+        lda #12
+        jsr CalcXPos
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
+
+        ldx #1
+        lda #20
+        jsr CalcXPos
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
 ToggleFrame1
         sec
         bcs SkipMusicPlayer
@@ -1159,7 +1192,7 @@ WaitLoop
         lda INTIM
         bne WaitLoop
 ; overscan
-        ldx #11                                         ; 2
+        ldx #5                                         ; 2
 Overscan
         dex                                             ; 3
         sta WSYNC                                       ; 2
