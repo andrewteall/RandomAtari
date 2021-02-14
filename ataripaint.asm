@@ -1,6 +1,6 @@
         processor 6502
-        include "includes/vcs.h"
-        include "includes/macro.h"
+        include includes/vcs.h
+        include includes/macro.h
 ;Start Program
         SEG.U vars
         ORG $80
