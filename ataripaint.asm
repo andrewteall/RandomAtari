@@ -412,6 +412,10 @@ ControlSelection
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #9
         sta COLUPF
+;TODO: Draw Note letters from memory location
+;TODO: Add Multi-Channel Playback
+;TODO: Add Pause/Stop for play track
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; 26 cycles
