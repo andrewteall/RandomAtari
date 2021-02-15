@@ -72,7 +72,8 @@ FrameShifter            ds 1
 
 ;PATTERN           = $80 ; storage Location (1st byte in RAM)
 P0HEIGHT   =  #28
-
+TITLETEXTXSTARTPOSITION = #47
+SLEEPTIMER=TITLETEXTXSTARTPOSITION/3 +51
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -91,7 +92,7 @@ Clear
                                                         ;       randomized in Stella
 
         ldx #0
-        lda #72
+        lda #TITLETEXTXSTARTPOSITION
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -99,7 +100,7 @@ Clear
         sta HMCLR
 
         ldx #1
-        lda #80
+        lda #TITLETEXTXSTARTPOSITION+8
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -163,17 +164,23 @@ VerticalBlank
         ldx #155
         stx COLUBK
         ldx #0
+        IF TITLETEXTXSTARTPOSITION <= 47
+         sta WSYNC                                      ; 3     64
+        ENDIF
 ViewableScreenStart
         inx                                             ; 2     59
         ldy #0
-        cpx #4                                          ; 2     61
+        cpx #3                                          ; 2     61
         sta WSYNC                                       ; 3     64
         bne ViewableScreenStart                         ; 2/3   2/3
-        
+
 ; Works from P0 XPos 64 - decreased from 72-75 because of page boundaries
 ;                         and now moved back to 72
-; TODO: Be able to set text anywhere
-DrawText                                                
+; TODO: Multiplex Characters for more than 12 chars per line
+        SLEEP SLEEPTIMER
+        inx
+DrawText
+        
         stx LineTemp                                    ; 3     6
         sty YTemp                                       ; 3     9
         
@@ -204,7 +211,9 @@ DrawText
 
         inx                                             ; 2     70
         cpx #10                                         ; 2     72
-        sta WSYNC                                       ; 3     75
+        ;sta WSYNC                                       ; 3     75
+        nop
+        nop
         bne DrawText                                    ; 2/3   2/3
 
 TopBuffer
