@@ -72,7 +72,7 @@ FrameShifter            ds 1
 
 ;PATTERN           = $80 ; storage Location (1st byte in RAM)
 P0HEIGHT   =  #28
-TITLETEXTXSTARTPOSITION = #47
+TITLETEXTXSTARTPOSITION = #57
 SLEEPTIMER=TITLETEXTXSTARTPOSITION/3 +51
 
 
