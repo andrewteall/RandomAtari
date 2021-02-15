@@ -1,7 +1,7 @@
 # RandomAtari
 Random Atari Practice and Skill up
 
-Just a repo to hold random homebrew Atari 2600 games. 
+Just a repo to hold random homebrew Atari 2600 games/demos. Not using any of the newly developed extensions or hardware.
 
 You will need to download a copy of the vcs.h and macro.h header files from the DASM repo. Once you have those each .asm file can be assembled with DASM.
 
