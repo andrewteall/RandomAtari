@@ -166,23 +166,19 @@ VerticalBlank
 ViewableScreenStart
         inx                                             ; 2     59
         ldy #0
-        cpx #3                                          ; 2     61
+        cpx #4                                          ; 2     61
         sta WSYNC                                       ; 3     64
         bne ViewableScreenStart                         ; 2/3   2/3
         
 ; Works from P0 XPos 64 - decreased from 72-75 because of page boundaries
 ;                         and now moved back to 72
 ; TODO: Be able to set text anywhere
-        lda FrameShifter
-        bne SecondTextSet
-        sta WSYNC
-        inx
 DrawText                                                
         stx LineTemp                                    ; 3     6
         sty YTemp                                       ; 3     9
         
-        ; ldx RSpace,y                                    ; 4     13
-        ; stx LetterBuffer                                ; 3     16
+        ldx RSpace,y                                    ; 4     13
+        stx LetterBuffer                                ; 3     16
         
         ldx KE,y                                        ; 4     20
 
@@ -210,52 +206,6 @@ DrawText
         cpx #10                                         ; 2     72
         sta WSYNC                                       ; 3     75
         bne DrawText                                    ; 2/3   2/3
-        sec
-        bcs FirstTextSet
-
-
-SecondTextSet
-        sta WSYNC
-        inx
-; Works from P0 XPos 64 - decreased from 72-75 because of page boundaries
-;                         and now moved back to 72
-; TODO: Be able to set text anywhere
-; TODO: Multiline/Multiplex to draw more characters
-DrawText2                                                
-        stx LineTemp                                    ; 3     6
-        sty YTemp                                       ; 3     9
-        
-        ldx RSpace,y                                    ; 4     13
-        stx LetterBuffer                                ; 3     16
-        
-        ldx MU,y                                        ; 4     20
-
-        lda SI,y                                        ; 4     24
-        sta GRP0                                        ; 3     27      MU -> [GRP0]
-        
-        lda CSpace,y                                        ; 4     31
-        sta GRP1                                        ; 3     34      SI -> [GRP1], [GRP0] -> GRP0
-        
-        lda RSpace,y                                    ; 4     38
-        sta GRP0                                        ; 3     41      C  -> [GRP0]. [GRP1] -> GRP1
-        
-        lda KE,y                                        ; 4     45
-        ldy LetterBuffer                                ; 3     48
-        sta GRP1                                        ; 3     51      MA -> [GRP1], [GRP0] -> GRP0
-        stx GRP0                                        ; 3     54      KE -> [GRP0], [GRP1] -> GRP1
-        sty GRP1                                        ; 3     57      R  -> [GRP1], [GRP0] -> GRP0
-        stx GRP0                                        ; 3     60      ?? -> [GRP0], [GRP1] -> GRP1
-        
-        ldx LineTemp                                    ; 3     63
-        ldy YTemp                                       ; 3     66
-        iny                                             ; 2     68
-
-        inx                                             ; 2     70
-        cpx #10                                         ; 2     72
-        sta WSYNC                                       ; 3     75
-        bne DrawText2                                    ; 2/3   2/3
-
-FirstTextSet
 
 TopBuffer
         inx                                             ; 2     59
@@ -1083,48 +1033,48 @@ SkipAddNote
 SkipRemoveNote
 
 
-; Frame Toggle
-        lda FrameShifter
-        bne ToggleFrame0
-        lda #1
-        sta FrameShifter
-        ldx #0
-        lda #72
-        jsr CalcXPos
-        sta WSYNC
-        sta HMOVE
-        SLEEP 24
-        sta HMCLR
+; ; Frame Toggle
+;         lda FrameShifter
+;         bne ToggleFrame0
+;         lda #1
+;         sta FrameShifter
+;         ldx #0
+;         lda #72
+;         jsr CalcXPos
+;         sta WSYNC
+;         sta HMOVE
+;         SLEEP 24
+;         sta HMCLR
 
-        ldx #1
-        lda #80
-        jsr CalcXPos
-        sta WSYNC
-        sta HMOVE
-        SLEEP 24
-        sta HMCLR
+;         ldx #1
+;         lda #80
+;         jsr CalcXPos
+;         sta WSYNC
+;         sta HMOVE
+;         SLEEP 24
+;         sta HMCLR
 
-        sec
-        bcs ToggleFrame1
-ToggleFrame0        
-        lda #0
-        sta FrameShifter
-        ldx #0
-        lda #12
-        jsr CalcXPos
-        sta WSYNC
-        sta HMOVE
-        SLEEP 24
-        sta HMCLR
+;         sec
+;         bcs ToggleFrame1
+; ToggleFrame0        
+;         lda #0
+;         sta FrameShifter
+;         ldx #0
+;         lda #12
+;         jsr CalcXPos
+;         sta WSYNC
+;         sta HMOVE
+;         SLEEP 24
+;         sta HMCLR
 
-        ldx #1
-        lda #20
-        jsr CalcXPos
-        sta WSYNC
-        sta HMOVE
-        SLEEP 24
-        sta HMCLR
-ToggleFrame1
+;         ldx #1
+;         lda #20
+;         jsr CalcXPos
+;         sta WSYNC
+;         sta HMOVE
+;         SLEEP 24
+;         sta HMCLR
+; ToggleFrame1
         sec
         bcs SkipMusicPlayer
 ;;;;;;;;;;;;;;;;;;;;;;;; Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
