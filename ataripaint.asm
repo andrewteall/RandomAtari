@@ -424,6 +424,101 @@ ControlSelection
 ;TODO: Add Multi-Channel Playback
 ;TODO: Add Pause/Stop for play track
 
+        ldy #0
+        sty VDELP0
+        sty VDELP1
+        lda #11
+        sta NUSIZ0 
+        sta NUSIZ1
+        
+PostNoteControlBuffer
+        inx                                             ; 2
+        cpx #144                                        ; 2
+        sta WSYNC                                       ; 3
+        bne PostNoteControlBuffer                       ; 2/3
+        
+        inx
+        sta WSYNC
+        SLEEP 4                                         ; 4
+
+        
+TrackDisplay
+        
+        txa                                             ; 2     
+        and #1                                          ; 2     
+        bne DrawSprite1                                 ; 2/3   
+        lda MU,y                                        ; 4
+        sta GRP0                                        ; 3
+        stx LineTemp
+        ldx KE,y                                        ; 4
+
+        sta RESP0                                       ; 3
+        ; SLEEP 3
+        ; SLEEP 3
+        ; SLEEP 3
+        nop
+        lda CSpace,y                                        ; 4
+        sta GRP0                                        ; 3
+        ;SLEEP 3
+        SLEEP 2
+        stx GRP0
+        sta RESP0                                       ; 3
+        SLEEP 3
+        SLEEP 3
+        SLEEP 3
+        SLEEP 3
+        SLEEP 2
+        ;sta RESP0  
+
+        
+
+        iny                                             ; 2     
+        sec                                             ; 2     
+        bcs DrawSprite0                                 ; 2/3   
+DrawSprite1
+        
+        lda SI,y                                        ; 4
+        sta GRP1                                        ; 3
+        ;SLEEP 4
+        stx LineTemp
+        ldx RSpace,y                                        ; 4
+        sta RESP1                                       ; 3
+        nop
+        lda MA,y                                        ; 4
+        sta GRP1
+        
+        ; SLEEP 3
+        ; SLEEP 3
+        ; SLEEP 3
+        ; SLEEP 3
+        ; SLEEP 2
+        sta RESP1                                       ; 3
+        SLEEP 3
+        SLEEP 3
+        SLEEP 3
+        SLEEP 3
+        SLEEP 2
+        ;sta RESP1                                       ; 3
+
+        
+DrawSprite0
+        ldx LineTemp
+        inx                                             ; 2    
+        cpx #157                                        ; 2    
+        sta WSYNC                                       ; 3    
+        
+        bne TrackDisplay                                ; 2/3   2/3
+
+        lda #1
+        sta VDELP0
+        sta VDELP1
+        lda #11
+        sta NUSIZ0 
+        sta NUSIZ1
+        lda #0
+        sta GRP0
+        sta GRP1
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; 26 cycles
@@ -442,14 +537,10 @@ ControlSelection
 ; SkipCheckCollision
 
 EndofScreenBuffer
-        
         inx                                             ; 2
         cpx #192                                        ; 2
         sta WSYNC                                       ; 3
-        ;beq EndOfViewableScreen                         ; 2/3
-        ;jmp ViewableScreenStart                         ; 3
         bne EndofScreenBuffer                         ; 2/3
-EndOfViewableScreen
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; End of Viewable Screen ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1140,6 +1231,25 @@ SkipMusicPlayer
         sta WSYNC
         dec DebounceCtr
 SkipDecDebounceCtr
+
+; Reset Player positions for title
+        ldx #0
+        lda #TITLETEXTXSTARTPOSITION
+        jsr CalcXPos
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
+
+        ldx #1
+        lda #TITLETEXTXSTARTPOSITION+8
+        jsr CalcXPos
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
+
+
 
 ; Reset Backgruond,Audio,Collisions,
         lda #0
