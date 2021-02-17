@@ -58,7 +58,8 @@ CurrentSelect           ds 1
 
 PlayNoteFlag            ds 1
 
-TrackBuilder            ds 33           ; 108   $C6 Memory Location Needs to be (Multiple of 4) +1
+TrackBuilder            ds #TRACKSIZE+1           ; 108
+
 TrackBuilderPtr         ds 1
 
 AddNoteFlag             ds 1
@@ -77,6 +78,7 @@ FrameShifter            ds 1
 P0HEIGHT   =  #28
 TITLETEXTXSTARTPOSITION = #57
 SLEEPTIMER=TITLETEXTXSTARTPOSITION/3 +51
+TRACKSIZE=#32                                   ; Must be a multiple of 4 +1
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1119,8 +1121,8 @@ SkipPlayNote
         beq SkipAddNote
 
         lda TrackBuilderPtr
-        cmp #$E6
-        beq SkipAddNote                                 ;               This will change with the size of the track
+        cmp #<TrackBuilder+#TRACKSIZE
+        beq SkipAddNote
 
         ldy #0
 
@@ -1156,7 +1158,7 @@ SkipAddNote
         beq SkipRemoveNote
 
         lda TrackBuilderPtr
-        cmp #$C6
+        cmp #<TrackBuilder
         beq SkipRemoveNote
         
         lda #0
