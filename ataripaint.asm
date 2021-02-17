@@ -1266,8 +1266,8 @@ SkipRomMusicPlayer
         beq SkipRamMusicPlayer
 ;;;;;;;;;;;;;;;;;;;; Ram Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ; TODO: Load Pause Button Gfx when playing track
-; TODO: Fix Debounce for pressing play
-; TODO: Fix Ram Music Player
+; TODO: Fix Debounce for pressing play and adding and removing notes
+; TODO: Make Pressing Play all Pause if playing
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldy #0                                          ; 2     Initialize Y-Index to 0
         lda (NotePtr),y                                 ; 5     Load first note duration to A
@@ -1277,10 +1277,9 @@ SkipRomMusicPlayer
         cmp #255                                        ; 2     See if the notes duration equals 255
         bne SkipResetRamTrack                              ; 2/3   If so go back to the beginning of the track
 
-        lda #<Track                                     ; 4     Store the low byte of the track to 
+        lda #<TrackBuilder                              ; 4     Store the low byte of the track to 
         sta NotePtr                                     ; 3     the Note Pointer
-        lda #>Track                                     ; 4     Store the High byte of the track to
-        sta NotePtr+1                                   ; 3     the Note Pointer + 1
+
 SkipResetRamTrack
 
         iny                                             ; 2     Increment Y (Y=1) to point to the Note Volume
