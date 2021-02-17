@@ -62,7 +62,7 @@ TrackBuilderPtr         ds 1
 
 AddNoteFlag             ds 1
 RemoveNoteFlag          ds 1
-PlayAllFlag
+PlayAllFlag             ds 1
 LetterBuffer            ds 1
 LineTemp                ds 1
 YTemp                   ds 1            ; 108
@@ -734,6 +734,10 @@ Selection4
         ldy INPT4
         bmi Selection5
 
+        lda DebounceCtr
+        beq AllowBtn5
+        jmp SkipSelectionSet
+AllowBtn5
         lda PlayAllFlag
         bne SetPlayAllFlagToZero 
         lda #1
@@ -751,6 +755,11 @@ Selection5
 
         ldy INPT4
         bmi Selection6
+        lda DebounceCtr
+        beq AllowBtn6
+        jmp SkipSelectionSet
+AllowBtn6
+
         lda #1
         sta AddNoteFlag
         jmp SelectionSet
@@ -762,6 +771,10 @@ Selection6
 
         ldy INPT4
         bmi Selection7
+        lda DebounceCtr
+        beq AllowBtn7
+        jmp SkipSelectionSet
+AllowBtn7
         lda #1
         sta RemoveNoteFlag
         jmp SelectionSet
@@ -1266,16 +1279,15 @@ SkipRomMusicPlayer
         beq SkipRamMusicPlayer
 ;;;;;;;;;;;;;;;;;;;; Ram Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ; TODO: Load Pause Button Gfx when playing track
-; TODO: Fix Debounce for pressing play and adding and removing notes
 ; TODO: Make Pressing Play all Pause if playing
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldy #0                                          ; 2     Initialize Y-Index to 0
         lda (NotePtr),y                                 ; 5     Load first note duration to A
         cmp FrameCtr                                    ; 3     See if it equals the Frame Counter
-        beq NextRamNote                                    ; 2/3   If so move the NotePtr to the next note
+        beq NextRamNote                                 ; 2/3   If so move the NotePtr to the next note
 
         cmp #255                                        ; 2     See if the notes duration equals 255
-        bne SkipResetRamTrack                              ; 2/3   If so go back to the beginning of the track
+        bne SkipResetRamTrack                           ; 2/3   If so go back to the beginning of the track
 
         lda #<TrackBuilder                              ; 4     Store the low byte of the track to 
         sta NotePtr                                     ; 3     the Note Pointer
@@ -1313,7 +1325,6 @@ SkipRamMusicPlayer
 
         lda DebounceCtr
         beq SkipDecDebounceCtr
-        sta WSYNC
         dec DebounceCtr
 SkipDecDebounceCtr
 
