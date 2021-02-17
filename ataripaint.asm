@@ -526,36 +526,24 @@ DrawSprite0
         sta GRP0
         sta GRP1
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; 26 cycles
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-        ; ldy DebounceCtr                                 ; 2
-        ; bne SkipCheckCollision                          ; 2/3
-        ; ldy INPT4                                       ; 3
-        ; bmi SkipCheckCollision                          ; 2/3
-        ; ldy #15                                         ; 2
-        ; sty DebounceCtr                                 ; 3
-        ; ldy BlHPos                                      ; 3
-        ; sty AudSelect                                   ; 3
-        ; ldy BlVPos                                      ; 3
-        ; sty AudDir                                      ; 3
-; SkipCheckCollision
-
 EndofScreenBuffer
         inx                                             ; 2
         cpx #192                                        ; 2
         sta WSYNC                                       ; 3
         bne EndofScreenBuffer                         ; 2/3
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; End of Viewable Screen ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; end of screen - enter blanking
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda #%00000010                                  ; 2     4
+
+        lda #%00000010                                  ; 2     4       ; end of screen - enter blanking
         sta VBLANK                                      ; 3     7
-; Left and Right Selector Movement
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;; Left Right Crusor Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda DebounceCtr                                 ; 3     10
         bne SkipCursorMove                              ; 2/3   12/13
         
@@ -588,63 +576,68 @@ SkipSelectionResetDown
 SkipSelectionResetUp
         sta WSYNC
 
-;;;;;;;;;;;;;;;;;;;;; Selection Detection ;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;; Load Overscan Timer ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #30
         sta TIM64T
-Selection
-        lda #0                                          ; 2     2
-        sta PlayGfxSelect                               ; 3     5
-        sta DurGfxSelect                                ; 3     8
-        sta VolGfxSelect                                ; 3     11
-        sta FrqGfxSelect                                ; 3     14
-        sta CtlGfxSelect                                ; 3     17
-        sta PlayAllGfxSelect                            ; 3     20
-        sta AddGfxSelect                                ; 3     23
-        sta RemoveGfxSelect                             ; 3     26
-        sta ChannelGfxSelect                            ; 3     29
 
-        lda CurrentSelect                               ; 3     32
-        
-        cmp #0                                          ; 2     34
-        bne Selection0                                  ; 2/3   36/37
-        lda #%11100000                                  ; 2     38
-        sta PlayGfxSelect                               ; 3     41
-        
-        ldy INPT4                                       ; 3     44
-        bmi Selection0                                  ; 2/3   46/47
-        lda #0                                          ; 2     48
-        sta PlayNoteFlag                                ; 3     51
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;; Selection Detection ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #0
+        sta PlayGfxSelect
+        sta DurGfxSelect
+        sta VolGfxSelect
+        sta FrqGfxSelect
+        sta CtlGfxSelect
+        sta PlayAllGfxSelect
+        sta AddGfxSelect
+        sta RemoveGfxSelect
+        sta ChannelGfxSelect
+
+        lda CurrentSelect
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 0 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        cmp #0
+        bne Selection0
+        lda #%11100000
+        sta PlayGfxSelect
+
+        ldy INPT4
+        bmi Selection0
+        lda #0
+        sta PlayNoteFlag
 Selection0
-        sta WSYNC                                       ; 3     54
-        cmp #1                                          ; 2     2
-        bne Selection1                                  ; 2/3   4/5
-        lda #%01111111                                  ; 2     6
-        sta DurGfxSelect                                ; 3     9
-        ldy INPT4                                       ; 3     12
-        bmi PlayNote1                                   ; 2/3   14/15
-        lda #0                                          ; 2     16
-        sta PlayNoteFlag                                ; 3     19
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 1 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        cmp #1
+        bne Selection1
+        lda #%01111111
+        sta DurGfxSelect
+        ldy INPT4
+        bmi PlayNote1
+        lda #0
+        sta PlayNoteFlag
 PlayNote1
-        lda DebounceCtr                                 ; 3     22
-        beq AllowBtn1                                   ; 2/3   24/25
-        jmp SkipSelectionSet                            ; 3     27
+        lda DebounceCtr
+        beq AllowBtn1
+        jmp SkipSelectionSet
 AllowBtn1
-        lda #%00010000                                  ; 2
-        bit SWCHA                                       ; 3
-        bne Dur0Down                                    ; 2/3
-        inc AudDur0                                     ; 5
-        jmp SelectionSet                                ; 3
+        lda #%00010000
+        bit SWCHA
+        bne Dur0Down
+        inc AudDur0
+        jmp SelectionSet
 Dur0Down
-        lda #%00100000                                  ; 2
-        bit SWCHA                                       ; 3
-        bne Dur0Up                                      ; 2/3
-        dec AudDur0                                     ; 5
-        jmp SelectionSet                                ; 3
+        lda #%00100000
+        bit SWCHA
+        bne Dur0Up
+        dec AudDur0
+        jmp SelectionSet
 Dur0Up
 Selection1
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 2 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         cmp #2
         bne Selection2
         lda #%00111110
@@ -670,8 +663,9 @@ Vol0Down
         dec AudVol0
         jmp SelectionSet
 Vol0Up
-
 Selection2
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 3 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         cmp #3
         bne Selection3
         lda #%11111111
@@ -696,10 +690,10 @@ Frq0Down
         bne Frq0Up
         dec AudFrq0
         jmp SelectionSet
-Frq0Up
-
-        
+Frq0Up        
 Selection3
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 4 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         cmp #4
         bne Selection4
         lda #%11111000
@@ -724,9 +718,10 @@ Ctl0Down
         bne Ctl0Up
         dec AudCtl0
         jmp SelectionSet
-Ctl0Up        
-        
+Ctl0Up                
 Selection4
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 5 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         cmp #5
         bne Selection5
         lda #%11100000
@@ -734,7 +729,6 @@ Selection4
 
         ldy INPT4
         bmi Selection5
-
         lda DebounceCtr
         beq AllowBtn5
         jmp SkipSelectionSet
@@ -749,6 +743,8 @@ SetPlayAllFlagToZero
         sta PlayAllFlag
         jmp SelectionSet
 Selection5
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 6 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         cmp #6
         bne Selection6
         lda #%00011111
@@ -760,11 +756,12 @@ Selection5
         beq AllowBtn6
         jmp SkipSelectionSet
 AllowBtn6
-
         lda #1
         sta AddNoteFlag
         jmp SelectionSet
 Selection6
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 7 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         cmp #7
         bne Selection7
         lda #%11111000
@@ -780,6 +777,8 @@ AllowBtn7
         sta RemoveNoteFlag
         jmp SelectionSet
 Selection7
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 8 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         cmp #8
         bne Selection8
         lda #%00011111
@@ -803,7 +802,6 @@ Chl0Down
         sta AudChannel
         jmp SelectionSet
 Chl0Up
-
 Selection8
 
         jmp SkipSelectionSet
@@ -812,7 +810,9 @@ SelectionSet
         sta DebounceCtr
 SkipSelectionSet
 
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;; Check Audio Bounds ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldx AudVol0
         bpl SkipVol0ResetDown
         ldx #15
@@ -851,12 +851,16 @@ SkipFrq0ResetDown
         ldx #0
         stx AudFrq0
 SkipFrq0ResetUp
-;;;;;;;;;;;;;;;;;;;;;;;; Number Drawing ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        sta WSYNC
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;; Build Audio Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;; Build Audio Duration Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda AudDur0
         and #$0F
         sta AudTmp
@@ -914,12 +918,15 @@ GetDurHiIdx
         sta NumberPtr
 
         lda #>(RZero)
-        sta NumberPtr+1  
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        sta NumberPtr+1
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;; Build Audio Volume Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda AudVol0
         asl
         asl
-        ;clc
+        clc
         adc AudVol0
 
         ldy #0
@@ -928,8 +935,6 @@ GetDurHiIdx
 GetVolIdx
         lda (NumberPtr),y
         asl
-        ;asl
-        ;asl
         sta VolGfxValue,y
         iny
         cpy #5
@@ -941,22 +946,10 @@ GetVolIdx
         lda #>(Zero)
         sta NumberPtr+1  
  
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;         lda AudFrq0
-;         asl
-;         asl
-;         clc
-;         adc AudFrq0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;; Build Audio Frequency Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;         ldy #0
-;         adc NumberPtr
-;         sta NumberPtr
-; GetFrqIdx
-;         lda (NumberPtr),y
-;         sta FrqGfxValue,y
-;         iny
-;         cpy #5
-;         bne GetFrqIdx
         lda AudFrq0
         and #$0F
         sta AudTmp
@@ -1016,7 +1009,10 @@ GetFrqHiIdx
 
         lda #>(RZero)
         sta NumberPtr+1  
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;; Build Audio Control Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda AudCtl0
         asl
         asl
@@ -1042,7 +1038,9 @@ GetCtlIdx
         lda #>(Zero)
         sta NumberPtr+1 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;; Build Audio Channel Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda AudChannel
         asl
         asl
@@ -1066,7 +1064,9 @@ GetChannelIdx
         sta NumberPtr+1  
 
 
-;;;;;;;;;;;;;; Note Player
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Note Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda PlayNoteFlag
         bne SkipPlayNote
         lda AudDur0
@@ -1278,7 +1278,9 @@ SkipRomMusicPlayer
 
         lda PlayAllFlag
         beq SkipRamMusicPlayer
-;;;;;;;;;;;;;;;;;;;; Ram Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;; Ram Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldy #0                                          ; 2     Initialize Y-Index to 0
@@ -1436,36 +1438,6 @@ CalcXPos:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; P0Grfx     .byte  #%00011000
-;            .byte  #%00000000
-;            .byte  #%00111100
-;            .byte  #%00000000
-;            .byte  #%01111110
-;            .byte  #%00000000
-;            .byte  #%11111111
-;            .byte  #%00000000
-;            .byte  #%00000000
-;            .byte  #%00000000
-;            .byte  #%00000000
-;            .byte  #%00000000
-;            .byte  #%00000000
-;            .byte  #%00000000
-;            .byte  #%00000000
-;            .byte  #%00000000
-;            .byte  #%00000000
-;            .byte  #%00000000
-;            .byte  #%00000000
-;            .byte  #%00000000
-;            .byte  #%11111111
-;            .byte  #%00000000
-;            .byte  #%01111110
-;            .byte  #%00000000
-;            .byte  #%00111100
-;            .byte  #%00000000
-;            .byte  #%00011000
-;            .byte  #0
-;            .byte  #0
-
         align 256
 Zero       .byte  #%111
            .byte  #%101
@@ -1562,102 +1534,6 @@ F          .byte  #%111
            .byte  #%111
            .byte  #%100
            .byte  #%100
-
-; OneZero    .byte  #%10111
-;            .byte  #%10101
-;            .byte  #%10101
-;            .byte  #%10101
-;            .byte  #%10111
-
-; OneOne        .byte  #%10010
-;            .byte  #%10010
-;            .byte  #%10010
-;            .byte  #%10010
-;            .byte  #%10010
-
-; OneTwo        .byte  #%10111
-;            .byte  #%10001
-;            .byte  #%10111
-;            .byte  #%10100
-;            .byte  #%10111
-
-; OneThree      .byte  #%10111
-;            .byte  #%10001
-;            .byte  #%10111
-;            .byte  #%10001
-;            .byte  #%10111
-
-; OneFour       .byte  #%10101
-;            .byte  #%10101
-;            .byte  #%10111
-;            .byte  #%10001
-;            .byte  #%10001
-
-; OneFive       .byte  #%10111
-;            .byte  #%10100
-;            .byte  #%10111
-;            .byte  #%10001
-;            .byte  #%10111
-
-; OneSix        .byte  #%10111
-;            .byte  #%10100
-;            .byte  #%10111
-;            .byte  #%10101
-;            .byte  #%10111
-
-; OneSeven      .byte  #%10111
-;            .byte  #%10001
-;            .byte  #%10001
-;            .byte  #%10001
-;            .byte  #%10001
-
-; OneEight      .byte  #%10111
-;            .byte  #%10101
-;            .byte  #%10111
-;            .byte  #%10101
-;            .byte  #%10111
-
-; OneNine       .byte  #%10111
-;            .byte  #%10101
-;            .byte  #%10111
-;            .byte  #%10001
-;            .byte  #%10111
-
-; OneA          .byte  #%10111
-;            .byte  #%10101
-;            .byte  #%10111
-;            .byte  #%10101
-;            .byte  #%10101
-
-; OneB          .byte  #%10110
-;            .byte  #%10101
-;            .byte  #%10110
-;            .byte  #%10101
-;            .byte  #%10110
-
-; OneC          .byte  #%10111
-;            .byte  #%10100
-;            .byte  #%10100
-;            .byte  #%10100
-;            .byte  #%10111
-
-; OneD          .byte  #%10110
-;            .byte  #%10101
-;            .byte  #%10101
-;            .byte  #%10101
-;            .byte  #%10110
-
-; OneE          .byte  #%10111
-;            .byte  #%10100
-;            .byte  #%10111
-;            .byte  #%10100
-;            .byte  #%10111
-
-; OneF       .byte  #%10111
-;            .byte  #%10100
-;            .byte  #%10111
-;            .byte  #%10100
-;            .byte  #%10100
 
 
         align 256
