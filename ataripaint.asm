@@ -428,7 +428,7 @@ ControlSelection
         sta COLUPF
 ;TODO: Draw Note letters from memory location
 ;TODO: Add Multi-Channel Playback
-;TODO: Add Pause/Stop for play track
+
 
         ldy #0
         sty VDELP0
@@ -1265,7 +1265,7 @@ SkipRomMusicPlayer
         lda PlayAllFlag
         beq SkipRamMusicPlayer
 ;;;;;;;;;;;;;;;;;;;; Ram Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-; TODO: Load Pause Button Gfx when playing
+; TODO: Load Pause Button Gfx when playing track
 ; TODO: Fix Debounce for pressing play
 ; TODO: Fix Ram Music Player
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
