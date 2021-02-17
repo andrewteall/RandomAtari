@@ -4,14 +4,14 @@
 ;Start Program
         SEG.U vars
         ORG $80
-AudDur0                 ds 1            ; $84
-AudDur1                 ds 1            ; $85
-AudVol0                 ds 1            ; $84
-AudVol1                 ds 1            ; $85
-AudFrq0                 ds 1            ; $86
-AudFrq1                 ds 1            ; $87
-AudCtl0                 ds 1            ; $88
-AudCtl1                 ds 1            ; $89
+AudDur0                 ds 1            ; 
+AudDur1                 ds 1            ; 
+AudVol0                 ds 1            ; 
+AudVol1                 ds 1            ; 
+AudFrq0                 ds 1            ; 
+AudFrq1                 ds 1            ; 
+AudCtl0                 ds 1            ; 
+AudCtl1                 ds 1            ; 
 AudChannel              ds 1
 AudTmp                  ds 1
 
@@ -183,9 +183,12 @@ ViewableScreenStart
         sta WSYNC                                       ; 3     64
         bne ViewableScreenStart                         ; 2/3   2/3
 
-; Works from P0 XPos 64 - decreased from 72-75 because of page boundaries
-;                         and now moved back to 72
 ; TODO: Multiplex Characters for more than 12 chars per line
+; TODO: Add support for Channel 1
+;               -Play Button Channel 1
+;               -Play All Button Plays Channel 1
+;               -Add/Remove Button performs based on Channel select
+; TODO: Finalize Colors and Decor
         SLEEP SLEEPTIMER
         inx
 DrawText
