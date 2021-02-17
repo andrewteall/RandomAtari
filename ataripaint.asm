@@ -48,6 +48,7 @@ AddGfxSelect            ds 1
 RemoveGfxSelect         ds 1
 
 PlayButtonMask          ds 5
+PlayAllButtonMask       ds 5
 
 NumberPtr               ds 2
 
@@ -57,7 +58,7 @@ CurrentSelect           ds 1
 
 PlayNoteFlag            ds 1
 
-TrackBuilder            ds 33           ; 102   $C6 Memory Location Needs to be (Multiple of 4) +1
+TrackBuilder            ds 33           ; 108   $C6 Memory Location Needs to be (Multiple of 4) +1
 TrackBuilderPtr         ds 1
 
 AddNoteFlag             ds 1
@@ -65,7 +66,7 @@ RemoveNoteFlag          ds 1
 PlayAllFlag             ds 1
 LetterBuffer            ds 1
 LineTemp                ds 1
-YTemp                   ds 1            ; 108
+YTemp                   ds 1            ; 115
 FrameShifter            ds 1
 ;TODO Optimize Memory Usage
 
@@ -347,7 +348,7 @@ ControlRow
         lsr                                             ; 2     13      Divide by 2 to get index twice for double height
         tay                                             ; 2     15      Transfer A to Y so we can index off Y
         
-        lda PlayAllButton,y                                ; 4     19      Get the Score From our Player 0 Score Array
+        lda PlayAllButtonMask,y                                ; 4     19      Get the Score From our Player 0 Score Array
         sta PF0                                         ; 3     22      
 
         lda PlusBtn,y                               ; 4     26      Get the Score From our Player 0 Score Array
@@ -1279,7 +1280,6 @@ SkipRomMusicPlayer
         beq SkipRamMusicPlayer
 ;;;;;;;;;;;;;;;;;;;; Ram Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ; TODO: Load Pause Button Gfx when playing track
-; TODO: Make Pressing Play all Pause if playing
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldy #0                                          ; 2     Initialize Y-Index to 0
         lda (NotePtr),y                                 ; 5     Load first note duration to A
@@ -1304,6 +1304,15 @@ SkipResetRamTrack
         lda (NotePtr),y                                 ; 5     Load Control to A
         sta AUDC0                                       ; 3     and set the Note Control
         inc FrameCtr                                    ; 5     Increment the Frame Counter to duration compare later
+
+        ldy #0
+LoadPauseAllButton
+        lda PauseButton,y
+        sta PlayAllButtonMask,y
+        iny
+        cpy #5
+        bne LoadPauseAllButton
+
         sec                                             ; 2     Set the carry to prepare to always branch
         bcs KeepPlayingRam                              ; 3     Branch to the end of the media player
 NextRamNote
@@ -1315,13 +1324,25 @@ NextRamNote
         lda #0                                          ; 2     Load Zero to
         sta FrameCtr                                    ; 3     Reset the Frame counter
 
-        sta WSYNC
+        
 KeepPlayingRam
-
+        sec
+        bcs SkipResetPlayAllButton
 ;;;;;;;;;;;;;;;;;; End Ram Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 SkipRamMusicPlayer
+        ldy #0
+LoadPlayAllButton
+        lda PlayButton,y
+        sta PlayAllButtonMask,y
+        iny
+        cpy #5
+        bne LoadPlayAllButton
+
+        lda #<TrackBuilder                              ; 4     Store the low byte of the track to 
+        sta NotePtr                                     ; 3     the Note Pointer
+SkipResetPlayAllButton
 
         lda DebounceCtr
         beq SkipDecDebounceCtr
