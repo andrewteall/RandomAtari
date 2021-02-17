@@ -57,10 +57,12 @@ CurrentSelect           ds 1
 
 PlayNoteFlag            ds 1
 
-TrackBuilder            ds 32           ; 102
+TrackBuilder            ds 33           ; 102   $C6 Memory Location Needs to be (Multiple of 4) +1
 TrackBuilderPtr         ds 1
+
 AddNoteFlag             ds 1
 RemoveNoteFlag          ds 1
+PlayAllFlag
 LetterBuffer            ds 1
 LineTemp                ds 1
 YTemp                   ds 1            ; 108
@@ -119,18 +121,22 @@ Clear
         sta NUSIZ0
         sta NUSIZ1
 
-        lda #<Track
+        ; lda #<Track                                   ; Init for Rom Music Player
+        ; sta NotePtr
+        ; lda #>Track
+        ; sta NotePtr+1
+
+        lda #<TrackBuilder
         sta NotePtr
-        lda #>Track
-        sta NotePtr+1
+
 
         lda #<Zero
         sta NumberPtr
         lda #>Zero
         sta NumberPtr+1
 
-        ; lda #<TrackBuilder
-        ; sta TrackBuilderPtr
+        lda #<TrackBuilder
+        sta TrackBuilderPtr
 
         lda #%00000001
         sta VDELP0
@@ -724,6 +730,19 @@ Selection4
         bne Selection5
         lda #%11100000
         sta PlayAllGfxSelect
+
+        ldy INPT4
+        bmi Selection5
+
+        lda PlayAllFlag
+        bne SetPlayAllFlagToZero 
+        lda #1
+        sta PlayAllFlag
+        jmp SelectionSet
+SetPlayAllFlagToZero
+        lda #0
+        sta PlayAllFlag
+        jmp SelectionSet
 Selection5
         cmp #6
         bne Selection6
@@ -731,9 +750,10 @@ Selection5
         sta AddGfxSelect
 
         ldy INPT4
-        bmi PlayNote4
+        bmi Selection6
         lda #1
         sta AddNoteFlag
+        jmp SelectionSet
 Selection6
         cmp #7
         bne Selection7
@@ -741,9 +761,10 @@ Selection6
         sta RemoveGfxSelect
 
         ldy INPT4
-        bmi PlayNote4
+        bmi Selection7
         lda #1
         sta RemoveNoteFlag
+        jmp SelectionSet
 Selection7
         cmp #8
         bne Selection8
@@ -1076,27 +1097,33 @@ LoadPlayButton
         bne LoadPlayButton
 SkipPlayNote
 
-
-; ;;;;;;;;;;;;;;;;;;;;;;;; Add Note ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Add Note ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         lda AddNoteFlag
         beq SkipAddNote
-        ldy #0        
+
+        lda TrackBuilderPtr
+        cmp #$E6
+        beq SkipAddNote                                 ;               This will change with the size of the track
+
+        ldy #0
 
         lda AudDur0
-        sta TrackBuilderPtr,y
+        sta (TrackBuilderPtr),y
         iny
         lda AudVol0
-        sta TrackBuilderPtr,y
+        sta (TrackBuilderPtr),y
         iny
         lda AudFrq0
-        sta TrackBuilderPtr,y
+        sta (TrackBuilderPtr),y
         iny
         lda AudCtl0
-        sta TrackBuilderPtr,y
+        sta (TrackBuilderPtr),y
         iny
         lda #255
-        sta TrackBuilderPtr,y
+        sta (TrackBuilderPtr),y
         
         lda TrackBuilderPtr
         clc
@@ -1107,21 +1134,30 @@ SkipPlayNote
         sta AddNoteFlag        
 SkipAddNote
 
-; ;;;;;;;;;;;;;;;;;;;;;;;; Remove Note ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Remove Note ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         lda RemoveNoteFlag
         beq SkipRemoveNote
-        ldy #$FF        
 
+        lda TrackBuilderPtr
+        cmp #$C6
+        beq SkipRemoveNote
+        
         lda #0
-        sta TrackBuilderPtr,y
+        ldy #0        
+        sta (TrackBuilderPtr),y
+
+        ldy #$FF
+        sta (TrackBuilderPtr),y
         dey
-        sta TrackBuilderPtr,y
+        sta (TrackBuilderPtr),y
         dey
-        sta TrackBuilderPtr,y
+        sta (TrackBuilderPtr),y
         dey
         lda #255
-        sta TrackBuilderPtr,y
+        sta (TrackBuilderPtr),y
         
         lda TrackBuilderPtr
         sec
@@ -1176,8 +1212,8 @@ SkipRemoveNote
 ;         sta HMCLR
 ; ToggleFrame1
         sec
-        bcs SkipMusicPlayer
-;;;;;;;;;;;;;;;;;;;;;;;; Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+        bcs SkipRomMusicPlayer
+;;;;;;;;;;;;;;;;;;;; Rom Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ; TODO: Potentially Optimize Flow
 ; TODO: Add Second Channel
 ; TODO: Add advanced Looping control. Repeat Track, Repeat whole song
@@ -1221,10 +1257,60 @@ NextNote
         sta WSYNC
 KeepPlaying
 
-;;;;;;;;;;;;;;;;;;;;;; End Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;;;;;;;;;;;;;;;;;; End Rom Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-SkipMusicPlayer
+SkipRomMusicPlayer
+
+        lda PlayAllFlag
+        beq SkipRamMusicPlayer
+;;;;;;;;;;;;;;;;;;;; Ram Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+; TODO: Load Pause Button Gfx when playing
+; TODO: Fix Debounce for pressing play
+; TODO: Fix Ram Music Player
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldy #0                                          ; 2     Initialize Y-Index to 0
+        lda (NotePtr),y                                 ; 5     Load first note duration to A
+        cmp FrameCtr                                    ; 3     See if it equals the Frame Counter
+        beq NextRamNote                                    ; 2/3   If so move the NotePtr to the next note
+
+        cmp #255                                        ; 2     See if the notes duration equals 255
+        bne SkipResetRamTrack                              ; 2/3   If so go back to the beginning of the track
+
+        lda #<Track                                     ; 4     Store the low byte of the track to 
+        sta NotePtr                                     ; 3     the Note Pointer
+        lda #>Track                                     ; 4     Store the High byte of the track to
+        sta NotePtr+1                                   ; 3     the Note Pointer + 1
+SkipResetRamTrack
+
+        iny                                             ; 2     Increment Y (Y=1) to point to the Note Volume
+        lda (NotePtr),y                                 ; 5     Load Volume to A
+        sta AUDV0                                       ; 3     and set the Note Volume
+        iny                                             ; 2     Increment Y (Y=2) to point to the Note Frequency
+        lda (NotePtr),y                                 ; 5     Load Frequency to A
+        sta AUDF0                                       ; 3     and set the Note Frequency
+        iny                                             ; 2     Increment Y (Y=3) to point to the Note Control
+        lda (NotePtr),y                                 ; 5     Load Control to A
+        sta AUDC0                                       ; 3     and set the Note Control
+        inc FrameCtr                                    ; 5     Increment the Frame Counter to duration compare later
+        sec                                             ; 2     Set the carry to prepare to always branch
+        bcs KeepPlayingRam                              ; 3     Branch to the end of the media player
+NextRamNote
+        lda NotePtr                                     ; 3     Load the Note Pointer to A
+        clc                                             ; 2     Clear the carry 
+        adc #4                                          ; 2     Add 4 to move the Notep pointer to the next note
+        sta NotePtr                                     ; 3     Store the new note pointer
+
+        lda #0                                          ; 2     Load Zero to
+        sta FrameCtr                                    ; 3     Reset the Frame counter
+
+        sta WSYNC
+KeepPlayingRam
+
+;;;;;;;;;;;;;;;;;; End Ram Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+SkipRamMusicPlayer
 
         lda DebounceCtr
         beq SkipDecDebounceCtr
@@ -1251,10 +1337,12 @@ SkipDecDebounceCtr
 
 
 
-; Reset Backgruond,Audio,Collisions,
+; Reset Backgruond,Audio,Collisions,Note Flags
         lda #0
         sta COLUBK
         sta CXCLR
+        sta AddNoteFlag
+        sta RemoveNoteFlag
         ldy #26                                         ; 2
         
 WaitLoop
