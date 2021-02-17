@@ -1279,7 +1279,7 @@ SkipRomMusicPlayer
         lda PlayAllFlag
         beq SkipRamMusicPlayer
 ;;;;;;;;;;;;;;;;;;;; Ram Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-; TODO: Load Pause Button Gfx when playing track
+; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldy #0                                          ; 2     Initialize Y-Index to 0
         lda (NotePtr),y                                 ; 5     Load first note duration to A
