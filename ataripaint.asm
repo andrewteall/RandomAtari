@@ -69,6 +69,8 @@ LetterBuffer            ds 1
 LineTemp                ds 1
 YTemp                   ds 1            ; 115
 FrameShifter            ds 1
+
+        echo "----",($100 - *) , "bytes of RAM left"
 ;TODO Optimize Memory Usage
 
         SEG
