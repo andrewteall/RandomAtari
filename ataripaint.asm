@@ -187,7 +187,6 @@ ViewableScreenStart
 
 ; TODO: Multiplex Characters for more than 12 chars per line
 ; TODO: Add support for Channel 1
-;               -Play Button Channel 1
 ;               -Play All Button Plays Channel 1
 ;               -Add/Remove Button performs based on Channel select
 ; TODO: Finalize Colors and Decor
@@ -1080,14 +1079,16 @@ GetChannelIdx
         cmp FrameCtr
         beq TurnOffNote
         
+        ldy AudChannel
+
         lda AudVol0
-        sta AUDV0
+        sta AUDV0,y
 
         lda AudFrq0
-        sta AUDF0
+        sta AUDF0,y
 
         lda AudCtl0
-        sta AUDC0
+        sta AUDC0,y
         inc FrameCtr
 
         ldy #0
@@ -1101,10 +1102,11 @@ LoadPauseButton
         sec
         bcs SkipPlayNote
 TurnOffNote
+        ldy AudChannel
         lda #0
-        sta AUDV0
-        sta AUDF0
-        sta AUDC0
+        sta AUDV0,y
+        sta AUDF0,y
+        sta AUDC0,y
         sta FrameCtr
         lda #1
         sta PlayNoteFlag
