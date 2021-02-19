@@ -7,16 +7,16 @@
 AudDur0                 ds 1            ; 
 AudDur1                 ds 1            ; 
 AudVol0                 ds 1            ; 
-AudVol1                 ds 1            ; 
+;AudVol1                 ds 1            ; 
 AudFrq0                 ds 1            ; 
-AudFrq1                 ds 1            ; 
+;AudFrq1                 ds 1            ; 
 AudCtl0                 ds 1            ; 
-AudCtl1                 ds 1            ; 
+;AudCtl1                 ds 1            ; 
 AudChannel              ds 1
 AudTmp                  ds 1
 
-AudSelect               ds 1            ; 
-AudDir                  ds 1            ; 
+;AudSelect               ds 1            ; 
+;AudDir                  ds 1            ; 
 
 FrameCtr                ds 1            ; 
 NoteDuration            ds 1            ; 
@@ -68,7 +68,7 @@ PlayAllFlag             ds 1
 LetterBuffer            ds 1
 LineTemp                ds 1
 YTemp                   ds 1            ; 115
-FrameShifter            ds 1
+;FrameShifter            ds 1
 
         echo "----",($100 - *) , "bytes of RAM left"
 ;TODO Optimize Memory Usage
@@ -1234,56 +1234,56 @@ SkipRemoveNote
 ;         SLEEP 24
 ;         sta HMCLR
 ; ToggleFrame1
-        sec
-        bcs SkipRomMusicPlayer
-;;;;;;;;;;;;;;;;;;;; Rom Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-; TODO: Potentially Optimize Flow
-; TODO: Add Second Channel
-; TODO: Add advanced Looping control. Repeat Track, Repeat whole song
-; TODO: Add Sub-Routine Option
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ldy #0                                          ; 2     Initialize Y-Index to 0
-        lda (NotePtr),y                                 ; 5     Load first note duration to A
-        cmp FrameCtr                                    ; 3     See if it equals the Frame Counter
-        beq NextNote                                    ; 2/3   If so move the NotePtr to the next note
+;         sec
+;         bcs SkipRomMusicPlayer
+; ;;;;;;;;;;;;;;;;;;;; Rom Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+; ; TODO: Potentially Optimize Flow
+; ; TODO: Add Second Channel
+; ; TODO: Add advanced Looping control. Repeat Track, Repeat whole song
+; ; TODO: Add Sub-Routine Option
+; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;         ldy #0                                          ; 2     Initialize Y-Index to 0
+;         lda (NotePtr),y                                 ; 5     Load first note duration to A
+;         cmp FrameCtr                                    ; 3     See if it equals the Frame Counter
+;         beq NextNote                                    ; 2/3   If so move the NotePtr to the next note
 
-        cmp #255                                        ; 2     See if the notes duration equals 255
-        bne SkipResetTrack                              ; 2/3   If so go back to the beginning of the track
+;         cmp #255                                        ; 2     See if the notes duration equals 255
+;         bne SkipResetTrack                              ; 2/3   If so go back to the beginning of the track
 
-        lda #<Track                                     ; 4     Store the low byte of the track to 
-        sta NotePtr                                     ; 3     the Note Pointer
-        lda #>Track                                     ; 4     Store the High byte of the track to
-        sta NotePtr+1                                   ; 3     the Note Pointer + 1
-SkipResetTrack
+;         lda #<Track                                     ; 4     Store the low byte of the track to 
+;         sta NotePtr                                     ; 3     the Note Pointer
+;         lda #>Track                                     ; 4     Store the High byte of the track to
+;         sta NotePtr+1                                   ; 3     the Note Pointer + 1
+; SkipResetTrack
 
-        iny                                             ; 2     Increment Y (Y=1) to point to the Note Volume
-        lda (NotePtr),y                                 ; 5     Load Volume to A
-        sta AUDV0                                       ; 3     and set the Note Volume
-        iny                                             ; 2     Increment Y (Y=2) to point to the Note Frequency
-        lda (NotePtr),y                                 ; 5     Load Frequency to A
-        sta AUDF0                                       ; 3     and set the Note Frequency
-        iny                                             ; 2     Increment Y (Y=3) to point to the Note Control
-        lda (NotePtr),y                                 ; 5     Load Control to A
-        sta AUDC0                                       ; 3     and set the Note Control
-        inc FrameCtr                                    ; 5     Increment the Frame Counter to duration compare later
-        sec                                             ; 2     Set the carry to prepare to always branch
-        bcs KeepPlaying                                 ; 3     Branch to the end of the media player
-NextNote
-        lda NotePtr                                     ; 3     Load the Note Pointer to A
-        clc                                             ; 2     Clear the carry 
-        adc #4                                          ; 2     Add 4 to move the Notep pointer to the next note
-        sta NotePtr                                     ; 3     Store the new note pointer
+;         iny                                             ; 2     Increment Y (Y=1) to point to the Note Volume
+;         lda (NotePtr),y                                 ; 5     Load Volume to A
+;         sta AUDV0                                       ; 3     and set the Note Volume
+;         iny                                             ; 2     Increment Y (Y=2) to point to the Note Frequency
+;         lda (NotePtr),y                                 ; 5     Load Frequency to A
+;         sta AUDF0                                       ; 3     and set the Note Frequency
+;         iny                                             ; 2     Increment Y (Y=3) to point to the Note Control
+;         lda (NotePtr),y                                 ; 5     Load Control to A
+;         sta AUDC0                                       ; 3     and set the Note Control
+;         inc FrameCtr                                    ; 5     Increment the Frame Counter to duration compare later
+;         sec                                             ; 2     Set the carry to prepare to always branch
+;         bcs KeepPlaying                                 ; 3     Branch to the end of the media player
+; NextNote
+;         lda NotePtr                                     ; 3     Load the Note Pointer to A
+;         clc                                             ; 2     Clear the carry 
+;         adc #4                                          ; 2     Add 4 to move the Notep pointer to the next note
+;         sta NotePtr                                     ; 3     Store the new note pointer
 
-        lda #0                                          ; 2     Load Zero to
-        sta FrameCtr                                    ; 3     Reset the Frame counter
+;         lda #0                                          ; 2     Load Zero to
+;         sta FrameCtr                                    ; 3     Reset the Frame counter
 
-        sta WSYNC
-KeepPlaying
+;         sta WSYNC
+; KeepPlaying
 
-;;;;;;;;;;;;;;;;;; End Rom Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-SkipRomMusicPlayer
+; ;;;;;;;;;;;;;;;;;; End Rom Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+; ;
+; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; SkipRomMusicPlayer
 
         lda PlayAllFlag
         beq SkipRamMusicPlayer
