@@ -7,21 +7,16 @@
 AudDur0                 ds 1            ; 
 AudDur1                 ds 1            ; 
 AudVol0                 ds 1            ; 
-;AudVol1                 ds 1            ; 
 AudFrq0                 ds 1            ; 
-;AudFrq1                 ds 1            ; 
-AudCtl0                 ds 1            ; 
-;AudCtl1                 ds 1            ; 
+AudCtl0                 ds 1            ;  
 AudChannel              ds 1
-AudTmp                  ds 1
+AudTmp                  ds 1 
 
-;AudSelect               ds 1            ; 
-;AudDir                  ds 1            ; 
+FrameCtrTrk0            ds 1            ; 
+FrameCtrTrk1            ds 1            ; 
 
-FrameCtr                ds 1            ; 
-NoteDuration            ds 1            ; 
-
-NotePtr                 ds 2            ; 16
+NotePtrCh0              ds 2            ; 
+NotePtrCh1              ds 2
 
 DurGfxSelect            ds 1            ; 
 DurGfxValue             ds 5            ; 
@@ -33,7 +28,7 @@ FrqGfxSelect            ds 1            ;
 FrqGfxValue             ds 5            ; 
 
 CtlGfxSelect            ds 1            ; 
-CtlGfxValue             ds 5            ; 40
+CtlGfxValue             ds 5            
 
 PlayGfxValue            ds 5            ; 
 PlayGfxSelect           ds 1
@@ -42,7 +37,7 @@ PlayAllGfxValue         ds 5            ;
 PlayAllGfxSelect        ds 1
 
 ChannelGfxValue         ds 5            ; 
-ChannelGfxSelect        ds 1            ; 58
+ChannelGfxSelect        ds 1            
 
 AddGfxSelect            ds 1
 RemoveGfxSelect         ds 1
@@ -58,9 +53,11 @@ CurrentSelect           ds 1
 
 PlayNoteFlag            ds 1
 
-TrackBuilder            ds #TRACKSIZE+1           ; 108
+Track0Builder           ds #TRACKSIZE+1           ; 108
+Track1Builder           ds #TRACKSIZE+1           ; 108
 
-TrackBuilderPtr         ds 1
+Track0BuilderPtr        ds 2                      ; Why do these need to be 2 bytes when I have both but
+Track1BuilderPtr        ds 2                      ; 1 byte when I only have one
 
 AddNoteFlag             ds 1
 RemoveNoteFlag          ds 1
@@ -80,7 +77,7 @@ YTemp                   ds 1            ; 115
 P0HEIGHT   =  #28
 TITLETEXTXSTARTPOSITION = #57
 SLEEPTIMER=TITLETEXTXSTARTPOSITION/3 +51
-TRACKSIZE=#32                                   ; Must be a multiple of 4 +1
+TRACKSIZE=#16                                   ; Must be a multiple of 4 +1
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -126,13 +123,11 @@ Clear
         sta NUSIZ0
         sta NUSIZ1
 
-        ; lda #<Track                                   ; Init for Rom Music Player
-        ; sta NotePtr
-        ; lda #>Track
-        ; sta NotePtr+1
+        lda #<Track0Builder
+        sta NotePtrCh0
 
-        lda #<TrackBuilder
-        sta NotePtr
+        lda #<Track1Builder
+        sta NotePtrCh1
 
 
         lda #<Zero
@@ -140,8 +135,11 @@ Clear
         lda #>Zero
         sta NumberPtr+1
 
-        lda #<TrackBuilder
-        sta TrackBuilderPtr
+        lda #<Track0Builder
+        sta Track0BuilderPtr
+
+        lda #<Track1Builder
+        sta Track1BuilderPtr
 
         lda #%00000001
         sta VDELP0
@@ -186,9 +184,6 @@ ViewableScreenStart
         bne ViewableScreenStart                         ; 2/3   2/3
 
 ; TODO: Multiplex Characters for more than 12 chars per line
-; TODO: Add support for Channel 1
-;               -Play All Button Plays Channel 1
-;               -Add/Remove Button performs based on Channel select
 ; TODO: Finalize Colors and Decor
         SLEEP SLEEPTIMER
         inx
@@ -434,103 +429,102 @@ ControlSelection
         lda #9
         sta COLUPF
 ;TODO: Draw Note letters from memory location
-;TODO: Add Multi-Channel Playback
 
 
-        ldy #0
-        sty VDELP0
-        sty VDELP1
-        lda #11
-        sta NUSIZ0 
-        sta NUSIZ1
+;         ldy #0
+;         sty VDELP0
+;         sty VDELP1
+;         lda #11
+;         sta NUSIZ0 
+;         sta NUSIZ1
         
-PostNoteControlBuffer
-        inx                                             ; 2
-        cpx #144                                        ; 2
-        sta WSYNC                                       ; 3
-        bne PostNoteControlBuffer                       ; 2/3
+; PostNoteControlBuffer
+;         inx                                             ; 2
+;         cpx #144                                        ; 2
+;         sta WSYNC                                       ; 3
+;         bne PostNoteControlBuffer                       ; 2/3
         
-        inx
-        sta WSYNC
-        SLEEP 4                                         ; 4
+;         inx
+;         sta WSYNC
+;         SLEEP 4                                         ; 4
 
         
-TrackDisplay
+; TrackDisplay
         
-        txa                                             ; 2     
-        and #1                                          ; 2     
-        bne DrawSprite1                                 ; 2/3   
-        lda MU,y                                        ; 4
-        sta GRP0                                        ; 3
-        stx LineTemp
-        ldx KE,y                                        ; 4
+;         txa                                             ; 2     
+;         and #1                                          ; 2     
+;         bne DrawSprite1                                 ; 2/3   
+;         lda MU,y                                        ; 4
+;         sta GRP0                                        ; 3
+;         stx LineTemp
+;         ldx KE,y                                        ; 4
 
-        sta RESP0                                       ; 3
-        ; SLEEP 3
-        ; SLEEP 3
-        ; SLEEP 3
-        nop
-        lda CSpace,y                                        ; 4
-        sta GRP0                                        ; 3
-        ;SLEEP 3
-        SLEEP 2
-        stx GRP0
-        sta RESP0                                       ; 3
-        SLEEP 3
-        SLEEP 3
-        SLEEP 3
-        SLEEP 3
-        SLEEP 2
-        ;sta RESP0  
-
-        
-
-        iny                                             ; 2     
-        sec                                             ; 2     
-        bcs DrawSprite0                                 ; 2/3   
-DrawSprite1
-        
-        lda SI,y                                        ; 4
-        sta GRP1                                        ; 3
-        ;SLEEP 4
-        stx LineTemp
-        ldx RSpace,y                                        ; 4
-        sta RESP1                                       ; 3
-        nop
-        lda MA,y                                        ; 4
-        sta GRP1
-        
-        ; SLEEP 3
-        ; SLEEP 3
-        ; SLEEP 3
-        ; SLEEP 3
-        ; SLEEP 2
-        sta RESP1                                       ; 3
-        SLEEP 3
-        SLEEP 3
-        SLEEP 3
-        SLEEP 3
-        SLEEP 2
-        ;sta RESP1                                       ; 3
+;         sta RESP0                                       ; 3
+;         ; SLEEP 3
+;         ; SLEEP 3
+;         ; SLEEP 3
+;         nop
+;         lda CSpace,y                                        ; 4
+;         sta GRP0                                        ; 3
+;         ;SLEEP 3
+;         SLEEP 2
+;         stx GRP0
+;         sta RESP0                                       ; 3
+;         SLEEP 3
+;         SLEEP 3
+;         SLEEP 3
+;         SLEEP 3
+;         SLEEP 2
+;         ;sta RESP0  
 
         
-DrawSprite0
-        ldx LineTemp
-        inx                                             ; 2    
-        cpx #157                                        ; 2    
-        sta WSYNC                                       ; 3    
-        
-        bne TrackDisplay                                ; 2/3   2/3
 
-        lda #1
-        sta VDELP0
-        sta VDELP1
-        lda #11
-        sta NUSIZ0 
-        sta NUSIZ1
-        lda #0
-        sta GRP0
-        sta GRP1
+;         iny                                             ; 2     
+;         sec                                             ; 2     
+;         bcs DrawSprite0                                 ; 2/3   
+; DrawSprite1
+        
+;         lda SI,y                                        ; 4
+;         sta GRP1                                        ; 3
+;         ;SLEEP 4
+;         stx LineTemp
+;         ldx RSpace,y                                        ; 4
+;         sta RESP1                                       ; 3
+;         nop
+;         lda MA,y                                        ; 4
+;         sta GRP1
+        
+;         ; SLEEP 3
+;         ; SLEEP 3
+;         ; SLEEP 3
+;         ; SLEEP 3
+;         ; SLEEP 2
+;         sta RESP1                                       ; 3
+;         SLEEP 3
+;         SLEEP 3
+;         SLEEP 3
+;         SLEEP 3
+;         SLEEP 2
+;         ;sta RESP1                                       ; 3
+
+        
+; DrawSprite0
+;         ldx LineTemp
+;         inx                                             ; 2    
+;         cpx #157                                        ; 2    
+;         sta WSYNC                                       ; 3    
+        
+;         bne TrackDisplay                                ; 2/3   2/3
+
+;         lda #1
+;         sta VDELP0
+;         sta VDELP1
+;         lda #11
+;         sta NUSIZ0 
+;         sta NUSIZ1
+;         lda #0
+;         sta GRP0
+;         sta GRP1
 
 EndofScreenBuffer
         inx                                             ; 2
@@ -1073,23 +1067,22 @@ GetChannelIdx
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Note Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldx AudChannel
         lda PlayNoteFlag
         bne SkipPlayNote
         lda AudDur0
-        cmp FrameCtr
+        cmp FrameCtrTrk0,x
         beq TurnOffNote
-        
-        ldy AudChannel
 
         lda AudVol0
-        sta AUDV0,y
+        sta AUDV0,x
 
         lda AudFrq0
-        sta AUDF0,y
+        sta AUDF0,x
 
         lda AudCtl0
-        sta AUDC0,y
-        inc FrameCtr
+        sta AUDC0,x
+        inc FrameCtrTrk0,x
 
         ldy #0
 LoadPauseButton
@@ -1102,12 +1095,12 @@ LoadPauseButton
         sec
         bcs SkipPlayNote
 TurnOffNote
-        ldy AudChannel
+        ldx AudChannel
         lda #0
-        sta AUDV0,y
-        sta AUDF0,y
-        sta AUDC0,y
-        sta FrameCtr
+        sta AUDV0,x
+        sta AUDF0,x
+        sta AUDC0,x
+        sta FrameCtrTrk0,x
         lda #1
         sta PlayNoteFlag
 
@@ -1127,36 +1120,69 @@ SkipPlayNote
         lda AddNoteFlag
         beq SkipAddNote
 
-        lda TrackBuilderPtr
-        cmp #<TrackBuilder+#TRACKSIZE
+        ldx AudChannel
+        cpx #1
+        beq AddNoteChannel1
+
+        lda Track0BuilderPtr
+        cmp #<Track0Builder+#TRACKSIZE
         beq SkipAddNote
 
         ldy #0
 
         lda AudDur0
-        sta (TrackBuilderPtr),y
+        sta (Track0BuilderPtr),y
         iny
         lda AudVol0
-        sta (TrackBuilderPtr),y
+        sta (Track0BuilderPtr),y
         iny
         lda AudFrq0
-        sta (TrackBuilderPtr),y
+        sta (Track0BuilderPtr),y
         iny
         lda AudCtl0
-        sta (TrackBuilderPtr),y
+        sta (Track0BuilderPtr),y
         iny
         lda #255
-        sta (TrackBuilderPtr),y
+        sta (Track0BuilderPtr),y
         
-        lda TrackBuilderPtr
+        lda Track0BuilderPtr
         clc
         adc #4
-        sta TrackBuilderPtr
+        sta Track0BuilderPtr
 
+        sec
+        bcs AddNoteChannel0
+AddNoteChannel1
+        lda Track1BuilderPtr
+        cmp #<Track1Builder+#TRACKSIZE
+        beq SkipAddNote
+
+        ldy #0
+
+        lda AudDur0
+        sta (Track1BuilderPtr),y
+        iny
+        lda AudVol0
+        sta (Track1BuilderPtr),y
+        iny
+        lda AudFrq0
+        sta (Track1BuilderPtr),y
+        iny
+        lda AudCtl0
+        sta (Track1BuilderPtr),y
+        iny
+        lda #255
+        sta (Track1BuilderPtr),y
+        
+        lda Track1BuilderPtr
+        clc
+        adc #4
+        sta Track1BuilderPtr
+
+AddNoteChannel0
         lda #0
         sta AddNoteFlag        
 SkipAddNote
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Remove Note ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1164,33 +1190,62 @@ SkipAddNote
         lda RemoveNoteFlag
         beq SkipRemoveNote
 
-        lda TrackBuilderPtr
-        cmp #<TrackBuilder
+        ldx AudChannel
+        cpx #1
+        beq RemNoteChannel1
+
+        lda Track0BuilderPtr
+        cmp #<Track0Builder
         beq SkipRemoveNote
         
         lda #0
         ldy #0        
-        sta (TrackBuilderPtr),y
+        sta (Track0BuilderPtr),y
 
         ldy #$FF
-        sta (TrackBuilderPtr),y
+        sta (Track0BuilderPtr),y
         dey
-        sta (TrackBuilderPtr),y
+        sta (Track0BuilderPtr),y
         dey
-        sta (TrackBuilderPtr),y
+        sta (Track0BuilderPtr),y
         dey
         lda #255
-        sta (TrackBuilderPtr),y
+        sta (Track0BuilderPtr),y
         
-        lda TrackBuilderPtr
+        lda Track0BuilderPtr
         sec
         sbc #4
-        sta TrackBuilderPtr
+        sta Track0BuilderPtr
+        sec
+        bcs RemNoteChannel0
+RemNoteChannel1
+        lda Track1BuilderPtr
+        cmp #<Track1Builder
+        beq SkipRemoveNote
+        
+        lda #0
+        ldy #0        
+        sta (Track1BuilderPtr),y
 
+        ldy #$FF
+        sta (Track1BuilderPtr),y
+        dey
+        sta (Track1BuilderPtr),y
+        dey
+        sta (Track1BuilderPtr),y
+        dey
+        lda #255
+        sta (Track1BuilderPtr),y
+        
+        lda Track1BuilderPtr
+        sec
+        sbc #4
+        sta Track1BuilderPtr
+RemNoteChannel0
         lda #0
         sta RemoveNoteFlag        
 SkipRemoveNote
-
+        
 
 ; ; Frame Toggle
 ;         lda FrameShifter
@@ -1234,56 +1289,6 @@ SkipRemoveNote
 ;         SLEEP 24
 ;         sta HMCLR
 ; ToggleFrame1
-;         sec
-;         bcs SkipRomMusicPlayer
-; ;;;;;;;;;;;;;;;;;;;; Rom Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-; ; TODO: Potentially Optimize Flow
-; ; TODO: Add Second Channel
-; ; TODO: Add advanced Looping control. Repeat Track, Repeat whole song
-; ; TODO: Add Sub-Routine Option
-; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;         ldy #0                                          ; 2     Initialize Y-Index to 0
-;         lda (NotePtr),y                                 ; 5     Load first note duration to A
-;         cmp FrameCtr                                    ; 3     See if it equals the Frame Counter
-;         beq NextNote                                    ; 2/3   If so move the NotePtr to the next note
-
-;         cmp #255                                        ; 2     See if the notes duration equals 255
-;         bne SkipResetTrack                              ; 2/3   If so go back to the beginning of the track
-
-;         lda #<Track                                     ; 4     Store the low byte of the track to 
-;         sta NotePtr                                     ; 3     the Note Pointer
-;         lda #>Track                                     ; 4     Store the High byte of the track to
-;         sta NotePtr+1                                   ; 3     the Note Pointer + 1
-; SkipResetTrack
-
-;         iny                                             ; 2     Increment Y (Y=1) to point to the Note Volume
-;         lda (NotePtr),y                                 ; 5     Load Volume to A
-;         sta AUDV0                                       ; 3     and set the Note Volume
-;         iny                                             ; 2     Increment Y (Y=2) to point to the Note Frequency
-;         lda (NotePtr),y                                 ; 5     Load Frequency to A
-;         sta AUDF0                                       ; 3     and set the Note Frequency
-;         iny                                             ; 2     Increment Y (Y=3) to point to the Note Control
-;         lda (NotePtr),y                                 ; 5     Load Control to A
-;         sta AUDC0                                       ; 3     and set the Note Control
-;         inc FrameCtr                                    ; 5     Increment the Frame Counter to duration compare later
-;         sec                                             ; 2     Set the carry to prepare to always branch
-;         bcs KeepPlaying                                 ; 3     Branch to the end of the media player
-; NextNote
-;         lda NotePtr                                     ; 3     Load the Note Pointer to A
-;         clc                                             ; 2     Clear the carry 
-;         adc #4                                          ; 2     Add 4 to move the Notep pointer to the next note
-;         sta NotePtr                                     ; 3     Store the new note pointer
-
-;         lda #0                                          ; 2     Load Zero to
-;         sta FrameCtr                                    ; 3     Reset the Frame counter
-
-;         sta WSYNC
-; KeepPlaying
-
-; ;;;;;;;;;;;;;;;;;; End Rom Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-; ;
-; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; SkipRomMusicPlayer
 
         lda PlayAllFlag
         beq SkipRamMusicPlayer
@@ -1293,28 +1298,74 @@ SkipRemoveNote
 ; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldy #0                                          ; 2     Initialize Y-Index to 0
-        lda (NotePtr),y                                 ; 5     Load first note duration to A
-        cmp FrameCtr                                    ; 3     See if it equals the Frame Counter
-        beq NextRamNote                                 ; 2/3   If so move the NotePtr to the next note
+        lda (NotePtrCh0),y                              ; 5     Load first note duration to A
+        cmp FrameCtrTrk0                                ; 3     See if it equals the Frame Counter
+        bne NextRamNote                                 ; 2/3   If so move the NotePointer to the next note
+
+        lda NotePtrCh0                                  ; 3     Load the Note Pointer to A
+        clc                                             ; 2     Clear the carry 
+        adc #4                                          ; 2     Add 4 to move the Notep pointer to the next note
+        sta NotePtrCh0                                  ; 3     Store the new note pointer
+
+        lda #0                                          ; 2     Load Zero to
+        sta FrameCtrTrk0                                ; 3     Reset the Frame counter
+NextRamNote
 
         cmp #255                                        ; 2     See if the notes duration equals 255
-        bne SkipResetRamTrack                           ; 2/3   If so go back to the beginning of the track
+        bne SkipResetRamTrack0                          ; 2/3   If so go back to the beginning of the track
 
-        lda #<TrackBuilder                              ; 4     Store the low byte of the track to 
-        sta NotePtr                                     ; 3     the Note Pointer
-
-SkipResetRamTrack
+        lda #<Track0Builder                             ; 4     Store the low byte of the track to 
+        sta NotePtrCh0                                  ; 3     the Note Pointer
+SkipResetRamTrack0
 
         iny                                             ; 2     Increment Y (Y=1) to point to the Note Volume
-        lda (NotePtr),y                                 ; 5     Load Volume to A
+        lda (NotePtrCh0),y                              ; 5     Load Volume to A
         sta AUDV0                                       ; 3     and set the Note Volume
         iny                                             ; 2     Increment Y (Y=2) to point to the Note Frequency
-        lda (NotePtr),y                                 ; 5     Load Frequency to A
+        lda (NotePtrCh0),y                              ; 5     Load Frequency to A
         sta AUDF0                                       ; 3     and set the Note Frequency
         iny                                             ; 2     Increment Y (Y=3) to point to the Note Control
-        lda (NotePtr),y                                 ; 5     Load Control to A
+        lda (NotePtrCh0),y                              ; 5     Load Control to A
         sta AUDC0                                       ; 3     and set the Note Control
-        inc FrameCtr                                    ; 5     Increment the Frame Counter to duration compare later
+        inc FrameCtrTrk0                                ; 5     Increment the Frame Counter to duration compare later
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldy #0                                          ; 2     Initialize Y-Index to 0
+        lda (NotePtrCh1),y                              ; 5     Load first note duration to A
+        cmp FrameCtrTrk1                                ; 3     See if it equals the Frame Counter
+        bne NextRamNote1                                ; 2/3   If so move the NotePointer to the next note
+
+        lda NotePtrCh1                                  ; 3     Load the Note Pointer to A
+        clc                                             ; 2     Clear the carry 
+        adc #4                                          ; 2     Add 4 to move the Notep pointer to the next note
+        sta NotePtrCh1                                  ; 3     Store the new note pointer
+
+        lda #0                                          ; 2     Load Zero to
+        sta FrameCtrTrk1                                ; 3     Reset the Frame counter
+NextRamNote1
+
+        cmp #255                                        ; 2     See if the notes duration equals 255
+        bne SkipResetRamTrack1                          ; 2/3   If so go back to the beginning of the track
+
+        lda #<Track1Builder                             ; 4     Store the low byte of the track to 
+        sta NotePtrCh1                                  ; 3     the Note Pointer
+SkipResetRamTrack1
+
+        iny                                             ; 2     Increment Y (Y=1) to point to the Note Volume
+        lda (NotePtrCh1),y                              ; 5     Load Volume to A
+        sta AUDV1                                       ; 3     and set the Note Volume
+        iny                                             ; 2     Increment Y (Y=2) to point to the Note Frequency
+        lda (NotePtrCh1),y                              ; 5     Load Frequency to A
+        sta AUDF1                                       ; 3     and set the Note Frequency
+        iny                                             ; 2     Increment Y (Y=3) to point to the Note Control
+        lda (NotePtrCh1),y                              ; 5     Load Control to A
+        sta AUDC1                                       ; 3     and set the Note Control
+        inc FrameCtrTrk1                                ; 5     Increment the Frame Counter to duration compare later
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
 
         ldy #0
 LoadPauseAllButton
@@ -1324,24 +1375,9 @@ LoadPauseAllButton
         cpy #5
         bne LoadPauseAllButton
 
-        sec                                             ; 2     Set the carry to prepare to always branch
-        bcs KeepPlayingRam                              ; 3     Branch to the end of the media player
-NextRamNote
-        lda NotePtr                                     ; 3     Load the Note Pointer to A
-        clc                                             ; 2     Clear the carry 
-        adc #4                                          ; 2     Add 4 to move the Notep pointer to the next note
-        sta NotePtr                                     ; 3     Store the new note pointer
-
-        lda #0                                          ; 2     Load Zero to
-        sta FrameCtr                                    ; 3     Reset the Frame counter
-
-        
-KeepPlayingRam
         sec
         bcs SkipResetPlayAllButton
-;;;;;;;;;;;;;;;;;; End Ram Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 SkipRamMusicPlayer
         ldy #0
 LoadPlayAllButton
@@ -1351,14 +1387,27 @@ LoadPlayAllButton
         cpy #5
         bne LoadPlayAllButton
 
-        lda #<TrackBuilder                              ; 4     Store the low byte of the track to 
-        sta NotePtr                                     ; 3     the Note Pointer
+        lda #<Track0Builder                              ; 4     Store the low byte of the track to 
+        sta NotePtrCh0                                   ; 3     the Note Pointer
+
+        lda #0
+        sta AUDV0
+        sta AUDV1
+        sta AUDC0
+        sta AUDC1
+        sta AUDF0
+        sta AUDF1
+
 SkipResetPlayAllButton
+;;;;;;;;;;;;;;;;;; End Ram Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         lda DebounceCtr
         beq SkipDecDebounceCtr
         dec DebounceCtr
 SkipDecDebounceCtr
+        
 
 ; Reset Player positions for title
         ldx #0
@@ -1641,6 +1690,8 @@ RF         .byte  #%11100
            .byte  #%11100
            .byte  #%00100
            .byte  #%00100
+           
+        align 256
 
 PlayButton .byte  #%00100000
            .byte  #%01100000
@@ -1717,8 +1768,6 @@ RSpace     .byte  #%11000000
            .byte  #%10100000
            .byte  #0
 
-Track       .byte  #10,#3,#1,#7,#10,#3,#2,#7,#10,#3,#3,#7,#10,#3,#4,#7,#10,#3,#5,#7,#10,#3,#6,#7,#10,#3,#7,#7,#10,#3,#8,#7,#10,#3,#9,#7,#255,#3,#2,#5
-; Track       .byte  #30,#3,#5,#7,#30,#3,#6,#7,#30,#3,#7,#7,#30,#3,#6,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#6,#7,#2,#0,#5,#7,#30,#3,#6,#7,#2,#0,#5,#7,#30,#3,#6,#7,#2,#0,#5,#7,#30,#3,#5,#7,#2,#0,#5,#7,#30,#3,#3,#7,#2,#0,#5,#7,#30,#3,#3,#7,#2,#0,#5,#7,#255,#3,#2,#5
 ;-------------------------------------------------------------------------------
         ORG $FFFA
 InterruptVectors
