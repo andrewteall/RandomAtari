@@ -50,8 +50,6 @@ DebounceCtr             ds 1
 
 CurrentSelect           ds 1
 
-PlayNoteFlag            ds 1
-
 Track0Builder           ds #TRACKSIZE+1           ; 108
 Track1Builder           ds #TRACKSIZE+1           ; 108
 
@@ -60,6 +58,7 @@ YTemp                   ds 1                      ; This will get zeroed so that
 Track1BuilderPtr        ds 1                      ; 1 byte when I only have one
 LineTemp                ds 1                      ; will seem like it has 2 bytes
 
+PlayNoteFlag            ds 1
 AddNoteFlag             ds 1
 RemoveNoteFlag          ds 1
 PlayAllFlag             ds 1
@@ -70,8 +69,18 @@ LetterBuffer            ds 1
 
         echo "----",($100 - *) , "bytes of RAM left"
 ; TODO: Optimize Memory Usage
-;       - Swicth Grx drawing to use pointers
-;       - Compress Audio values to fit in 1/2 byte for player
+;       - 24 bytes: Switch Grx drawing to use pointers
+;               - All Gfx Values will have to exist in Rom
+;               - May have to use bank switching
+;       - 2x Ram Player Memory: Compress Audio values to fit in 1/2 byte for player
+;               - Add note
+;               - Remove Note
+;               - Ram Note Player
+;               - Will only have 8 duration values
+;       - 3 bytes: Add Flags to single variable
+;       - 1 byte: Maybe Add current select to flags 
+;       - 2 bytes: Combine Working Aud values to 2 bytes
+; TODO: Flag to not use Channel 1 - doubles play time
 
         SEG
         ORG $F000
