@@ -5,7 +5,6 @@
         SEG.U vars
         ORG $80
 AudDur0                 ds 1            ; 
-AudDur1                 ds 1            ; 
 AudVol0                 ds 1            ; 
 AudFrq0                 ds 1            ; 
 AudCtl0                 ds 1            ;  
@@ -22,7 +21,7 @@ DurGfxSelect            ds 1            ;
 DurGfxValue             ds 5            ; 
 
 VolGfxSelect            ds 1            ; 
-VolGfxValue             ds 5            ; 
+VolGfxPtr               ds 2            ; 
 
 FrqGfxSelect            ds 1            ; 
 FrqGfxValue             ds 5            ; 
@@ -56,19 +55,23 @@ PlayNoteFlag            ds 1
 Track0Builder           ds #TRACKSIZE+1           ; 108
 Track1Builder           ds #TRACKSIZE+1           ; 108
 
-Track0BuilderPtr        ds 2                      ; Why do these need to be 2 bytes when I have both but
-Track1BuilderPtr        ds 2                      ; 1 byte when I only have one
+Track0BuilderPtr        ds 1                      ; Why do these need to be 2 bytes when I have both but
+YTemp                   ds 1                      ; This will get zeroed so that the Trackpointer load
+Track1BuilderPtr        ds 1                      ; 1 byte when I only have one
+LineTemp                ds 1                      ; will seem like it has 2 bytes
 
 AddNoteFlag             ds 1
 RemoveNoteFlag          ds 1
 PlayAllFlag             ds 1
 LetterBuffer            ds 1
-LineTemp                ds 1
-YTemp                   ds 1            ; 115
+
+
 ;FrameShifter            ds 1
 
         echo "----",($100 - *) , "bytes of RAM left"
-;TODO Optimize Memory Usage
+; TODO: Optimize Memory Usage
+;       - Swicth Grx drawing to use pointers
+;       - Compress Audio values to fit in 1/2 byte for player
 
         SEG
         ORG $F000
@@ -77,7 +80,7 @@ YTemp                   ds 1            ; 115
 P0HEIGHT   =  #28
 TITLETEXTXSTARTPOSITION = #57
 SLEEPTIMER=TITLETEXTXSTARTPOSITION/3 +51
-TRACKSIZE=#16                                   ; Must be a multiple of 4 +1
+TRACKSIZE=#24                                   ; Must be a multiple of 4 +1
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -259,10 +262,11 @@ NoteRow
         lda DurGfxValue,y                               ; 4     24      Get the Score From our Duration Gfx Array
         sta PF1                                         ; 3     27      Store the value to PF1
         
-        lda VolGfxValue,y                               ; 4     31      Get the Score From our Volume Gfx Array
+        lda (VolGfxPtr),y                               ; 4     31      Get the Score From our Volume Gfx Array
+        asl
         sta PF2                                         ; 3     34      Store the value to PF2
 
-        SLEEP 6                                         ; 6     40      Waste 6 cycles to line up the next Pf draw
+        SLEEP 4                                         ; 6     40      Waste 6 cycles to line up the next Pf draw
 
         lda FrqGfxValue,y                               ; 4     44      Get the Score From our Frequency Gfx Array
         sta PF2                                         ; 3     47      Store the value to PF2
@@ -933,12 +937,15 @@ GetDurHiIdx
         adc NumberPtr
         sta NumberPtr
 GetVolIdx
-        lda (NumberPtr),y
-        asl
-        sta VolGfxValue,y
-        iny
-        cpy #5
-        bne GetVolIdx
+        lda NumberPtr;,y
+        ;asl
+        sta VolGfxPtr;,y
+        lda NumberPtr+1;,y
+        ;asl
+        sta VolGfxPtr+1;,y
+        ;iny
+        ;cpy #5
+        ;bne GetVolIdx
 
         lda #<(Zero)
         sta NumberPtr
@@ -1112,6 +1119,14 @@ LoadPlayButton
         cpy #5
         bne LoadPlayButton
 SkipPlayNote
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Note ptr Fix ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  
+        lda #0
+        sta YTemp
+        sta LineTemp
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Add Note ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
