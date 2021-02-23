@@ -65,28 +65,43 @@ PlayAllFlag             ds 1
 LetterBuffer            ds 1
 
 
-;FrameShifter            ds 1
+
 
         echo "----",($100 - *) , "bytes of RAM left"
 ; TODO: Optimize Memory Usage
 ;       - 24 bytes: Switch Grx drawing to use pointers
 ;               - All Gfx Values will have to exist in Rom
 ;               - May have to use bank switching
+;               - All letters have to use pointers
+;               - Reuse Pointers from previous text sections
 ;       - 2x Ram Player Memory: Compress Audio values to fit in 1/2 byte for player
 ;               - Add note
 ;               - Remove Note
 ;               - Ram Note Player
 ;               - Will only have 8 duration values
+;                       ; whole(3/4) note - 216 or maybe half triplets
+;                       ; half note - 144
+;                       ; quarter note - 72
+;                       ; triplet note - 48
+;                       ; eighth note - 36
+;                       ; 16th note - 18
+;                       ; 32nd note - 9
+;                       ; control note - 255
 ;       - 3 bytes: Add Flags to single variable
 ;       - 1 byte: Maybe Add current select to flags 
 ;       - 2 bytes: Combine Working Aud values to 2 bytes
 ; TODO: Flag to not use Channel 1 - doubles play time
+;       - Could also have channel 1 count from top so the tracks meet in the middle
+; TODO: Multiplex Characters for more than 12 chars per line
+; TODO: Finalize Colors and Decor and Name
+; TODO: Draw Note letters from memory location
+; TODO: Add note count left on track
+; TODO: Add note spacer inbetween plays
 
         SEG
         ORG $F000
 
 ;PATTERN           = $80 ; storage Location (1st byte in RAM)
-P0HEIGHT   =  #28
 TITLETEXTXSTARTPOSITION = #57
 SLEEPTIMER=TITLETEXTXSTARTPOSITION/3 +51
 TRACKSIZE=#24                                   ; Must be a multiple of 4 +1
@@ -195,8 +210,7 @@ ViewableScreenStart
         sta WSYNC                                       ; 3     64
         bne ViewableScreenStart                         ; 2/3   2/3
 
-; TODO: Multiplex Characters for more than 12 chars per line
-; TODO: Finalize Colors and Decor
+
         SLEEP SLEEPTIMER
         inx
 DrawText
@@ -441,103 +455,7 @@ ControlSelection
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #9
         sta COLUPF
-;TODO: Draw Note letters from memory location
 
-
-;         ldy #0
-;         sty VDELP0
-;         sty VDELP1
-;         lda #11
-;         sta NUSIZ0 
-;         sta NUSIZ1
-        
-; PostNoteControlBuffer
-;         inx                                             ; 2
-;         cpx #144                                        ; 2
-;         sta WSYNC                                       ; 3
-;         bne PostNoteControlBuffer                       ; 2/3
-        
-;         inx
-;         sta WSYNC
-;         SLEEP 4                                         ; 4
-
-        
-; TrackDisplay
-        
-;         txa                                             ; 2     
-;         and #1                                          ; 2     
-;         bne DrawSprite1                                 ; 2/3   
-;         lda MU,y                                        ; 4
-;         sta GRP0                                        ; 3
-;         stx LineTemp
-;         ldx KE,y                                        ; 4
-
-;         sta RESP0                                       ; 3
-;         ; SLEEP 3
-;         ; SLEEP 3
-;         ; SLEEP 3
-;         nop
-;         lda CSpace,y                                        ; 4
-;         sta GRP0                                        ; 3
-;         ;SLEEP 3
-;         SLEEP 2
-;         stx GRP0
-;         sta RESP0                                       ; 3
-;         SLEEP 3
-;         SLEEP 3
-;         SLEEP 3
-;         SLEEP 3
-;         SLEEP 2
-;         ;sta RESP0  
-
-        
-
-;         iny                                             ; 2     
-;         sec                                             ; 2     
-;         bcs DrawSprite0                                 ; 2/3   
-; DrawSprite1
-        
-;         lda SI,y                                        ; 4
-;         sta GRP1                                        ; 3
-;         ;SLEEP 4
-;         stx LineTemp
-;         ldx RSpace,y                                        ; 4
-;         sta RESP1                                       ; 3
-;         nop
-;         lda MA,y                                        ; 4
-;         sta GRP1
-        
-;         ; SLEEP 3
-;         ; SLEEP 3
-;         ; SLEEP 3
-;         ; SLEEP 3
-;         ; SLEEP 2
-;         sta RESP1                                       ; 3
-;         SLEEP 3
-;         SLEEP 3
-;         SLEEP 3
-;         SLEEP 3
-;         SLEEP 2
-;         ;sta RESP1                                       ; 3
-
-        
-; DrawSprite0
-;         ldx LineTemp
-;         inx                                             ; 2    
-;         cpx #157                                        ; 2    
-;         sta WSYNC                                       ; 3    
-        
-;         bne TrackDisplay                                ; 2/3   2/3
-
-;         lda #1
-;         sta VDELP0
-;         sta VDELP1
-;         lda #11
-;         sta NUSIZ0 
-;         sta NUSIZ1
-;         lda #0
-;         sta GRP0
-;         sta GRP1
 
 EndofScreenBuffer
         inx                                             ; 2
@@ -1270,49 +1188,6 @@ RemNoteChannel0
         sta RemoveNoteFlag        
 SkipRemoveNote
         
-
-; ; Frame Toggle
-;         lda FrameShifter
-;         bne ToggleFrame0
-;         lda #1
-;         sta FrameShifter
-;         ldx #0
-;         lda #72
-;         jsr CalcXPos
-;         sta WSYNC
-;         sta HMOVE
-;         SLEEP 24
-;         sta HMCLR
-
-;         ldx #1
-;         lda #80
-;         jsr CalcXPos
-;         sta WSYNC
-;         sta HMOVE
-;         SLEEP 24
-;         sta HMCLR
-
-;         sec
-;         bcs ToggleFrame1
-; ToggleFrame0        
-;         lda #0
-;         sta FrameShifter
-;         ldx #0
-;         lda #12
-;         jsr CalcXPos
-;         sta WSYNC
-;         sta HMOVE
-;         SLEEP 24
-;         sta HMCLR
-
-;         ldx #1
-;         lda #20
-;         jsr CalcXPos
-;         sta WSYNC
-;         sta HMOVE
-;         SLEEP 24
-;         sta HMCLR
-; ToggleFrame1
 
         lda PlayAllFlag
         beq SkipRamMusicPlayer
