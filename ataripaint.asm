@@ -48,7 +48,6 @@ NumberPtr               ds 2
 
 DebounceCtr             ds 1
 
-CurrentSelect           ds 1
 
 Track0Builder           ds #TRACKSIZE+1           ; 108
 Track1Builder           ds #TRACKSIZE+1           ; 108
@@ -59,10 +58,11 @@ Track1BuilderPtr        ds 1                      ; 1 byte when I only have one
 LineTemp                ds 1                      ; will seem like it has 2 bytes
 
                       
-Flags                   ds 1                      ; 0 - Play note flag - 0 plays note
-                                                  ; 1 - Add note flag - 1 adds note
-                                                  ; 2 - Remove note flag - 1 removes note
-                                                  ; 3 - Play track flag - 0 plays tracks
+FlagsSelection          ds 1                      ; 0-4 Current Selection
+                                                  ; 5 - Play note flag - 0 plays note
+                                                  ; 6 - Add note flag - 1 adds note
+                                                  ; 7 - Remove note flag - 1 removes note
+                                                  ; 8 - Play track flag - 1 plays tracks
 LetterBuffer            ds 1
 
 
@@ -88,7 +88,6 @@ LetterBuffer            ds 1
 ;                       ; 16th note - 18
 ;                       ; 32nd note - 9
 ;                       ; control note - 255
-;       - 1 byte: Maybe Add current select to flags 
 ;       - 2 bytes: Combine Working Aud values to 2 bytes
 ; TODO: Flag to not use Channel 1 - doubles play time
 ;       - Could also have channel 1 count from top so the tracks meet in the middle
@@ -483,28 +482,50 @@ EndofScreenBuffer
         bne CursorLeft                                  ; 2/3   18/19
         lda #10                                         ; 2     20
         sta DebounceCtr                                 ; 3     23
-        dec CurrentSelect                               ; 5     28
+        lda FlagsSelection                                       ;       10100000 10100010
+        and #%00001111                                  ;       00000000 00000010
+        beq SetCurrentSelectionto8
+        dec FlagsSelection                                       ; 5     28
+        sec
+        bcs SkipSetCurrentSelectionto8
+SetCurrentSelectionto8
+        lda FlagsSelection
+        eor #%00001000
+        sta FlagsSelection
+SkipSetCurrentSelectionto8
 CursorLeft
+
         lda #%10000000                                  ; 2     30
         bit SWCHA                                       ; 4     34
         bne CursorRight                                 ; 2/3   36/37
         lda #10                                         ; 2     38
         sta DebounceCtr                                 ; 3     41
-        inc CurrentSelect                               ; 5     46
+        lda FlagsSelection                                       ;       10100000 10101000
+        and #%00001000                                  ;       00000000 00001000
+        bne SetCurrentSelectionto0
+        inc FlagsSelection
+        sec
+        bcs SkipSetCurrentSelectionto0
+SetCurrentSelectionto0
+        lda FlagsSelection
+        eor #%00001000
+        sta FlagsSelection                          
+SkipSetCurrentSelectionto0                
 CursorRight
+
 SkipCursorMove
 
-        lda CurrentSelect                               ; 3     49
-        bpl SkipSelectionResetDown                      ; 2/3   51/52
-        lda #8                                          ; 2     53
-        sta CurrentSelect                               ; 3     56
-SkipSelectionResetDown
-        lda CurrentSelect                               ; 3     59
-        cmp #9                                          ; 2     61
-        bne SkipSelectionResetUp                        ; 2/3   63/64
-        lda #0                                          ; 2     65
-        sta CurrentSelect                               ; 3     68
-SkipSelectionResetUp
+;         lda CurrentSelect                               ; 3     49
+;         bpl SkipSelectionResetDown                      ; 2/3   51/52
+;         lda #8                                          ; 2     53
+;         sta CurrentSelect                               ; 3     56
+; SkipSelectionResetDown
+;         lda CurrentSelect                               ; 3     59
+;         cmp #9                                          ; 2     61
+;         bne SkipSelectionResetUp                        ; 2/3   63/64
+;         lda #0                                          ; 2     65
+;         sta CurrentSelect                               ; 3     68
+; SkipSelectionResetUp
         sta WSYNC
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -527,7 +548,8 @@ SkipSelectionResetUp
         sta RemoveGfxSelect
         sta ChannelGfxSelect
 
-        lda CurrentSelect
+        lda FlagsSelection
+        and #%00001111
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 0 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         cmp #0
         bne Selection0
@@ -537,9 +559,9 @@ SkipSelectionResetUp
         ldy INPT4
         bmi Selection0
         tay
-        lda Flags               ;00000   00100
+        lda FlagsSelection               ;00000   00100
         and #%11101111          ;00000   00000 
-        sta Flags               ;00000   00000
+        sta FlagsSelection               ;00000   00000
         tya 
 Selection0
 
@@ -551,9 +573,9 @@ Selection0
         ldy INPT4
         bmi PlayNote1
         tay
-        lda Flags               ;00000   00100
+        lda FlagsSelection               ;00000   00100
         and #%11101111          ;11110   11110 
-        sta Flags               ;11110   11110
+        sta FlagsSelection               ;11110   11110
         tya 
 PlayNote1
         lda DebounceCtr
@@ -582,9 +604,9 @@ Selection1
         ldy INPT4
         bmi PlayNote2
         tay
-        lda Flags               ;00000   00100
+        lda FlagsSelection               ;00000   00100
         and #%11101111          ;00000   00000 
-        sta Flags               ;00000   00000
+        sta FlagsSelection               ;00000   00000
         tya 
 PlayNote2
         lda DebounceCtr
@@ -612,9 +634,9 @@ Selection2
         sta FrqGfxSelect
         ldy INPT4
         bmi PlayNote3
-        lda Flags               ;00000   00100
+        lda FlagsSelection               ;00000   00100
         and #%11101111          ;00000   00000 
-        sta Flags               ;00000   00000
+        sta FlagsSelection               ;00000   00000
 PlayNote3
         lda DebounceCtr
         beq AllowBtn3
@@ -641,9 +663,9 @@ Selection3
         sta CtlGfxSelect
         ldy INPT4
         bmi PlayNote4
-        lda Flags               ;00000   00100
+        lda FlagsSelection               ;00000   00100
         and #%11101111          ;00000   00000 
-        sta Flags               ;00000   00000
+        sta FlagsSelection               ;00000   00000
 PlayNote4
         lda DebounceCtr
         beq AllowBtn4
@@ -676,17 +698,17 @@ Selection4
         jmp SkipSelectionSet
 AllowBtn5
         lda #128
-        bit Flags
+        bit FlagsSelection
         bne SetPlayAllFlagToZero 
-        lda Flags               ;0000   0000
+        lda FlagsSelection               ;0000   0000
         and #%01111111          ;0000   0000 
         eor #128                  ;1000   1000     
-        sta Flags               ;1000   1000
+        sta FlagsSelection               ;1000   1000
         jmp SelectionSet
 SetPlayAllFlagToZero
-        lda Flags               ;0000   0010
+        lda FlagsSelection               ;0000   0010
         and #%01111111          ;0000   0000 
-        sta Flags               ;0000   0000 
+        sta FlagsSelection               ;0000   0000 
         jmp SelectionSet
 Selection5
 
@@ -702,10 +724,10 @@ Selection5
         beq AllowBtn6
         jmp SkipSelectionSet
 AllowBtn6
-        lda Flags               ;0000   0010
+        lda FlagsSelection               ;0000   0010
         and #%11011111          ;0000   0000 
         eor #32                  ;0010   0010     
-        sta Flags               ;0010   0010
+        sta FlagsSelection               ;0010   0010
         jmp SelectionSet
 Selection6
 
@@ -721,10 +743,10 @@ Selection6
         beq AllowBtn7
         jmp SkipSelectionSet
 AllowBtn7
-        lda Flags               ;00000   00100
+        lda FlagsSelection               ;00000   00100
         and #%10111111          ;00000   00000 
         eor #64                  ;00100   00100    
-        sta Flags               ;00100   00100
+        sta FlagsSelection               ;00100   00100
         jmp SelectionSet
 Selection7
 
@@ -1022,7 +1044,7 @@ GetChannelIdx
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldx AudChannel
         lda #16
-        bit Flags
+        bit FlagsSelection
         bne SkipPlayNote
         lda AudDur0
         cmp FrameCtrTrk0,x
@@ -1055,10 +1077,10 @@ TurnOffNote
         sta AUDF0,x
         sta AUDC0,x
         sta FrameCtrTrk0,x
-        lda Flags               ;00000   00100
+        lda FlagsSelection               ;00000   00100
         and #%11101111          ;00000   00000 
         eor #16                  ;00100   00100    
-        sta Flags               ;00100   00100
+        sta FlagsSelection               ;00100   00100
 
         ldy #0
 LoadPlayButton
@@ -1082,7 +1104,7 @@ SkipPlayNote
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         lda #32
-        bit Flags
+        bit FlagsSelection
         beq SkipAddNote
 
         ldx AudChannel
@@ -1145,16 +1167,16 @@ AddNoteChannel1
         sta Track1BuilderPtr
 
 AddNoteChannel0
-        lda Flags               ;0000   0010
+        lda FlagsSelection               ;0000   0010
         and #%11011111          ;0000   0000 
-        sta Flags               ;0000   0000      
+        sta FlagsSelection               ;0000   0000      
 SkipAddNote
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Remove Note ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         lda #64
-        bit Flags
+        bit FlagsSelection
         beq SkipRemoveNote
 
         ldx AudChannel
@@ -1209,14 +1231,14 @@ RemNoteChannel1
         sbc #4
         sta Track1BuilderPtr
 RemNoteChannel0
-        lda Flags               ;00000   00100
+        lda FlagsSelection               ;00000   00100
         and #%10111111          ;00000   00000 
-        sta Flags               ;00000   00000      
+        sta FlagsSelection               ;00000   00000      
 SkipRemoveNote
         
 
         lda #128
-        bit Flags
+        bit FlagsSelection
         beq SkipRamMusicPlayer
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;; Ram Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1306,7 +1328,7 @@ LoadPauseAllButton
 
 SkipRamMusicPlayer
         lda #16
-        bit Flags
+        bit FlagsSelection
         beq SkipResetAud
 
         ldy #0
@@ -1364,13 +1386,13 @@ SkipDecDebounceCtr
         sta CXCLR  
         ldy #26                                         ; 2
 
-        lda Flags               ;00000   00100
+        lda FlagsSelection               ;00000   00100
         and #%10111111          ;00000   00000 
-        sta Flags               ;00000   00000 
+        sta FlagsSelection               ;00000   00000 
         
-        lda Flags               ;0000   0010
+        lda FlagsSelection               ;0000   0010
         and #%11011111          ;0000   0000 
-        sta Flags               ;0000   0000  
+        sta FlagsSelection               ;0000   0000  
 WaitLoop
         lda INTIM
         bne WaitLoop
