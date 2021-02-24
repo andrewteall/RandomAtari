@@ -58,7 +58,7 @@ Track1BuilderPtr        ds 1                      ; 1 byte when I only have one
 LineTemp                ds 1                      ; will seem like it has 2 bytes
 
                       
-FlagsSelection          ds 1                      ; 0-4 Current Selection
+FlagsSelection          ds 1                      ; 0-4 Current Selection (#0-#8)
                                                   ; 5 - Play note flag - 0 plays note
                                                   ; 6 - Add note flag - 1 adds note
                                                   ; 7 - Remove note flag - 1 removes note
@@ -81,12 +81,12 @@ LetterBuffer            ds 1
 ;               - Ram Note Player
 ;               - Will only have 8 duration values
 ;                       ; whole(3/4) note - 216 or maybe half triplets
-;                       ; half note - 144
-;                       ; quarter note - 72
-;                       ; triplet note - 48
-;                       ; eighth note - 36
-;                       ; 16th note - 18
-;                       ; 32nd note - 9
+;                       ; half note - 144/120
+;                       ; quarter note - 72/60
+;                       ; triplet note - 48/40
+;                       ; eighth note - 36/30
+;                       ; 16th note - 18/15
+;                       ; 32nd note - 9/?
 ;                       ; control note - 255
 ;       - 2 bytes: Combine Working Aud values to 2 bytes
 ;       - 1 byte: AudTemp could be used as a filler byte
