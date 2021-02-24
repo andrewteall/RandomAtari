@@ -89,6 +89,7 @@ LetterBuffer            ds 1
 ;                       ; 32nd note - 9
 ;                       ; control note - 255
 ;       - 2 bytes: Combine Working Aud values to 2 bytes
+;       - 1 byte: AudTemp could be used as a filler byte
 ; TODO: Flag to not use Channel 1 - doubles play time
 ;       - Could also have channel 1 count from top so the tracks meet in the middle
 ; TODO: Multiplex Characters for more than 12 chars per line
