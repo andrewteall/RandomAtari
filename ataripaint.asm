@@ -538,7 +538,7 @@ SkipSelectionResetUp
         bmi Selection0
         tay
         lda Flags               ;00000   00100
-        and #%00001110          ;00000   00000 
+        and #%11101111          ;00000   00000 
         sta Flags               ;00000   00000
         tya 
 Selection0
@@ -552,8 +552,8 @@ Selection0
         bmi PlayNote1
         tay
         lda Flags               ;00000   00100
-        and #%00001110          ;00000   00000 
-        sta Flags               ;00000   00000
+        and #%11101111          ;11110   11110 
+        sta Flags               ;11110   11110
         tya 
 PlayNote1
         lda DebounceCtr
@@ -583,7 +583,7 @@ Selection1
         bmi PlayNote2
         tay
         lda Flags               ;00000   00100
-        and #%00001110          ;00000   00000 
+        and #%11101111          ;00000   00000 
         sta Flags               ;00000   00000
         tya 
 PlayNote2
@@ -613,7 +613,7 @@ Selection2
         ldy INPT4
         bmi PlayNote3
         lda Flags               ;00000   00100
-        and #%00001110          ;00000   00000 
+        and #%11101111          ;00000   00000 
         sta Flags               ;00000   00000
 PlayNote3
         lda DebounceCtr
@@ -642,7 +642,7 @@ Selection3
         ldy INPT4
         bmi PlayNote4
         lda Flags               ;00000   00100
-        and #%00001110          ;00000   00000 
+        and #%11101111          ;00000   00000 
         sta Flags               ;00000   00000
 PlayNote4
         lda DebounceCtr
@@ -675,17 +675,17 @@ Selection4
         beq AllowBtn5
         jmp SkipSelectionSet
 AllowBtn5
-        lda #8
+        lda #128
         bit Flags
         bne SetPlayAllFlagToZero 
         lda Flags               ;0000   0000
-        and #%00000111          ;0000   0000 
-        eor #8                  ;1000   1000     
+        and #%01111111          ;0000   0000 
+        eor #128                  ;1000   1000     
         sta Flags               ;1000   1000
         jmp SelectionSet
 SetPlayAllFlagToZero
         lda Flags               ;0000   0010
-        and #%00000111          ;0000   0000 
+        and #%01111111          ;0000   0000 
         sta Flags               ;0000   0000 
         jmp SelectionSet
 Selection5
@@ -703,8 +703,8 @@ Selection5
         jmp SkipSelectionSet
 AllowBtn6
         lda Flags               ;0000   0010
-        and #%00001101          ;0000   0000 
-        eor #2                  ;0010   0010     
+        and #%11011111          ;0000   0000 
+        eor #32                  ;0010   0010     
         sta Flags               ;0010   0010
         jmp SelectionSet
 Selection6
@@ -722,8 +722,8 @@ Selection6
         jmp SkipSelectionSet
 AllowBtn7
         lda Flags               ;00000   00100
-        and #%00001011          ;00000   00000 
-        eor #4                  ;00100   00100    
+        and #%10111111          ;00000   00000 
+        eor #64                  ;00100   00100    
         sta Flags               ;00100   00100
         jmp SelectionSet
 Selection7
@@ -1021,7 +1021,7 @@ GetChannelIdx
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Note Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldx AudChannel
-        lda #1
+        lda #16
         bit Flags
         bne SkipPlayNote
         lda AudDur0
@@ -1056,8 +1056,8 @@ TurnOffNote
         sta AUDC0,x
         sta FrameCtrTrk0,x
         lda Flags               ;00000   00100
-        and #%00001110          ;00000   00000 
-        eor #1                  ;00100   00100    
+        and #%11101111          ;00000   00000 
+        eor #16                  ;00100   00100    
         sta Flags               ;00100   00100
 
         ldy #0
@@ -1081,7 +1081,7 @@ SkipPlayNote
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Add Note ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda #2
+        lda #32
         bit Flags
         beq SkipAddNote
 
@@ -1146,14 +1146,14 @@ AddNoteChannel1
 
 AddNoteChannel0
         lda Flags               ;0000   0010
-        and #%00001101          ;0000   0000 
+        and #%11011111          ;0000   0000 
         sta Flags               ;0000   0000      
 SkipAddNote
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Remove Note ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda #4
+        lda #64
         bit Flags
         beq SkipRemoveNote
 
@@ -1210,12 +1210,12 @@ RemNoteChannel1
         sta Track1BuilderPtr
 RemNoteChannel0
         lda Flags               ;00000   00100
-        and #%00001011          ;00000   00000 
+        and #%10111111          ;00000   00000 
         sta Flags               ;00000   00000      
 SkipRemoveNote
         
 
-        lda #8
+        lda #128
         bit Flags
         beq SkipRamMusicPlayer
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1305,7 +1305,7 @@ LoadPauseAllButton
         bcs SkipResetPlayAllButton
 
 SkipRamMusicPlayer
-        lda #1
+        lda #16
         bit Flags
         beq SkipResetAud
 
@@ -1365,11 +1365,11 @@ SkipDecDebounceCtr
         ldy #26                                         ; 2
 
         lda Flags               ;00000   00100
-        and #%00001011          ;00000   00000 
+        and #%10111111          ;00000   00000 
         sta Flags               ;00000   00000 
         
         lda Flags               ;0000   0010
-        and #%00001101          ;0000   0000 
+        and #%11011111          ;0000   0000 
         sta Flags               ;0000   0000  
 WaitLoop
         lda INTIM
