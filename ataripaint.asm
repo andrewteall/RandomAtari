@@ -887,15 +887,15 @@ GetDurHiIdx
         cpy #5
         bne GetDurHiIdx
 
-        lda #<(RZero)
-        sta NumberPtr
-
-        lda #>(RZero)
-        sta NumberPtr+1
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; Build Audio Volume Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #<(RZero)
+        sta VolGfxPtr
+
+        lda #>(RZero)
+        sta VolGfxPtr+1
+
         lda AudVol0
         asl
         asl
@@ -903,18 +903,19 @@ GetDurHiIdx
         adc AudVol0
 
         ldy #0
-        adc NumberPtr
-        sta NumberPtr
+        adc VolGfxPtr
+        sta VolGfxPtr
 GetVolIdx
-        lda NumberPtr;,y
         ;asl
+        lda VolGfxPtr;,y
+        ldx VolGfxPtr+1;,y
         sta VolGfxPtr;,y
-        lda NumberPtr+1;,y
-        ;asl
-        sta VolGfxPtr+1;,y
-        ;iny
-        ;cpy #5
-        ;bne GetVolIdx
+        stx VolGfxPtr+1;,y
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;; Build Audio Frequency Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         lda #<(Zero)
         sta NumberPtr
@@ -922,10 +923,6 @@ GetVolIdx
         lda #>(Zero)
         sta NumberPtr+1  
  
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;; Build Audio Frequency Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
         lda AudFrq0
         and #$0F
         sta AudTmp
