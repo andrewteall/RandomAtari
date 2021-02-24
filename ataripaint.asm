@@ -88,7 +88,6 @@ LetterBuffer            ds 1
 ;                       ; 16th note - 18
 ;                       ; 32nd note - 9
 ;                       ; control note - 255
-;       - 3 bytes: Add Flags to single variable
 ;       - 1 byte: Maybe Add current select to flags 
 ;       - 2 bytes: Combine Working Aud values to 2 bytes
 ; TODO: Flag to not use Channel 1 - doubles play time
