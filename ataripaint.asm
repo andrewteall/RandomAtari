@@ -16,7 +16,8 @@ FrameCtrTrk1            ds 1            ;
 
 NotePtrCh0              ds 1            ; 
 AudTmp                  ds 1
-NotePtrCh1              ds 2
+NotePtrCh1              ds 1
+LetterBuffer            ds 1
 
 DurGfxSelect            ds 1            ; 
 DurGfxValue             ds 5            ; 
@@ -64,7 +65,6 @@ FlagsSelection          ds 1                      ; 0-4 Current Selection (#0-#8
                                                   ; 6 - Add note flag - 1 adds note
                                                   ; 7 - Remove note flag - 1 removes note
                                                   ; 8 - Play track flag - 1 plays tracks
-LetterBuffer            ds 1
 
 
 
@@ -90,7 +90,6 @@ LetterBuffer            ds 1
 ;                       ; 32nd note - 9/?
 ;                       ; control note - 255
 ;       - 2 bytes: Combine Working Aud values to 2 bytes
-;       - 1 byte: AudTemp could be used as a filler byte
 ; TODO: Flag to not use Channel 1 - doubles play time
 ;       - Could also have channel 1 count from top so the tracks meet in the middle
 ; TODO: Multiplex Characters for more than 12 chars per line
@@ -1104,6 +1103,7 @@ SkipPlayNote
         lda #0
         sta YTemp
         sta LineTemp
+        sta LetterBuffer
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
