@@ -58,10 +58,11 @@ YTemp                   ds 1                      ; This will get zeroed so that
 Track1BuilderPtr        ds 1                      ; 1 byte when I only have one
 LineTemp                ds 1                      ; will seem like it has 2 bytes
 
-PlayNoteFlag            ds 1
-AddNoteFlag             ds 1
-RemoveNoteFlag          ds 1
-PlayAllFlag             ds 1
+                      
+Flags                   ds 1                      ; 0 - Play note flag - 0 plays note
+                                                  ; 1 - Add note flag - 1 adds note
+                                                  ; 2 - Remove note flag - 1 removes note
+                                                  ; 3 - Play track flag - 0 plays tracks
 LetterBuffer            ds 1
 
 
@@ -536,8 +537,11 @@ SkipSelectionResetUp
 
         ldy INPT4
         bmi Selection0
-        lda #0
-        sta PlayNoteFlag
+        tay
+        lda Flags               ;00000   00100
+        and #%00001110          ;00000   00000 
+        sta Flags               ;00000   00000
+        tya 
 Selection0
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 1 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -547,8 +551,11 @@ Selection0
         sta DurGfxSelect
         ldy INPT4
         bmi PlayNote1
-        lda #0
-        sta PlayNoteFlag
+        tay
+        lda Flags               ;00000   00100
+        and #%00001110          ;00000   00000 
+        sta Flags               ;00000   00000
+        tya 
 PlayNote1
         lda DebounceCtr
         beq AllowBtn1
@@ -575,8 +582,11 @@ Selection1
         sta VolGfxSelect
         ldy INPT4
         bmi PlayNote2
-        lda #0
-        sta PlayNoteFlag
+        tay
+        lda Flags               ;00000   00100
+        and #%00001110          ;00000   00000 
+        sta Flags               ;00000   00000
+        tya 
 PlayNote2
         lda DebounceCtr
         beq AllowBtn2
@@ -603,8 +613,9 @@ Selection2
         sta FrqGfxSelect
         ldy INPT4
         bmi PlayNote3
-        lda #0
-        sta PlayNoteFlag
+        lda Flags               ;00000   00100
+        and #%00001110          ;00000   00000 
+        sta Flags               ;00000   00000
 PlayNote3
         lda DebounceCtr
         beq AllowBtn3
@@ -631,8 +642,9 @@ Selection3
         sta CtlGfxSelect
         ldy INPT4
         bmi PlayNote4
-        lda #0
-        sta PlayNoteFlag
+        lda Flags               ;00000   00100
+        and #%00001110          ;00000   00000 
+        sta Flags               ;00000   00000
 PlayNote4
         lda DebounceCtr
         beq AllowBtn4
@@ -664,14 +676,18 @@ Selection4
         beq AllowBtn5
         jmp SkipSelectionSet
 AllowBtn5
-        lda PlayAllFlag
+        lda #8
+        bit Flags
         bne SetPlayAllFlagToZero 
-        lda #1
-        sta PlayAllFlag
+        lda Flags               ;0000   0000
+        and #%00000111          ;0000   0000 
+        eor #8                  ;1000   1000     
+        sta Flags               ;1000   1000
         jmp SelectionSet
 SetPlayAllFlagToZero
-        lda #0
-        sta PlayAllFlag
+        lda Flags               ;0000   0010
+        and #%00000111          ;0000   0000 
+        sta Flags               ;0000   0000 
         jmp SelectionSet
 Selection5
 
@@ -687,8 +703,10 @@ Selection5
         beq AllowBtn6
         jmp SkipSelectionSet
 AllowBtn6
-        lda #1
-        sta AddNoteFlag
+        lda Flags               ;0000   0010
+        and #%00001101          ;0000   0000 
+        eor #2                  ;0010   0010     
+        sta Flags               ;0010   0010
         jmp SelectionSet
 Selection6
 
@@ -704,8 +722,10 @@ Selection6
         beq AllowBtn7
         jmp SkipSelectionSet
 AllowBtn7
-        lda #1
-        sta RemoveNoteFlag
+        lda Flags               ;00000   00100
+        and #%00001011          ;00000   00000 
+        eor #4                  ;00100   00100    
+        sta Flags               ;00100   00100
         jmp SelectionSet
 Selection7
 
@@ -1002,7 +1022,8 @@ GetChannelIdx
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Note Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldx AudChannel
-        lda PlayNoteFlag
+        lda #1
+        bit Flags
         bne SkipPlayNote
         lda AudDur0
         cmp FrameCtrTrk0,x
@@ -1035,8 +1056,10 @@ TurnOffNote
         sta AUDF0,x
         sta AUDC0,x
         sta FrameCtrTrk0,x
-        lda #1
-        sta PlayNoteFlag
+        lda Flags               ;00000   00100
+        and #%00001110          ;00000   00000 
+        eor #1                  ;00100   00100    
+        sta Flags               ;00100   00100
 
         ldy #0
 LoadPlayButton
@@ -1059,7 +1082,8 @@ SkipPlayNote
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Add Note ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda AddNoteFlag
+        lda #2
+        bit Flags
         beq SkipAddNote
 
         ldx AudChannel
@@ -1122,14 +1146,16 @@ AddNoteChannel1
         sta Track1BuilderPtr
 
 AddNoteChannel0
-        lda #0
-        sta AddNoteFlag        
+        lda Flags               ;0000   0010
+        and #%00001101          ;0000   0000 
+        sta Flags               ;0000   0000      
 SkipAddNote
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Remove Note ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda RemoveNoteFlag
+        lda #4
+        bit Flags
         beq SkipRemoveNote
 
         ldx AudChannel
@@ -1184,12 +1210,14 @@ RemNoteChannel1
         sbc #4
         sta Track1BuilderPtr
 RemNoteChannel0
-        lda #0
-        sta RemoveNoteFlag        
+        lda Flags               ;00000   00100
+        and #%00001011          ;00000   00000 
+        sta Flags               ;00000   00000      
 SkipRemoveNote
         
 
-        lda PlayAllFlag
+        lda #8
+        bit Flags
         beq SkipRamMusicPlayer
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;; Ram Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1209,7 +1237,7 @@ SkipRemoveNote
         lda #0                                          ; 2     Load Zero to
         sta FrameCtrTrk0                                ; 3     Reset the Frame counter
 NextRamNote
-
+        lda (NotePtrCh0),y                              ; 5     Load first note duration to A
         cmp #255                                        ; 2     See if the notes duration equals 255
         bne SkipResetRamTrack0                          ; 2/3   If so go back to the beginning of the track
 
@@ -1243,7 +1271,7 @@ SkipResetRamTrack0
         lda #0                                          ; 2     Load Zero to
         sta FrameCtrTrk1                                ; 3     Reset the Frame counter
 NextRamNote1
-
+        lda (NotePtrCh1),y                              ; 5     Load first note duration to A
         cmp #255                                        ; 2     See if the notes duration equals 255
         bne SkipResetRamTrack1                          ; 2/3   If so go back to the beginning of the track
 
@@ -1278,6 +1306,10 @@ LoadPauseAllButton
         bcs SkipResetPlayAllButton
 
 SkipRamMusicPlayer
+        lda #1
+        bit Flags
+        beq SkipResetAud
+
         ldy #0
 LoadPlayAllButton
         lda PlayButton,y
@@ -1288,7 +1320,7 @@ LoadPlayAllButton
 
         lda #<Track0Builder                              ; 4     Store the low byte of the track to 
         sta NotePtrCh0                                   ; 3     the Note Pointer
-
+        
         lda #0
         sta AUDV0
         sta AUDV1
@@ -1296,7 +1328,7 @@ LoadPlayAllButton
         sta AUDC1
         sta AUDF0
         sta AUDF1
-
+SkipResetAud
 SkipResetPlayAllButton
 ;;;;;;;;;;;;;;;;;; End Ram Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;
@@ -1330,11 +1362,16 @@ SkipDecDebounceCtr
 ; Reset Backgruond,Audio,Collisions,Note Flags
         lda #0
         sta COLUBK
-        sta CXCLR
-        sta AddNoteFlag
-        sta RemoveNoteFlag
+        sta CXCLR  
         ldy #26                                         ; 2
+
+        lda Flags               ;00000   00100
+        and #%00001011          ;00000   00000 
+        sta Flags               ;00000   00000 
         
+        lda Flags               ;0000   0010
+        and #%00001101          ;0000   0000 
+        sta Flags               ;0000   0000  
 WaitLoop
         lda INTIM
         bne WaitLoop
