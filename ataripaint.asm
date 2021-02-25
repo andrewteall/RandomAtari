@@ -4,78 +4,63 @@
 ;Start Program
         SEG.U vars
         ORG $80
-AudDur0                 ds 1            ; 
-AudVol0                 ds 1            ; 
-AudFrq0                 ds 1            ; 
+AudDur0                 ds 1             
+AudVol0                 ds 1             
+AudFrq0                 ds 1             
 AudCtl0                 ds 1            ;  
 AudChannel              ds 1
 
+; Flags
+FlagsSelection          ds 1                    ; 0-4 Current Selection (#0-#8) - (#9-#15 Not Used)
+                                                ; 5 - Play note flag - 0 plays note
+                                                ; 6 - Add note flag - 1 adds note
+                                                ; 7 - Remove note flag - 1 removes note
+                                                ; 8 - Play track flag - 1 plays tracks
 
-FrameCtrTrk0            ds 1            ; 
-FrameCtrTrk1            ds 1            ; 
+; Counters
+FrameCtrTrk0            ds 1            ;
+FrameCtrTrk1            ds 1            ;
+DebounceCtr             ds 1                    ; Currently set to 10 probably won't be over 15 - XXXXX000
 
-NotePtrCh0              ds 1            ; 
-AudTmp                  ds 1
-NotePtrCh1              ds 1
-LetterBuffer            ds 1
-
+; Selection
 DurGfxSelect            ds 1            ; 
-DurGfxValue             ds 5            ; 
-
 VolGfxSelect            ds 1            ; 
-VolGfxPtr               ds 2            ; 
-
 FrqGfxSelect            ds 1            ; 
-FrqGfxValue             ds 5            ; 
-
 CtlGfxSelect            ds 1            ; 
-CtlGfxValue             ds 5            
-
-PlayGfxValue            ds 5            ; 
 PlayGfxSelect           ds 1
-
-PlayAllGfxValue         ds 5            ; 
 PlayAllGfxSelect        ds 1
-
-ChannelGfxValue         ds 5            ; 
 ChannelGfxSelect        ds 1            
-
 AddGfxSelect            ds 1
 RemoveGfxSelect         ds 1
 
-PlayButtonMask          ds 5
-PlayAllButtonMask       ds 5
+; Rom Pointers
+PlayButtonMaskPtr       ds 2                    
+PlayAllButtonMaskPtr    ds 2 
+ChannelGfxPtr           ds 2
+CtlGfxPtr               ds 2
+VolGfxPtr               ds 2
+DurGfxPtr               ds 2
+FrqGfxPtr               ds 2
 
-NumberPtr               ds 2
+; Ram Pointers
+Track0BuilderPtr        ds 1                    ; 
+YTemp                   ds 1                    ; This will get zeroed so that the Trackpointer load
+Track1BuilderPtr        ds 1                    ; 
+LineTemp                ds 1                    ; will seem like it has 2 bytes
 
-DebounceCtr             ds 1
+NotePtrCh0              ds 2                     
 
+NotePtrCh1              ds 1
+LetterBuffer            ds 1                    ; 00000000               
 
-Track0Builder           ds #TRACKSIZE+1           ; 108
-Track1Builder           ds #TRACKSIZE+1           ; 108
-
-Track0BuilderPtr        ds 1                      ; Why do these need to be 2 bytes when I have both but
-YTemp                   ds 1                      ; This will get zeroed so that the Trackpointer load
-Track1BuilderPtr        ds 1                      ; 1 byte when I only have one
-LineTemp                ds 1                      ; will seem like it has 2 bytes
-
-                      
-FlagsSelection          ds 1                      ; 0-4 Current Selection (#0-#8)
-                                                  ; 5 - Play note flag - 0 plays note
-                                                  ; 6 - Add note flag - 1 adds note
-                                                  ; 7 - Remove note flag - 1 removes note
-                                                  ; 8 - Play track flag - 1 plays tracks
+; Ram Music Tracks
+Track0Builder           ds #TRACKSIZE+1
+Track1Builder           ds #TRACKSIZE+1
 
 
-
-
+        echo "----",(* - $80) , "bytes of RAM Used"
         echo "----",($100 - *) , "bytes of RAM left"
 ; TODO: Optimize Memory Usage
-;       - 24 bytes: Switch Grx drawing to use pointers
-;               - All Gfx Values will have to exist in Rom
-;               - May have to use bank switching
-;               - All letters have to use pointers
-;               - Reuse Pointers from previous text sections
 ;       - 2x Ram Player Memory: Compress Audio values to fit in 1/2 byte for player
 ;               - Add note
 ;               - Remove Note
@@ -97,6 +82,7 @@ FlagsSelection          ds 1                      ; 0-4 Current Selection (#0-#8
 ; TODO: Draw Note letters from memory location
 ; TODO: Add note count left on track
 ; TODO: Add note spacer inbetween plays
+; TODO: Frame Counters need to be reset to 0 before loading a new value so it doesn't run away
 
         SEG
         ORG $F000
@@ -104,7 +90,7 @@ FlagsSelection          ds 1                      ; 0-4 Current Selection (#0-#8
 ;PATTERN           = $80 ; storage Location (1st byte in RAM)
 TITLETEXTXSTARTPOSITION = #57
 SLEEPTIMER=TITLETEXTXSTARTPOSITION/3 +51
-TRACKSIZE=#24                                   ; Must be a multiple of 4 +1
+TRACKSIZE=#24                                   ; Must be a multiple of 4
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -155,12 +141,6 @@ Clear
 
         lda #<Track1Builder
         sta NotePtrCh1
-
-
-        lda #<Zero
-        sta NumberPtr
-        lda #>Zero
-        sta NumberPtr+1
 
         lda #<Track0Builder
         sta Track0BuilderPtr
@@ -261,6 +241,7 @@ TopBuffer
         sta GRP1                                        ; 3     " "    " "    " "   
         inx                                             ; 2
         txa
+        sbc #19
         sta WSYNC                                       ; 3
         SLEEP 4                                         ; 3     4       Set to 4 because our branch below crosses the
                                                         ;               page boundary so it takes an extra cycle
@@ -272,29 +253,28 @@ TopBuffer
 ;              to skip extra cycle needed
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 NoteRow 
-        sbc #19                                         ; 2     5       Subtract #19 since the carry is cleared above   
-                                                        ;               and we want to start on line 20
+
         lsr                                             ; 2     7       Divide by 2 to get index twice for double height
         lsr                                             ; 2     9       Divide by 2 to get index twice for quadruple height
         lsr                                             ; 2     11      Divide by 2 to get index twice for octuple height
         tay                                             ; 2     13      Transfer A to Y so we can index off Y
         
-        lda PlayButtonMask,y                            ; 4     17      Get the Score From our Play Button Mask Array
+        lda (PlayButtonMaskPtr),y                       ; 5     17      Get the Score From our Play Button Mask Array
         sta PF0                                         ; 3     20      Store the value to PF0
 
-        lda DurGfxValue,y                               ; 4     24      Get the Score From our Duration Gfx Array
+        lda (DurGfxPtr),y                               ; 5     24      Get the Score From our Duration Gfx Array
         sta PF1                                         ; 3     27      Store the value to PF1
         
-        lda (VolGfxPtr),y                               ; 4     31      Get the Score From our Volume Gfx Array
+        lda (VolGfxPtr),y                               ; 5     31      Get the Score From our Volume Gfx Array
         asl
         sta PF2                                         ; 3     34      Store the value to PF2
 
-        SLEEP 4                                         ; 6     40      Waste 6 cycles to line up the next Pf draw
+        SLEEP 2                                         ; 6     40      Waste 6 cycles to line up the next Pf draw
 
-        lda FrqGfxValue,y                               ; 4     44      Get the Score From our Frequency Gfx Array
+        lda (FrqGfxPtr),y                               ; 4     44      Get the Score From our Frequency Gfx Array
         sta PF2                                         ; 3     47      Store the value to PF2
         
-        lda CtlGfxValue,y                               ; 4     50      Get the Score From our Control Gfx Array        
+        lda (CtlGfxPtr),y                               ; 5     50      Get the Score From our Control Gfx Array        
         sta PF1                                         ; 3     53      Store the value to PF1        
 
         inx                                             ; 2     55      Increment our line number
@@ -302,8 +282,9 @@ NoteRow
         ldy #0                                          ; 2     57      Reset and clear the playfield
         txa                                             ; 2     59      Transfer the line number in preparation
                                                         ;               for the next line
+        sbc #19                                         ; 2     5       Subtract #19 since the carry is cleared above
+                                                        ;               and we want to start on line 20
         sty PF0                                         ; 3     62      Reset and clear the playfield
-        sty PF2                                         ; 3     65      Reset and clear the playfield
         sty PF1                                         ; 3     68      Reset and clear the playfield
         
         cpx #60                                         ; 2     70      Have we reached line #60
@@ -316,6 +297,8 @@ NoteRow
 ; Note Selection - 1-Line Kernel 
 ; Line 1 - 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldy #0
+        sty PF2                                         ; 3     65      Reset and clear the playfield
         sta WSYNC                                       ; 3     9
         inx                                             ; 2     4
         inx                                             ; 2     6
@@ -376,7 +359,7 @@ ControlRow
         lsr                                             ; 2     13      Divide by 2 to get index twice for double height
         tay                                             ; 2     15      Transfer A to Y so we can index off Y
         
-        lda PlayAllButtonMask,y                                ; 4     19      Get the Score From our Player 0 Score Array
+        lda (PlayAllButtonMaskPtr),y                                ; 4     19      Get the Score From our Player 0 Score Array
         sta PF0                                         ; 3     22      
 
         lda PlusBtn,y                               ; 4     26      Get the Score From our Player 0 Score Array
@@ -387,10 +370,10 @@ ControlRow
         lda MinusBtn,y                               ; 4     38      Get the Score From our Player 0 Score Array
         sta PF2                                         ; 3     41
         
-        lda ChannelGfxValue,y                               ; 4     45      Get the Score From our Player 0 Score Array
+        lda (ChannelGfxPtr),y                               ; 4     45      Get the Score From our Player 0 Score Array
         sta PF2                                         ; 3     48      Store Score to PF2
         
-        SLEEP 6                                         ; 7     62
+        SLEEP 4                                         ; 7     62
         
         lda #0                                          ; 2     64
         sta PF1                                         ; 3     70
@@ -473,6 +456,12 @@ EndofScreenBuffer
         sta VBLANK                                      ; 3     7
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;; Load Overscan Timer ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #30
+        sta TIM64T
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; Left Right Crusor Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda DebounceCtr                                 ; 3     10
@@ -515,25 +504,6 @@ SkipSetCurrentSelectionto0
 CursorRight
 
 SkipCursorMove
-
-;         lda CurrentSelect                               ; 3     49
-;         bpl SkipSelectionResetDown                      ; 2/3   51/52
-;         lda #8                                          ; 2     53
-;         sta CurrentSelect                               ; 3     56
-; SkipSelectionResetDown
-;         lda CurrentSelect                               ; 3     59
-;         cmp #9                                          ; 2     61
-;         bne SkipSelectionResetUp                        ; 2/3   63/64
-;         lda #0                                          ; 2     65
-;         sta CurrentSelect                               ; 3     68
-; SkipSelectionResetUp
-        sta WSYNC
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;; Load Overscan Timer ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #30
-        sta TIM64T
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;; Selection Detection ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -586,13 +556,33 @@ AllowBtn1
         lda #%00010000
         bit SWCHA
         bne Dur0Down
+        lda AudDur0
+        cmp #7
+        bne IncAudDur0
+        lda #0
+        sta AudDur0
+        sec
+        bcs SetAud0ToZero
+IncAudDur0
         inc AudDur0
+SetAud0ToZero        
         jmp SelectionSet
 Dur0Down
         lda #%00100000
         bit SWCHA
         bne Dur0Up
+
+        lda AudDur0
+        cmp #0
+        bne DecAudDur0
+        lda #7
+        sta AudDur0
+        sec
+        bcs SetAud0To8
+DecAudDur0
         dec AudDur0
+SetAud0To8  
+
         jmp SelectionSet
 Dur0Up
 Selection1
@@ -834,59 +824,24 @@ SkipFrq0ResetUp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;; Build Audio Duration Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda AudDur0
-        and #$0F
-        sta AudTmp
-        asl
-        asl
-        clc
-        adc AudTmp
-
-        ldy #0
-        clc
-        adc NumberPtr
-        sta NumberPtr
-GetDurLoIdx
-        lda (NumberPtr),y
-        sta DurGfxValue,y
-        iny
-        cpy #5
-        bne GetDurLoIdx
-
         lda #<(Zero)
-        sta NumberPtr
+        sta DurGfxPtr
 
         lda #>(Zero)
-        sta NumberPtr+1
+        sta DurGfxPtr+1 
 
         lda AudDur0
-        and #$F0
-        lsr
-        lsr
-        lsr
-        lsr
-        sta AudTmp
         asl
         asl
         clc
-        adc AudTmp
+        adc AudDur0
 
-        ldy #0
         clc
-        adc NumberPtr
-        sta NumberPtr
-GetDurHiIdx
-        lda (NumberPtr),y
-        asl
-        asl
-        asl
-        asl
-        ora DurGfxValue,y
-        sta DurGfxValue,y
-        iny
-        cpy #5
-        bne GetDurHiIdx
+        adc DurGfxPtr
+        sta DurGfxPtr
 
+        lda DurGfxPtr+1
+        sta DurGfxPtr+1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; Build Audio Volume Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -907,10 +862,8 @@ GetDurHiIdx
         sta VolGfxPtr
 GetVolIdx
         ;asl
-        lda VolGfxPtr;,y
-        ldx VolGfxPtr+1;,y
-        sta VolGfxPtr;,y
-        stx VolGfxPtr+1;,y
+        lda VolGfxPtr+1
+        sta VolGfxPtr+1
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -918,79 +871,34 @@ GetVolIdx
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         lda #<(Zero)
-        sta NumberPtr
+        sta FrqGfxPtr
 
         lda #>(Zero)
-        sta NumberPtr+1  
+        sta FrqGfxPtr+1  
  
         lda AudFrq0
-        and #$0F
-        sta AudTmp
         asl
         asl
         clc
-        adc AudTmp
+        adc AudFrq0
 
-        ldy #0
-        clc
-        adc NumberPtr
-        sta NumberPtr
-GetFrqLoIdx
-        lda (NumberPtr),y
-        sta FrqGfxValue,y
-        iny
-        cpy #5
-        bne GetFrqLoIdx
-
-        lda #<(Zero)
-        sta NumberPtr
-
-        lda #>(Zero)
-        sta NumberPtr+1 
+        ;clc
+        adc FrqGfxPtr
+        sta FrqGfxPtr
+GetFrqIdx
+        lda FrqGfxPtr+1
+        sta FrqGfxPtr+1
 
 
-        lda AudFrq0
-        and #$F0
-        lsr
-        lsr
-        lsr
-        lsr
-        sta AudTmp
-        asl
-        asl
-        clc
-        adc AudTmp
-
-        ldy #0
-        clc
-        adc NumberPtr
-        sta NumberPtr
-GetFrqHiIdx
-        lda (NumberPtr),y
-        asl
-        asl
-        asl
-        asl
-        ora FrqGfxValue,y
-        sta FrqGfxValue,y
-        iny
-        cpy #5
-        bne GetFrqHiIdx
-
-        lda #<(RZero)
-        sta NumberPtr
-
-        lda #>(RZero)
-        sta NumberPtr+1  
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;; Reset AudTmp to #0 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #0
-        sta AudTmp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; Build Audio Control Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #<(RSZero)
+        sta CtlGfxPtr
+
+        lda #>(RSZero)
+        sta CtlGfxPtr+1  
+
         lda AudCtl0
         asl
         asl
@@ -998,27 +906,23 @@ GetFrqHiIdx
         adc AudCtl0
 
         ldy #0
-        adc NumberPtr
-        sta NumberPtr
+        clc
+        adc CtlGfxPtr
+        sta CtlGfxPtr
 GetCtlIdx
-        lda (NumberPtr),y
-        asl
-        asl
-        asl
-        sta CtlGfxValue,y
-        iny
-        cpy #5
-        bne GetCtlIdx
-
-        lda #<(Zero)
-        sta NumberPtr
-
-        lda #>(Zero)
-        sta NumberPtr+1 
-
+        lda CtlGfxPtr
+        ldx CtlGfxPtr+1
+        sta CtlGfxPtr
+        stx CtlGfxPtr+1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; Build Audio Channel Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #<(Zero)
+        sta ChannelGfxPtr
+
+        lda #>(Zero)
+        sta ChannelGfxPtr+1  
+
         lda AudChannel
         asl
         asl
@@ -1026,20 +930,12 @@ GetCtlIdx
         adc AudChannel
 
         ldy #0
-        adc NumberPtr
-        sta NumberPtr
+        clc
+        adc ChannelGfxPtr
+        sta ChannelGfxPtr
 GetChannelIdx
-        lda (NumberPtr),y
-        sta ChannelGfxValue,y
-        iny
-        cpy #5
-        bne GetChannelIdx
-
-        lda #<(Zero)
-        sta NumberPtr
-
-        lda #>(Zero)
-        sta NumberPtr+1  
+        lda ChannelGfxPtr+1
+        sta ChannelGfxPtr+1
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1063,13 +959,13 @@ GetChannelIdx
         sta AUDC0,x
         inc FrameCtrTrk0,x
 
-        ldy #0
+
 LoadPauseButton
-        lda PauseButton,y
-        sta PlayButtonMask,y
-        iny
-        cpy #5
-        bne LoadPauseButton
+        lda #<PauseButton
+        sta PlayButtonMaskPtr
+        lda #>PauseButton
+        sta PlayButtonMaskPtr+1
+
 
         sec
         bcs SkipPlayNote
@@ -1085,13 +981,11 @@ TurnOffNote
         eor #16                  ;00100   00100    
         sta FlagsSelection               ;00100   00100
 
-        ldy #0
 LoadPlayButton
-        lda PlayButton,y
-        sta PlayButtonMask,y
-        iny
-        cpy #5
-        bne LoadPlayButton
+        lda #<PlayButton
+        sta PlayButtonMaskPtr
+        lda #>PlayButton
+        sta PlayButtonMaskPtr+1
 SkipPlayNote
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1319,13 +1213,11 @@ SkipResetRamTrack1
 
 
 
-        ldy #0
 LoadPauseAllButton
-        lda PauseButton,y
-        sta PlayAllButtonMask,y
-        iny
-        cpy #5
-        bne LoadPauseAllButton
+        lda #<PauseButton
+        sta PlayAllButtonMaskPtr
+        lda #>PauseButton
+        sta PlayAllButtonMaskPtr+1
 
         sec
         bcs SkipResetPlayAllButton
@@ -1335,13 +1227,11 @@ SkipRamMusicPlayer
         bit FlagsSelection
         beq SkipResetAud
 
-        ldy #0
 LoadPlayAllButton
-        lda PlayButton,y
-        sta PlayAllButtonMask,y
-        iny
-        cpy #5
-        bne LoadPlayAllButton
+        lda #<PlayButton
+        sta PlayAllButtonMaskPtr
+        lda #>PlayButton
+        sta PlayAllButtonMaskPtr+1
 
         lda #<Track0Builder                              ; 4     Store the low byte of the track to 
         sta NotePtrCh0                                   ; 3     the Note Pointer
@@ -1401,7 +1291,7 @@ WaitLoop
         lda INTIM
         bne WaitLoop
 ; overscan
-        ldx #5                                         ; 2
+        ldx #6                                         ; 2
 Overscan
         dex                                             ; 3
         sta WSYNC                                       ; 2
@@ -1554,6 +1444,102 @@ F          .byte  #%111
            .byte  #%100
            .byte  #%100
 
+OneZero    .byte  #%01100111
+           .byte  #%00100101
+           .byte  #%00100101
+           .byte  #%00100101
+           .byte  #%01110111
+
+OneOne     .byte  #%01100110
+           .byte  #%00100010
+           .byte  #%00100010
+           .byte  #%00100010
+           .byte  #%01110111
+
+OneTwo     .byte  #%01100111
+           .byte  #%00100001
+           .byte  #%00100111
+           .byte  #%00100100
+           .byte  #%01110111
+
+OneThree   .byte  #%01100111
+           .byte  #%00100001
+           .byte  #%00100111
+           .byte  #%00100001
+           .byte  #%01110111
+
+OneFour    .byte  #%01100101
+           .byte  #%00100101
+           .byte  #%00100111
+           .byte  #%00100001
+           .byte  #%01110001
+
+OneFive    .byte  #%01100111
+           .byte  #%00100100
+           .byte  #%00100111
+           .byte  #%00100001
+           .byte  #%01110111
+
+OneSix     .byte  #%01100111
+           .byte  #%00100100
+           .byte  #%00100111
+           .byte  #%00100101
+           .byte  #%01110111
+
+OneSeven   .byte  #%01100111
+           .byte  #%00100001
+           .byte  #%00100001
+           .byte  #%00100001
+           .byte  #%01110001
+
+OneEight   .byte  #%01100111
+           .byte  #%00100101
+           .byte  #%00100111
+           .byte  #%00100101
+           .byte  #%01110111
+
+OneNine    .byte  #%01100111
+           .byte  #%00100101
+           .byte  #%00100111
+           .byte  #%00100001
+           .byte  #%01110111
+
+OneA       .byte  #%01100111
+           .byte  #%00100101
+           .byte  #%00100111
+           .byte  #%00100101
+           .byte  #%01110101
+
+OneB       .byte  #%01100110
+           .byte  #%00100101
+           .byte  #%00100110
+           .byte  #%00100101
+           .byte  #%01110110
+
+OneC       .byte  #%01100111
+           .byte  #%00100100
+           .byte  #%00100100
+           .byte  #%00100100
+           .byte  #%01110111
+
+OneD       .byte  #%01100110
+           .byte  #%00100101
+           .byte  #%00100101
+           .byte  #%00100101
+           .byte  #%01110110
+
+OneE       .byte  #%01100111
+           .byte  #%00100100
+           .byte  #%00100111
+           .byte  #%00100100
+           .byte  #%01110111
+
+OneF       .byte  #%01100111
+           .byte  #%00100100
+           .byte  #%00100111
+           .byte  #%00100100
+           .byte  #%01110100
+
 
         align 256
 RZero      .byte  #%11100
@@ -1651,7 +1637,104 @@ RF         .byte  #%11100
            .byte  #%11100
            .byte  #%00100
            .byte  #%00100
-           
+
+        align 256
+RSZero      .byte  #%11100000
+           .byte  #%10100000
+           .byte  #%10100000
+           .byte  #%10100000
+           .byte  #%11100000
+
+RSOne       .byte  #%01100000
+           .byte  #%01000000
+           .byte  #%01000000
+           .byte  #%01000000
+           .byte  #%11100000
+
+RSTwo       .byte  #%11100000
+           .byte  #%10000000
+           .byte  #%11100000
+           .byte  #%00100000
+           .byte  #%11100000
+
+RSThree     .byte  #%11100000
+           .byte  #%10000000
+           .byte  #%11100000
+           .byte  #%10000000
+           .byte  #%11100000
+
+RSFour      .byte  #%10100000
+           .byte  #%10100000
+           .byte  #%11100000
+           .byte  #%10000000
+           .byte  #%10000000
+
+RSFive      .byte  #%11100000
+           .byte  #%00100000
+           .byte  #%11100000
+           .byte  #%10000000
+           .byte  #%11100000
+
+RSSix       .byte  #%11100000
+           .byte  #%00100000
+           .byte  #%11100000
+           .byte  #%10100000
+           .byte  #%11100000
+
+RSSeven     .byte  #%11100000
+           .byte  #%10000000
+           .byte  #%10000000
+           .byte  #%10000000
+           .byte  #%10000000
+
+RSEight     .byte  #%11100000
+           .byte  #%10100000
+           .byte  #%11100000
+           .byte  #%10100000
+           .byte  #%11100000
+
+RSNine      .byte  #%11100000
+           .byte  #%10100000
+           .byte  #%11100000
+           .byte  #%10000000
+           .byte  #%11100000
+
+RSA         .byte  #%11100000
+           .byte  #%10100000
+           .byte  #%11100000
+           .byte  #%10100000
+           .byte  #%10100000
+
+RSB         .byte  #%01100000
+           .byte  #%10100000
+           .byte  #%01100000
+           .byte  #%10100000
+           .byte  #%01100000
+
+RSC         .byte  #%11100000
+           .byte  #%00100000
+           .byte  #%00100000
+           .byte  #%00100000
+           .byte  #%11100000
+
+RSD         .byte  #%01100000
+           .byte  #%10100000
+           .byte  #%10100000
+           .byte  #%10100000
+           .byte  #%01100000
+
+RSE         .byte  #%11100000
+           .byte  #%00100000
+           .byte  #%11100000
+           .byte  #%00100000
+           .byte  #%11100000
+
+RSF         .byte  #%11100000
+           .byte  #%00100000
+           .byte  #%11100000
+           .byte  #%00100000
+           .byte  #%00100000
+
         align 256
 
 PlayButton .byte  #%00100000
