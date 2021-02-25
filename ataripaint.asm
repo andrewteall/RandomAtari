@@ -82,7 +82,6 @@ Track1Builder           ds #TRACKSIZE+1
 ; TODO: Draw Note letters from memory location
 ; TODO: Add note count left on track
 ; TODO: Add note spacer inbetween plays
-; TODO: Frame Counters need to be reset to 0 before loading a new value so it doesn't run away
 
         SEG
         ORG $F000
@@ -1243,6 +1242,8 @@ LoadPlayAllButton
         sta AUDC1
         sta AUDF0
         sta AUDF1
+        sta FrameCtrTrk0
+        sta FrameCtrTrk1
 SkipResetAud
 SkipResetPlayAllButton
 ;;;;;;;;;;;;;;;;;; End Ram Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
