@@ -4,11 +4,13 @@
 ;Start Program
         SEG.U vars
         ORG $80
-AudDur0                 ds 1             
+
 AudVol0                 ds 1             
-AudFrq0                 ds 1             
-AudCtl0                 ds 1            ;  
+AudCtl0                 ds 1              
 AudChannel              ds 1
+
+AudVolCtl               ds 1            
+AudFrqDur               ds 1
 
 ; Flags
 FlagsSelection          ds 1                    ; 0-4 Current Selection (#0-#8) - (#9-#15 Not Used)
@@ -555,32 +557,36 @@ AllowBtn1
         lda #%00010000
         bit SWCHA
         bne Dur0Down
-        lda AudDur0
+        lda AudFrqDur
+        and #%00000111
         cmp #7
         bne IncAudDur0
-        lda #0
-        sta AudDur0
+        lda AudFrqDur
+        and #%11111000
+        sta AudFrqDur
         sec
         bcs SetAud0ToZero
 IncAudDur0
-        inc AudDur0
-SetAud0ToZero        
+        inc AudFrqDur
+SetAud0ToZero
         jmp SelectionSet
 Dur0Down
         lda #%00100000
         bit SWCHA
         bne Dur0Up
 
-        lda AudDur0
+        lda AudFrqDur
+        and #%00000111
         cmp #0
         bne DecAudDur0
-        lda #7
-        sta AudDur0
+        lda AudFrqDur
+        eor #%00000111
+        sta AudFrqDur
         sec
         bcs SetAud0To8
 DecAudDur0
-        dec AudDur0
-SetAud0To8  
+        dec AudFrqDur
+SetAud0To8
 
         jmp SelectionSet
 Dur0Up
@@ -635,13 +641,75 @@ AllowBtn3
         lda #%00010000            
         bit SWCHA
         bne Frq0Down
-        inc AudFrq0
+
+        lda AudFrqDur
+        and #%11111000
+        lsr
+        lsr
+        lsr
+        cmp #31
+        bne IncAudFrq0
+        lda AudFrqDur
+        and #%00000111
+        sta AudFrqDur
+        sec
+        bcs SetAudFrq0ToZero
+IncAudFrq0
+        lda AudFrqDur
+        tay
+        and #%00000111
+        sta AudFrqDur
+        tya
+        and #%11111000
+        lsr
+        lsr
+        lsr
+        clc
+        adc #1
+        asl
+        asl
+        asl
+        ora AudFrqDur
+        sta AudFrqDur
+SetAudFrq0ToZero
+
         jmp SelectionSet
 Frq0Down
         lda #%00100000            
         bit SWCHA
         bne Frq0Up
-        dec AudFrq0
+
+        lda AudFrqDur
+        and #%11111000
+        lsr
+        lsr
+        lsr
+        cmp #0
+        bne DecAudFrq0
+        lda AudFrqDur
+        ora #%11111000
+        sta AudFrqDur
+        sec
+        bcs SetAudFrq0To31
+DecAudFrq0
+        lda AudFrqDur
+        tay
+        and #%00000111
+        sta AudFrqDur
+        tya
+        and #%11111000
+        lsr
+        lsr
+        lsr
+        sec
+        sbc #1
+        asl
+        asl
+        asl
+        ora AudFrqDur
+        sta AudFrqDur
+SetAudFrq0To31
+
         jmp SelectionSet
 Frq0Up        
 Selection3
@@ -801,19 +869,6 @@ SkipCtl0ResetDown
         stx AudCtl0
 SkipCtl0ResetUp
 
-        ldx AudFrq0
-        bpl SkipFrq0ResetDown
-        ldx #31
-        stx AudFrq0
-SkipFrq0ResetDown
-
-        ldx AudFrq0
-        cpx #32
-        bne SkipFrq0ResetUp
-        ldx #0
-        stx AudFrq0
-SkipFrq0ResetUp
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;; Build Audio Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -829,11 +884,19 @@ SkipFrq0ResetUp
         lda #>(Zero)
         sta DurGfxPtr+1 
 
-        lda AudDur0
+        lda AudFrqDur
+        sta LineTemp
+        and #%11111000
+        sta YTemp
+        lda AudFrqDur
+        and #%00000111
+        sta AudFrqDur
         asl
         asl
         clc
-        adc AudDur0
+        adc AudFrqDur
+        ;ora YTemp
+        ;sta AudFrqDur
 
         clc
         adc DurGfxPtr
@@ -841,6 +904,9 @@ SkipFrq0ResetUp
 
         lda DurGfxPtr+1
         sta DurGfxPtr+1
+        lda LineTemp
+        sta AudFrqDur
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; Build Audio Volume Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -853,7 +919,7 @@ SkipFrq0ResetUp
         lda AudVol0
         asl
         asl
-        clc
+        
         adc AudVol0
 
         ldy #0
@@ -875,18 +941,28 @@ GetVolIdx
         lda #>(Zero)
         sta FrqGfxPtr+1  
  
-        lda AudFrq0
+        lda AudFrqDur
+        sta LineTemp
+        and #%00000111
+        sta YTemp
+        lda AudFrqDur
+        and #%11111000
+        lsr
+        lsr
+        lsr
+        sta AudFrqDur
         asl
         asl
-        clc
-        adc AudFrq0
-
+        ;clc
+        adc AudFrqDur
         ;clc
         adc FrqGfxPtr
         sta FrqGfxPtr
 GetFrqIdx
         lda FrqGfxPtr+1
         sta FrqGfxPtr+1
+        lda LineTemp
+        sta AudFrqDur
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -944,14 +1020,19 @@ GetChannelIdx
         lda #16
         bit FlagsSelection
         bne SkipPlayNote
-        lda AudDur0
+        lda AudFrqDur
+        and #%00000111
         cmp FrameCtrTrk0,x
         beq TurnOffNote
 
         lda AudVol0
         sta AUDV0,x
 
-        lda AudFrq0
+        lda AudFrqDur
+        and #%11111000
+        lsr
+        lsr
+        lsr
         sta AUDF0,x
 
         lda AudCtl0
@@ -1014,13 +1095,18 @@ SkipPlayNote
 
         ldy #0
 
-        lda AudDur0
+        lda AudFrqDur
+        and #%00000111
         sta (Track0BuilderPtr),y
         iny
         lda AudVol0
         sta (Track0BuilderPtr),y
         iny
-        lda AudFrq0
+        lda AudFrqDur
+        and #%11111000
+        lsr
+        lsr
+        lsr
         sta (Track0BuilderPtr),y
         iny
         lda AudCtl0
@@ -1043,13 +1129,18 @@ AddNoteChannel1
 
         ldy #0
 
-        lda AudDur0
+        lda AudFrqDur
+        and #%00000111
         sta (Track1BuilderPtr),y
         iny
         lda AudVol0
         sta (Track1BuilderPtr),y
         iny
-        lda AudFrq0
+        lda AudFrqDur
+        and #%11111000
+        lsr
+        lsr
+        lsr
         sta (Track1BuilderPtr),y
         iny
         lda AudCtl0
