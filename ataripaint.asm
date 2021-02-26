@@ -9,6 +9,7 @@ AudChannel              ds 1
 
 AudVolCtl               ds 1            
 AudFrqDur               ds 1
+AudChannelDebouceCtr    ds 1
 
 ; Flags
 FlagsSelection          ds 1                    ; 0-4 Current Selection (#0-#8) - (#9-#15 Not Used)
@@ -60,12 +61,8 @@ Track1Builder           ds #TRACKSIZE+1
 
         echo "----",(* - $80) , "bytes of RAM Used"
         echo "----",($100 - *) , "bytes of RAM left"
-; TODO: Optimize Memory Usage
-;       - 2x Ram Player Memory: Compress Audio values to fit in 1/2 byte for player
-;               - Add note
-;               - Remove Note
-;               - Ram Note Player
-;               - Will only have 8 duration values
+; TODO: Use Duration values to set real time
+;       - Will only have 8 duration values
 ;                       ; whole(3/4) note - 216 or maybe half triplets
 ;                       ; half note - 144/120
 ;                       ; quarter note - 72/60
@@ -74,7 +71,6 @@ Track1Builder           ds #TRACKSIZE+1
 ;                       ; 16th note - 18/15
 ;                       ; 32nd note - 9/?
 ;                       ; control note - 255
-;       - 2 bytes: Combine Working Aud values to 2 bytes
 ; TODO: Flag to not use Channel 1 - doubles play time
 ;       - Could also have channel 1 count from top so the tracks meet in the middle
 ; TODO: Multiplex Characters for more than 12 chars per line
@@ -1191,34 +1187,17 @@ SkipPlayNote
         ldy #0
 
         lda AudFrqDur
-        and #%00000111
         sta (Track0BuilderPtr),y
         iny
         lda AudVolCtl
-        and #%11110000
-        lsr
-        lsr
-        lsr
-        lsr
         sta (Track0BuilderPtr),y
         iny
-        lda AudFrqDur
-        and #%11111000
-        lsr
-        lsr
-        lsr
-        sta (Track0BuilderPtr),y
-        iny
-        lda AudVolCtl
-        and #%00001111
-        sta (Track0BuilderPtr),y
-        iny
-        lda #255
+        lda #7
         sta (Track0BuilderPtr),y
         
         lda Track0BuilderPtr
         clc
-        adc #4
+        adc #2
         sta Track0BuilderPtr
 
         sec
@@ -1231,34 +1210,17 @@ AddNoteChannel1
         ldy #0
 
         lda AudFrqDur
-        and #%00000111
         sta (Track1BuilderPtr),y
         iny
         lda AudVolCtl
-        and #%11110000
-        lsr
-        lsr
-        lsr
-        lsr
         sta (Track1BuilderPtr),y
         iny
-        lda AudFrqDur
-        and #%11111000
-        lsr
-        lsr
-        lsr
-        sta (Track1BuilderPtr),y
-        iny
-        lda AudVolCtl
-        and #%00001111
-        sta (Track1BuilderPtr),y
-        iny
-        lda #255
+        lda #7
         sta (Track1BuilderPtr),y
         
         lda Track1BuilderPtr
         clc
-        adc #4
+        adc #2
         sta Track1BuilderPtr
 
 AddNoteChannel0
@@ -1289,16 +1251,12 @@ SkipAddNote
         ldy #$FF
         sta (Track0BuilderPtr),y
         dey
-        sta (Track0BuilderPtr),y
-        dey
-        sta (Track0BuilderPtr),y
-        dey
-        lda #255
+        lda #7
         sta (Track0BuilderPtr),y
         
         lda Track0BuilderPtr
         sec
-        sbc #4
+        sbc #2
         sta Track0BuilderPtr
         sec
         bcs RemNoteChannel0
@@ -1314,16 +1272,12 @@ RemNoteChannel1
         ldy #$FF
         sta (Track1BuilderPtr),y
         dey
-        sta (Track1BuilderPtr),y
-        dey
-        sta (Track1BuilderPtr),y
-        dey
-        lda #255
+        lda #7
         sta (Track1BuilderPtr),y
         
         lda Track1BuilderPtr
         sec
-        sbc #4
+        sbc #2
         sta Track1BuilderPtr
 RemNoteChannel0
         lda FlagsSelection               ;00000   00100
@@ -1334,7 +1288,9 @@ SkipRemoveNote
 
         lda #128
         bit FlagsSelection
-        beq SkipRamMusicPlayer
+        bne SkipRamMusicPlayerJump
+        jmp SkipRamMusicPlayer
+SkipRamMusicPlayerJump
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;; Ram Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
@@ -1342,33 +1298,45 @@ SkipRemoveNote
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldy #0                                          ; 2     Initialize Y-Index to 0
         lda (NotePtrCh0),y                              ; 5     Load first note duration to A
+        and #%00000111
         cmp FrameCtrTrk0                                ; 3     See if it equals the Frame Counter
         bne NextRamNote                                 ; 2/3   If so move the NotePointer to the next note
 
         lda NotePtrCh0                                  ; 3     Load the Note Pointer to A
         clc                                             ; 2     Clear the carry 
-        adc #4                                          ; 2     Add 4 to move the Notep pointer to the next note
+        adc #2                                          ; 2     Add 4 to move the Notep pointer to the next note
         sta NotePtrCh0                                  ; 3     Store the new note pointer
 
         lda #0                                          ; 2     Load Zero to
         sta FrameCtrTrk0                                ; 3     Reset the Frame counter
 NextRamNote
         lda (NotePtrCh0),y                              ; 5     Load first note duration to A
-        cmp #255                                        ; 2     See if the notes duration equals 255
+        and #%00000111
+        cmp #7                                          ; 2     See if the notes duration equals 255
         bne SkipResetRamTrack0                          ; 2/3   If so go back to the beginning of the track
 
         lda #<Track0Builder                             ; 4     Store the low byte of the track to 
         sta NotePtrCh0                                  ; 3     the Note Pointer
 SkipResetRamTrack0
 
-        iny                                             ; 2     Increment Y (Y=1) to point to the Note Volume
+        ;iny                                             ; 2     Increment Y (Y=1) to point to the Note Volume
         lda (NotePtrCh0),y                              ; 5     Load Volume to A
-        sta AUDV0                                       ; 3     and set the Note Volume
+        and #%11111000
+        lsr
+        lsr
+        lsr
+        sta AUDF0                                       ; 3     and set the Note Volume
         iny                                             ; 2     Increment Y (Y=2) to point to the Note Frequency
         lda (NotePtrCh0),y                              ; 5     Load Frequency to A
-        sta AUDF0                                       ; 3     and set the Note Frequency
-        iny                                             ; 2     Increment Y (Y=3) to point to the Note Control
+        and #%11110000
+        lsr
+        lsr
+        lsr
+        lsr
+        sta AUDV0                                       ; 3     and set the Note Frequency
+        ;iny                                             ; 2     Increment Y (Y=3) to point to the Note Control
         lda (NotePtrCh0),y                              ; 5     Load Control to A
+        and #%00001111
         sta AUDC0                                       ; 3     and set the Note Control
         inc FrameCtrTrk0                                ; 5     Increment the Frame Counter to duration compare later
 
@@ -1376,33 +1344,45 @@ SkipResetRamTrack0
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldy #0                                          ; 2     Initialize Y-Index to 0
         lda (NotePtrCh1),y                              ; 5     Load first note duration to A
+        and #%00000111
         cmp FrameCtrTrk1                                ; 3     See if it equals the Frame Counter
         bne NextRamNote1                                ; 2/3   If so move the NotePointer to the next note
 
         lda NotePtrCh1                                  ; 3     Load the Note Pointer to A
         clc                                             ; 2     Clear the carry 
-        adc #4                                          ; 2     Add 4 to move the Notep pointer to the next note
+        adc #2                                          ; 2     Add 4 to move the Notep pointer to the next note
         sta NotePtrCh1                                  ; 3     Store the new note pointer
 
         lda #0                                          ; 2     Load Zero to
         sta FrameCtrTrk1                                ; 3     Reset the Frame counter
 NextRamNote1
         lda (NotePtrCh1),y                              ; 5     Load first note duration to A
-        cmp #255                                        ; 2     See if the notes duration equals 255
+        and #%00000111
+        cmp #7                                          ; 2     See if the notes duration equals 255
         bne SkipResetRamTrack1                          ; 2/3   If so go back to the beginning of the track
 
         lda #<Track1Builder                             ; 4     Store the low byte of the track to 
         sta NotePtrCh1                                  ; 3     the Note Pointer
 SkipResetRamTrack1
 
-        iny                                             ; 2     Increment Y (Y=1) to point to the Note Volume
+        ;iny                                             ; 2     Increment Y (Y=1) to point to the Note Volume
         lda (NotePtrCh1),y                              ; 5     Load Volume to A
-        sta AUDV1                                       ; 3     and set the Note Volume
+        and #%11111000
+        lsr
+        lsr
+        lsr
+        sta AUDF1                                       ; 3     and set the Note Volume
         iny                                             ; 2     Increment Y (Y=2) to point to the Note Frequency
         lda (NotePtrCh1),y                              ; 5     Load Frequency to A
-        sta AUDF1                                       ; 3     and set the Note Frequency
-        iny                                             ; 2     Increment Y (Y=3) to point to the Note Control
+        and #%11110000
+        lsr
+        lsr
+        lsr
+        lsr
+        sta AUDV1                                       ; 3     and set the Note Frequency
+        ;iny                                             ; 2     Increment Y (Y=3) to point to the Note Control
         lda (NotePtrCh1),y                              ; 5     Load Control to A
+        and #%00001111
         sta AUDC1                                       ; 3     and set the Note Control
         inc FrameCtrTrk1                                ; 5     Increment the Frame Counter to duration compare later
 
