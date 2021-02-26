@@ -4,9 +4,7 @@
 ;Start Program
         SEG.U vars
         ORG $80
-
-AudVol0                 ds 1             
-AudCtl0                 ds 1              
+                      
 AudChannel              ds 1
 
 AudVolCtl               ds 1            
@@ -580,7 +578,7 @@ Dur0Down
         cmp #0
         bne DecAudDur0
         lda AudFrqDur
-        eor #%00000111
+        ora #%00000111
         sta AudFrqDur
         sec
         bcs SetAud0To8
@@ -594,7 +592,9 @@ Selection1
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 2 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         cmp #2
-        bne Selection2
+        beq SkipSelection2Jump
+        jmp Selection2
+SkipSelection2Jump
         lda #%00111110
         sta VolGfxSelect
         ldy INPT4
@@ -612,13 +612,85 @@ AllowBtn2
         lda #%00010000            
         bit SWCHA
         bne Vol0Down
-        inc AudVol0
+
+
+        lda AudVolCtl
+        and #%11110000
+        lsr
+        lsr
+        lsr
+        lsr
+        cmp #15
+        bne IncAudVol0
+        lda AudVolCtl
+        and #%00001111
+        sta AudVolCtl
+        sec
+        bcs SetAudVol0ToZero
+IncAudVol0
+        lda AudVolCtl
+        tay
+        and #%00001111
+        sta AudVolCtl
+        tya
+        and #%11110000
+        lsr
+        lsr
+        lsr
+        lsr
+        clc
+        adc #1
+        asl
+        asl
+        asl
+        asl
+        ora AudVolCtl
+        sta AudVolCtl
+SetAudVol0ToZero
+
+
         jmp SelectionSet
 Vol0Down
         lda #%00100000            
         bit SWCHA
         bne Vol0Up
-        dec AudVol0
+
+
+        lda AudVolCtl
+        and #%11110000
+        lsr
+        lsr
+        lsr
+        lsr
+        cmp #0
+        bne DecAudVol0
+        lda AudVolCtl
+        ora #%11110000
+        sta AudVolCtl
+        sec
+        bcs SetAudVol0To15
+DecAudVol0
+        lda AudVolCtl
+        tay
+        and #%00001111
+        sta AudVolCtl
+        tya
+        and #%11110000
+        lsr
+        lsr
+        lsr
+        lsr
+        sec
+        sbc #1
+        asl
+        asl
+        asl
+        asl
+        ora AudVolCtl
+        sta AudVolCtl
+SetAudVol0To15
+
+
         jmp SelectionSet
 Vol0Up
 Selection2
@@ -732,13 +804,39 @@ AllowBtn4
         lda #%00010000            
         bit SWCHA
         bne Ctl0Down
-        inc AudCtl0
+
+        lda AudVolCtl
+        and #%00001111
+        cmp #15
+        bne IncAudCtl0
+        lda AudVolCtl
+        and #%11110000
+        sta AudVolCtl
+        sec
+        bcs SetAudCtl0ToZero
+IncAudCtl0
+        inc AudVolCtl
+SetAudCtl0ToZero
+
         jmp SelectionSet
 Ctl0Down
         lda #%00100000            
         bit SWCHA
         bne Ctl0Up
-        dec AudCtl0
+        
+        lda AudVolCtl
+        and #%00001111
+        cmp #0
+        bne DecAudCtl0
+        lda AudVolCtl
+        ora #%00001111
+        sta AudVolCtl
+        sec
+        bcs SetAudCtl0To15
+DecAudCtl0
+        dec AudVolCtl
+SetAudCtl0To15
+
         jmp SelectionSet
 Ctl0Up                
 Selection4
@@ -841,35 +939,6 @@ SelectionSet
 SkipSelectionSet
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;; Check Audio Bounds ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ldx AudVol0
-        bpl SkipVol0ResetDown
-        ldx #15
-        stx AudVol0
-SkipVol0ResetDown
-
-        ldx AudVol0
-        cpx #16
-        bne SkipVol0ResetUp
-        ldx #0
-        stx AudVol0
-SkipVol0ResetUp
-
-        ldx AudCtl0
-        bpl SkipCtl0ResetDown
-        ldx #15
-        stx AudCtl0
-SkipCtl0ResetDown
-
-        ldx AudCtl0
-        cpx #16
-        bne SkipCtl0ResetUp
-        ldx #0
-        stx AudCtl0
-SkipCtl0ResetUp
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;; Build Audio Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -916,13 +985,22 @@ SkipCtl0ResetUp
         lda #>(RZero)
         sta VolGfxPtr+1
 
-        lda AudVol0
+        lda AudVolCtl
+        sta LineTemp
+        and #%00001111
+        sta YTemp
+        lda AudVolCtl
+        and #%11110000
+        lsr
+        lsr
+        lsr
+        lsr
+        sta AudVolCtl
         asl
         asl
-        
-        adc AudVol0
-
-        ldy #0
+        ;clc
+        adc AudVolCtl
+        ;clc
         adc VolGfxPtr
         sta VolGfxPtr
 GetVolIdx
@@ -930,6 +1008,8 @@ GetVolIdx
         lda VolGfxPtr+1
         sta VolGfxPtr+1
 
+        lda LineTemp
+        sta AudVolCtl
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;; Build Audio Frequency Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -974,13 +1054,18 @@ GetFrqIdx
         lda #>(RSZero)
         sta CtlGfxPtr+1  
 
-        lda AudCtl0
+        lda AudVolCtl
+        sta LineTemp
+        and #%11110000
+        sta YTemp
+        lda AudVolCtl
+        and #%00001111
+        sta AudVolCtl
         asl
         asl
         clc
-        adc AudCtl0
+        adc AudVolCtl
 
-        ldy #0
         clc
         adc CtlGfxPtr
         sta CtlGfxPtr
@@ -988,7 +1073,11 @@ GetCtlIdx
         lda CtlGfxPtr
         ldx CtlGfxPtr+1
         sta CtlGfxPtr
-        stx CtlGfxPtr+1
+        stx CtlGfxPtr+1 
+
+        lda LineTemp
+        sta AudVolCtl
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; Build Audio Channel Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1025,7 +1114,12 @@ GetChannelIdx
         cmp FrameCtrTrk0,x
         beq TurnOffNote
 
-        lda AudVol0
+        lda AudVolCtl
+        and #%11110000
+        lsr
+        lsr
+        lsr
+        lsr
         sta AUDV0,x
 
         lda AudFrqDur
@@ -1035,7 +1129,8 @@ GetChannelIdx
         lsr
         sta AUDF0,x
 
-        lda AudCtl0
+        lda AudVolCtl
+        and #%00001111
         sta AUDC0,x
         inc FrameCtrTrk0,x
 
@@ -1099,7 +1194,12 @@ SkipPlayNote
         and #%00000111
         sta (Track0BuilderPtr),y
         iny
-        lda AudVol0
+        lda AudVolCtl
+        and #%11110000
+        lsr
+        lsr
+        lsr
+        lsr
         sta (Track0BuilderPtr),y
         iny
         lda AudFrqDur
@@ -1109,7 +1209,8 @@ SkipPlayNote
         lsr
         sta (Track0BuilderPtr),y
         iny
-        lda AudCtl0
+        lda AudVolCtl
+        and #%00001111
         sta (Track0BuilderPtr),y
         iny
         lda #255
@@ -1133,7 +1234,12 @@ AddNoteChannel1
         and #%00000111
         sta (Track1BuilderPtr),y
         iny
-        lda AudVol0
+        lda AudVolCtl
+        and #%11110000
+        lsr
+        lsr
+        lsr
+        lsr
         sta (Track1BuilderPtr),y
         iny
         lda AudFrqDur
@@ -1143,7 +1249,8 @@ AddNoteChannel1
         lsr
         sta (Track1BuilderPtr),y
         iny
-        lda AudCtl0
+        lda AudVolCtl
+        and #%00001111
         sta (Track1BuilderPtr),y
         iny
         lda #255
