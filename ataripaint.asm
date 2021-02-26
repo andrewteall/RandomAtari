@@ -9,7 +9,7 @@ AudChannel              ds 1
 
 AudVolCtl               ds 1            
 AudFrqDur               ds 1
-AudChannelDebouceCtr    ds 1
+;AudChannelDebouceCtr    ds 1
 
 ; Flags
 FlagsSelection          ds 1                    ; 0-4 Current Selection (#0-#8) - (#9-#15 Not Used)
@@ -61,16 +61,6 @@ Track1Builder           ds #TRACKSIZE+1
 
         echo "----",(* - $80) , "bytes of RAM Used"
         echo "----",($100 - *) , "bytes of RAM left"
-; TODO: Use Duration values to set real time
-;       - Will only have 8 duration values
-;                       ; whole(3/4) note - 216 or maybe half triplets
-;                       ; half note - 144/120
-;                       ; quarter note - 72/60
-;                       ; triplet note - 48/40
-;                       ; eighth note - 36/30
-;                       ; 16th note - 18/15
-;                       ; 32nd note - 9/?
-;                       ; control note - 255
 ; TODO: Flag to not use Channel 1 - doubles play time
 ;       - Could also have channel 1 count from top so the tracks meet in the middle
 ; TODO: Multiplex Characters for more than 12 chars per line
@@ -1107,6 +1097,8 @@ GetChannelIdx
         bne SkipPlayNote
         lda AudFrqDur
         and #%00000111
+        tay
+        lda NoteDurations,y
         cmp FrameCtrTrk0,x
         beq TurnOffNote
 
@@ -1192,7 +1184,7 @@ SkipPlayNote
         lda AudVolCtl
         sta (Track0BuilderPtr),y
         iny
-        lda #7
+        lda #0
         sta (Track0BuilderPtr),y
         
         lda Track0BuilderPtr
@@ -1215,7 +1207,7 @@ AddNoteChannel1
         lda AudVolCtl
         sta (Track1BuilderPtr),y
         iny
-        lda #7
+        lda #0
         sta (Track1BuilderPtr),y
         
         lda Track1BuilderPtr
@@ -1251,7 +1243,7 @@ SkipAddNote
         ldy #$FF
         sta (Track0BuilderPtr),y
         dey
-        lda #7
+        lda #0
         sta (Track0BuilderPtr),y
         
         lda Track0BuilderPtr
@@ -1272,7 +1264,7 @@ RemNoteChannel1
         ldy #$FF
         sta (Track1BuilderPtr),y
         dey
-        lda #7
+        lda #0
         sta (Track1BuilderPtr),y
         
         lda Track1BuilderPtr
@@ -1299,6 +1291,8 @@ SkipRamMusicPlayerJump
         ldy #0                                          ; 2     Initialize Y-Index to 0
         lda (NotePtrCh0),y                              ; 5     Load first note duration to A
         and #%00000111
+        tay
+        lda NoteDurations,y
         cmp FrameCtrTrk0                                ; 3     See if it equals the Frame Counter
         bne NextRamNote                                 ; 2/3   If so move the NotePointer to the next note
 
@@ -1312,7 +1306,7 @@ SkipRamMusicPlayerJump
 NextRamNote
         lda (NotePtrCh0),y                              ; 5     Load first note duration to A
         and #%00000111
-        cmp #7                                          ; 2     See if the notes duration equals 255
+        cmp #0                                          ; 2     See if the notes duration equals 255
         bne SkipResetRamTrack0                          ; 2/3   If so go back to the beginning of the track
 
         lda #<Track0Builder                             ; 4     Store the low byte of the track to 
@@ -1345,6 +1339,8 @@ SkipResetRamTrack0
         ldy #0                                          ; 2     Initialize Y-Index to 0
         lda (NotePtrCh1),y                              ; 5     Load first note duration to A
         and #%00000111
+        tay
+        lda NoteDurations,y
         cmp FrameCtrTrk1                                ; 3     See if it equals the Frame Counter
         bne NextRamNote1                                ; 2/3   If so move the NotePointer to the next note
 
@@ -1358,7 +1354,7 @@ SkipResetRamTrack0
 NextRamNote1
         lda (NotePtrCh1),y                              ; 5     Load first note duration to A
         and #%00000111
-        cmp #7                                          ; 2     See if the notes duration equals 255
+        cmp #0                                          ; 2     See if the notes duration equals 255
         bne SkipResetRamTrack1                          ; 2/3   If so go back to the beginning of the track
 
         lda #<Track1Builder                             ; 4     Store the low byte of the track to 
@@ -1525,6 +1521,17 @@ CalcXPos:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;; Rom Data ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+NoteDurations   .byte 0         ; control note - 0
+                .byte 3
+                .byte 9         ; 32nd note - 9/?       2^3 8
+                .byte 18        ; 16th note - 18/15     2^4 16
+                .byte 36        ; eighth note - 36/30   2^5 32
+                .byte 48        ; triplet note - 48/40  2^6 64
+                .byte 72        ; quarter note - 72/60  2^7 128
+                .byte 144       ; half note - 144/120   2^9 256
+                ;.byte 216       ; whole(3/4) note - 216 or maybe half triplets
 
         align 256
 Zero       .byte  #%111
