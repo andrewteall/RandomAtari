@@ -1,40 +1,40 @@
         processor 6502
         include includes/vcs.h
         include includes/macro.h
-;Start Program
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Ram ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         SEG.U vars
         ORG $80
-                      
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Audio Working Values
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+AudVolCtl               ds 1                    ; 0000XXXX - Volume | XXXX0000 - Control
+AudFrqDur               ds 1                    ; 00000XXX - Frquency | XXXXX000 - Duration
+;AudChannelDebouceCtr    ds 1
 AudChannel              ds 1
 
-AudVolCtl               ds 1            
-AudFrqDur               ds 1
-;AudChannelDebouceCtr    ds 1
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Flags
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 FlagsSelection          ds 1                    ; 0-4 Current Selection (#0-#8) - (#9-#15 Not Used)
                                                 ; 5 - Play note flag - 0 plays note
                                                 ; 6 - Add note flag - 1 adds note
                                                 ; 7 - Remove note flag - 1 removes note
                                                 ; 8 - Play track flag - 1 plays tracks
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Counters
-FrameCtrTrk0            ds 1            ;
-FrameCtrTrk1            ds 1            ;
-DebounceCtr             ds 1                    ; Currently set to 10 probably won't be over 15 - XXXXX000
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+FrameCtrTrk0            ds 1
+FrameCtrTrk1            ds 1
+DebounceCtr             ds 1                    ; XXXX0000 - Top 4 bits not used
 
-; Selection
-DurGfxSelect            ds 1            ; 
-VolGfxSelect            ds 1            ; 
-FrqGfxSelect            ds 1            ; 
-CtlGfxSelect            ds 1            ; 
-PlayGfxSelect           ds 1
-PlayAllGfxSelect        ds 1
-ChannelGfxSelect        ds 1            
-AddGfxSelect            ds 1
-RemoveGfxSelect         ds 1
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Rom Pointers
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 PlayButtonMaskPtr       ds 2                    
 PlayAllButtonMaskPtr    ds 2 
 ChannelGfxPtr           ds 2
@@ -43,44 +43,73 @@ VolGfxPtr               ds 2
 DurGfxPtr               ds 2
 FrqGfxPtr               ds 2
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Ram Pointers
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 Track0BuilderPtr        ds 1                    ; 
 YTemp                   ds 1                    ; This will get zeroed so that the Trackpointer load
 Track1BuilderPtr        ds 1                    ; 
 LineTemp                ds 1                    ; will seem like it has 2 bytes
 
-NotePtrCh0              ds 2                     
-
+NotePtrCh0              ds 1                     
+ControlChannelGfxSelect ds 1
 NotePtrCh1              ds 1
-LetterBuffer            ds 1                    ; 00000000               
+LetterBuffer            ds 1
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Ram Music Tracks
-Track0Builder           ds #TRACKSIZE+1
-Track1Builder           ds #TRACKSIZE+1
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+Track0Builder           ds #TRACKSIZE+1         ; Memory Allocation to store the bytes(notes) saved to track 0
+Track1Builder           ds #TRACKSIZE+1         ; Memory Allocation to store the bytes(notes) saved to track 1
 
 
         echo "----",(* - $80) , "bytes of RAM Used"
         echo "----",($100 - *) , "bytes of RAM left"
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Ram ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
 ; TODO: Flag to not use Channel 1 - doubles play time
 ;       - Could also have channel 1 count from top so the tracks meet in the middle
+
 ; TODO: Multiplex Characters for more than 12 chars per line
-; TODO: Finalize Colors and Decor and Name
 ; TODO: Draw Note letters from memory location
+
 ; TODO: Add note count left on track
-; TODO: Add note spacer inbetween plays
 
-        SEG
-        ORG $F000
+; TODO: Reuse Rom Pointers like Channel Pointer
+; TODO: Optimize Selection Graphics under values
 
-;PATTERN           = $80 ; storage Location (1st byte in RAM)
-TITLETEXTXSTARTPOSITION = #57
-SLEEPTIMER=TITLETEXTXSTARTPOSITION/3 +51
-TRACKSIZE=#24                                   ; Must be a multiple of 4
+; TODO: Finalize Colors and Decor and Name
 
+        
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;PATTERN                = $80                   ; storage Location (1st byte in RAM)
+TITLE_H_POS             = #57
+TRACKDISPLAY_H_POS      = #20
+TRACKSIZE               = #24                   ; Must be a multiple of 2
 
+PLAY_NOTE_FLAG          = #16
+ADD_NOTE_FLAG           = #32
+REMOVE_NOTE_FLAG        = #64
+PLAY_TRACK_FLAG         = #128
+
+SLEEPTIMER_TITLE        = TITLE_H_POS/3 +51
+SLEEPTIMER_TRACK        = TRACKDISPLAY_H_POS/3 +51
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;; End Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+
+        
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;; Console Initialization ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        SEG
+        ORG $F000
 Reset
         ldx #0
         txa
@@ -94,7 +123,7 @@ Clear
                                                         ;       randomized in Stella
 
         ldx #0
-        lda #TITLETEXTXSTARTPOSITION
+        lda #TITLE_H_POS
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -102,7 +131,7 @@ Clear
         sta HMCLR
 
         ldx #1
-        lda #TITLETEXTXSTARTPOSITION+8
+        lda #TITLE_H_POS+8
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -111,7 +140,6 @@ Clear
 
         lda #132
         sta COLUP0
-        ;lda #32
         sta COLUP1
 
         lda #%00100101
@@ -120,6 +148,10 @@ Clear
         lda #%00000011
         sta NUSIZ0
         sta NUSIZ1
+
+        lda #1
+        sta VDELP0
+        sta VDELP1
 
         lda #<Track0Builder
         sta NotePtrCh0
@@ -133,53 +165,61 @@ Clear
         lda #<Track1Builder
         sta Track1BuilderPtr
 
-        lda #%00000001
-        sta VDELP0
-        sta VDELP1
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;; End Console Initialization ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 
 StartOfFrame
-        ; Start of vertical blank processing
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Start VBLANK Processing
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #0
         sta VBLANK
 
+; 3 VSYNC Lines
         lda #2
         sta VSYNC ; Turn on VSYNC
 
-        ; 3 scanlines of VSYNCH signal...
         sta WSYNC
         sta WSYNC
         sta WSYNC
         lda #0
         sta VSYNC ; Turn off VSYNC
 
-        ; 37 scanlines of vertical blank...
+; 37 VBLANK lines
         ldx #37                                         ; 2
 VerticalBlank
         sta WSYNC                                       ; 3
         dex                                             ; 2
         bne VerticalBlank                               ; 2/3
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; End VBLANK Processing
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; 192 scanlines of picture...
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Start 192 Lines of Viewable Picture
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldx #155
         stx COLUBK
         ldx #0
-        IF TITLETEXTXSTARTPOSITION <= 47
-         sta WSYNC                                      ; 3     64
+        IF TITLE_H_POS <= 47
+         sta WSYNC                                      ; 3     
         ENDIF
+
 ViewableScreenStart
-        inx                                             ; 2     59
+        inx                                             ; 2     
         ldy #0
-        cpx #3                                          ; 2     61
-        sta WSYNC                                       ; 3     64
+        cpx #3                                          ; 2     
+        sta WSYNC                                       ; 3     
         bne ViewableScreenStart                         ; 2/3   2/3
 
 
-        SLEEP SLEEPTIMER
-        inx
+        SLEEP SLEEPTIMER_TITLE
+        inx                                             ; 2
 DrawText
-        
         stx LineTemp                                    ; 3     6
         sty YTemp                                       ; 3     9
         
@@ -210,9 +250,8 @@ DrawText
 
         inx                                             ; 2     70
         cpx #10                                         ; 2     72
-        ;sta WSYNC                                       ; 3     75
-        nop
-        nop
+        nop                                             ; 2     74
+        nop                                             ; 2     76
         bne DrawText                                    ; 2/3   2/3
 
 TopBuffer
@@ -221,95 +260,120 @@ TopBuffer
         sta WSYNC                                       ; 3     64
         bne TopBuffer                                   ; 2/3   2/3
 
-        lda #0                                          ; 2     This isn't needed but pushes the next NoteRow
-        sta GRP0                                        ; 3     section branch over the oage boundary
-        sta GRP1                                        ; 3     " "    " "    " "   
-        inx                                             ; 2
-        txa
-        sbc #19
-        sta WSYNC                                       ; 3
-        SLEEP 4                                         ; 3     4       Set to 4 because our branch below crosses the
-                                                        ;               page boundary so it takes an extra cycle
+
+        inx                                             ; 2     4
+        txa                                             ; 2     6
+        sbc #19                                         ; 2     8
+        lsr                                             ; 2     10      Divide by 2 to get index twice for double height
+        lsr                                             ; 2     12      Divide by 2 to get index twice for quad height
+        sta WSYNC                                       ; 3     14     
+       
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Note Row - 1-Line Kernel 
 ; Line 1 - 74 Cycles
-; Improvement: Extra 6 cycles from sleep and removing WSYNC
-; Improvement: Relocate Code away from away from Page boundary
-;              to skip extra cycle needed
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        SLEEP 4                                 ; 4     4       Account for 4 cycle branch to keep timing aligned
 NoteRow 
-
-        lsr                                             ; 2     7       Divide by 2 to get index twice for double height
-        lsr                                             ; 2     9       Divide by 2 to get index twice for quadruple height
-        lsr                                             ; 2     11      Divide by 2 to get index twice for octuple height
-        tay                                             ; 2     13      Transfer A to Y so we can index off Y
+        lsr                                     ; 2     6       Divide by 2 to get index twice for octuple height
+        tay                                     ; 2     8       Transfer A to Y so we can index off Y
         
-        lda (PlayButtonMaskPtr),y                       ; 5     17      Get the Score From our Play Button Mask Array
-        sta PF0                                         ; 3     20      Store the value to PF0
+        lda (PlayButtonMaskPtr),y               ; 5     13      Get the Score From our Play Button Mask Array
+        sta PF0                                 ; 3     16      Store the value to PF0
 
-        lda (DurGfxPtr),y                               ; 5     24      Get the Score From our Duration Gfx Array
-        sta PF1                                         ; 3     27      Store the value to PF1
+        lda (DurGfxPtr),y                       ; 5     21      Get the Score From our Duration Gfx Array
+        asl                                     ; 2     23
+        asl                                     ; 2     25
+        sta PF1                                 ; 3     28      Store the value to PF1
         
-        lda (VolGfxPtr),y                               ; 5     31      Get the Score From our Volume Gfx Array
-        asl
-        sta PF2                                         ; 3     34      Store the value to PF2
+        lda (VolGfxPtr),y                       ; 5     33      Get the Score From our Volume Gfx Array
+        asl                                     ; 2     35
+        sta PF2                                 ; 3     38      Store the value to PF2
 
-        SLEEP 2                                         ; 6     40      Waste 6 cycles to line up the next Pf draw
+        nop                                     ; 2     40      Waste 2 cycles to line up the next Pf draw
 
-        lda (FrqGfxPtr),y                               ; 4     44      Get the Score From our Frequency Gfx Array
-        sta PF2                                         ; 3     47      Store the value to PF2
+        lda (FrqGfxPtr),y                       ; 5     45      Get the Score From our Frequency Gfx Array
+        sta PF2                                 ; 3     48      Store the value to PF2
         
-        lda (CtlGfxPtr),y                               ; 5     50      Get the Score From our Control Gfx Array        
-        sta PF1                                         ; 3     53      Store the value to PF1        
+        lda (CtlGfxPtr),y                       ; 5     53      Get the Score From our Control Gfx Array
+        sta PF1                                 ; 3     56      Store the value to PF1        
 
-        inx                                             ; 2     55      Increment our line number
+        inx                                     ; 2     58      Increment our line number
         
-        ldy #0                                          ; 2     57      Reset and clear the playfield
-        txa                                             ; 2     59      Transfer the line number in preparation
-                                                        ;               for the next line
-        sbc #19                                         ; 2     5       Subtract #19 since the carry is cleared above
-                                                        ;               and we want to start on line 20
-        sty PF0                                         ; 3     62      Reset and clear the playfield
-        sty PF1                                         ; 3     68      Reset and clear the playfield
-        
-        cpx #60                                         ; 2     70      Have we reached line #60
-        sta WSYNC                                       ; 3     73      Wait for New line
-        bne NoteRow                                     ; 2/3+1 2/3+1   No then repeat,Currently Crossing Page Boundary 
-                                                        ;               So Add one cycle
+        ldy #0                                  ; 2     60      Reset and clear the playfield
+        txa                                     ; 2     62      Transfer the line number in preparation for the next line
+        sbc #19                                 ; 2     64      Subtract #19 since the carry is cleared above
+        lsr                                     ; 2     66      Divide by 2 to get index twice for double height
+        sty PF0                                 ; 3     69      Reset and clear the playfield
+        lsr                                     ; 2     71      Divide by 2 to get index twice for quadruple height
+        sty PF1                                 ; 3     74      Reset and clear the playfield
 
+        cpx #60                                 ; 2     76      Have we reached line #60        
+        bne.x NoteRow                           ; 2/4   2/4     No then repeat,Currently Crossing Page Boundary 
+                                                ;               So Add one cycle
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Note Selection - 1-Line Kernel 
 ; Line 1 - 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldy #0
+        lda FlagsSelection
+        and #%00001111
+        cmp #4
+        bne LoadControlGfx
+        ldy #%11111000
+LoadControlGfx
+        sty ControlChannelGfxSelect
+
         ldy #0
         sty PF2                                         ; 3     65      Reset and clear the playfield
-        sta WSYNC                                       ; 3     9
-        inx                                             ; 2     4
         inx                                             ; 2     6
         lda #123
         sta COLUPF
         sta WSYNC                                       ; 3     3
         SLEEP 3                                         ; 3     3
+
+        
 NoteSelection
-        lda PlayGfxSelect                               ; 3     6
-        sta PF0                                         ; 3     9
-        lda DurGfxSelect                                ; 3     12
-        sta PF1                                         ; 3     15         
-        lda VolGfxSelect                                ; 3     18
-        sta PF2                                         ; 3     21
+        lda FlagsSelection                              ; 3
+        and #%00001111                                  ; 2
+        bne SkipSelectPlayButton                        ; 2/3
+        lda #%11100000                                  ; 2
+        sta PF0                                         ; 3
+SkipSelectPlayButton
 
-        SLEEP 22                                        ; 5  
+        lda FlagsSelection                              ; 3
+        and #%00001111                                  ; 2
+        sty PF1
+        cmp #1                                          ; 2
+        bne SkipSelectDuration                          ; 2/3
+        lda #%01111111                                  ; 2
+        sta PF1                                         ; 3
+SkipSelectDuration
 
-        lda FrqGfxSelect                                ; 3     45
-        sta PF2                                         ; 3     48
-        lda CtlGfxSelect                                ; 3     52
+        lda FlagsSelection
+        and #%00001111
+        cmp #2
+        bne SkipSelectVolume
+        lda #%00111110
+        sta PF2
+SkipSelectVolume
+
+        ;SLEEP 2
+        
+        lda FlagsSelection
+        and #%00001111
+        cmp #3
+        sty PF2
+        bne SkipSelectFreq
+        lda #%11111111
+        sta PF2
+SkipSelectFreq
+        
+        lda ControlChannelGfxSelect                     ; 3     52
         sta PF1                                         ; 3     55
         
-        SLEEP 2                                         ; 7     62
-        
-        lda #0                                          ; 2     64
-        sta PF0                                         ; 3     67
+        sty PF0                                         ; 3     67
+        sty PF2                                         ; 3     67
 
         inx                                             ; 2     4
         cpx #68                                         ; 2     6
@@ -344,18 +408,18 @@ ControlRow
         lsr                                             ; 2     13      Divide by 2 to get index twice for double height
         tay                                             ; 2     15      Transfer A to Y so we can index off Y
         
-        lda (PlayAllButtonMaskPtr),y                                ; 4     19      Get the Score From our Player 0 Score Array
+        lda (PlayAllButtonMaskPtr),y                    ; 4     19      Get the Score From our Player 0 Score Array
         sta PF0                                         ; 3     22      
 
-        lda PlusBtn,y                               ; 4     26      Get the Score From our Player 0 Score Array
+        lda PlusBtn,y                                   ; 4     26      Get the Score From our Player 0 Score Array
         sta PF1                                         ; 3     29      
         
         SLEEP 5                                         ; 5     34
         
-        lda MinusBtn,y                               ; 4     38      Get the Score From our Player 0 Score Array
+        lda MinusBtn,y                                  ; 4     38      Get the Score From our Player 0 Score Array
         sta PF2                                         ; 3     41
         
-        lda (ChannelGfxPtr),y                               ; 4     45      Get the Score From our Player 0 Score Array
+        lda (ChannelGfxPtr),y                           ; 4     45      Get the Score From our Player 0 Score Array
         sta PF2                                         ; 3     48      Store Score to PF2
         
         SLEEP 4                                         ; 7     62
@@ -379,50 +443,153 @@ ControlRow
 ; Control Selection - 1-Line Kernel 
 ; Line 1 - 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldy #0
+        lda FlagsSelection
+        and #%00001111
+        cmp #8
+        bne LoadChannelGfx
+        ldy #%00011111
+LoadChannelGfx
+        sty ControlChannelGfxSelect
+
         inx                                             ; 2     4
-        inx                                             ; 2     6
         lda #123
         sta COLUPF
-        sta WSYNC                                       ; 3     9
+        ldy #0
+        sty PF2                                         ; 3     65      Reset and clear the playfield
         sta WSYNC                                       ; 3     3
         SLEEP 3                                         ; 3     3
 ControlSelection
-        lda PlayAllGfxSelect                            ; 3     6
-        sta PF0                                         ; 3     9
-        lda AddGfxSelect                                ; 3     12
-        sta PF1                                         ; 3     15         
-        lda RemoveGfxSelect                             ; 3     18
-        sta PF2                                         ; 3     21
+        lda FlagsSelection                              ; 3
+        and #%00001111                                  ; 2
+        cmp #5
+        bne SkipSelectPlayAllButton                     ; 2/3
+        lda #%11100000                                  ; 2
+        sta PF0                                         ; 3
+SkipSelectPlayAllButton
 
-        SLEEP 22                                        ; 5  
+        lda FlagsSelection                              ; 3
+        and #%00001111                                  ; 2
+        sty PF1
+        cmp #6                                          ; 2
+        bne SkipSelectAddNote                           ; 2/3
+        lda #%00011111                                  ; 2
+        sta PF1                                         ; 3
+SkipSelectAddNote
 
-        lda ChannelGfxSelect                            ; 3     45
+        lda FlagsSelection
+        and #%00001111
+        cmp #7
+        bne SkipSelectRemoveNote
+        lda #%11111000
+        sta PF2
+SkipSelectRemoveNote
+
+        SLEEP 6
+        sty PF2
+
+        lda ControlChannelGfxSelect                     ; 3     45
         sta PF2                                         ; 3     48
-        
-        
-        SLEEP 5                                         ; 7     62
-        
-        lda #0                                          ; 2     64
-        sta PF1
-        sta PF0                                         ; 3     67
+        ; lda FlagsSelection
+        ; and #%00001111
+        ; cmp #7
+        ; sty PF2
+        ; bne SkipSelectRemoveChannel
+        ; lda #%11111111
+        ; sta PF2
 
+SkipSelectRemoveChannel
 
+        
+        ;SLEEP 2
+
+        sty PF1
+        sty PF0
+        sty PF2
+        
 
         inx                                             ; 2     4
         cpx #128                                        ; 2     6
         sta WSYNC                                       ; 3     9
         bne ControlSelection                            ; 2/3   2/3
 
-        
         lda #0                                          ; 2     64
         sta PF1                                         ; 3     67
         sta PF2                                         ; 3     67
+        sta PF0                                         ; 3     67
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Spacer - 1-Line Kernel 
 ; Line 1 - 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        stx LineTemp
         lda #9
         sta COLUPF
+; Reset Player positions for title
+        ldx #0
+        lda #TRACKDISPLAY_H_POS
+        jsr CalcXPos
+        sta WSYNC
+        sta HMOVE ; <--- need to make this happen on cycle 74 :eyeroll:
+        SLEEP 24
+        sta HMCLR
+
+
+        ldx #1
+        lda #TRACKDISPLAY_H_POS+8
+        jsr CalcXPos
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
+
+        ldx LineTemp
+        inx
+        inx
+        inx
+ViewableScreenStart2
+        inx                                             ; 2     
+        ldy #0
+        cpx #138                                          ; 2     
+        sta WSYNC                                       ; 3     
+        bne ViewableScreenStart2                         ; 2/3   2/3
+
+
+        SLEEP SLEEPTIMER_TRACK
+        inx                                             ; 2
+DrawText2
+        stx LineTemp                                    ; 3     6
+        sty YTemp                                       ; 3     9
+        
+        ldx RSpace,y                                    ; 4     13
+        stx LetterBuffer                                ; 3     16
+        
+        ldx KE,y                                        ; 4     20
+
+        lda MU,y                                        ; 4     24
+        sta GRP0                                        ; 3     27      MU -> [GRP0]
+        
+        lda SI,y                                        ; 4     31
+        sta GRP1                                        ; 3     34      SI -> [GRP1], [GRP0] -> GRP0
+        
+        lda CSpace,y                                    ; 4     38
+        sta GRP0                                        ; 3     41      C  -> [GRP0]. [GRP1] -> GRP1
+        
+        lda MA,y                                        ; 4     45
+        ldy LetterBuffer                                ; 3     48
+        sta GRP1                                        ; 3     51      MA -> [GRP1], [GRP0] -> GRP0
+        stx GRP0                                        ; 3     54      KE -> [GRP0], [GRP1] -> GRP1
+        sty GRP1                                        ; 3     57      R  -> [GRP1], [GRP0] -> GRP0
+        stx GRP0                                        ; 3     60      ?? -> [GRP0], [GRP1] -> GRP1
+        
+        ldx LineTemp                                    ; 3     63
+        ldy YTemp                                       ; 3     66
+        iny                                             ; 2     68
+
+        inx                                             ; 2     70
+        cpx #145                                         ; 2     72
+        nop                                             ; 2     74
+        nop                                             ; 2     76
+        bne DrawText2                                    ; 2/3   2/3
 
 
 EndofScreenBuffer
@@ -430,15 +597,15 @@ EndofScreenBuffer
         cpx #192                                        ; 2
         sta WSYNC                                       ; 3
         bne EndofScreenBuffer                         ; 2/3
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;; End of Viewable Screen ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End of Viewable Screen ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-        lda #%00000010                                  ; 2     4       ; end of screen - enter blanking
-        sta VBLANK                                      ; 3     7
+        lda #%00000010                                  ; 2 end of screen - enter blanking
+        sta VBLANK                                      ; 3 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;; Load Overscan Timer ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -447,7 +614,7 @@ EndofScreenBuffer
         sta TIM64T
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;; Left Right Crusor Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;; Left Right Cursor Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda DebounceCtr                                 ; 3     10
         bne SkipCursorMove                              ; 2/3   12/13
@@ -457,10 +624,10 @@ EndofScreenBuffer
         bne CursorLeft                                  ; 2/3   18/19
         lda #10                                         ; 2     20
         sta DebounceCtr                                 ; 3     23
-        lda FlagsSelection                                       ;       10100000 10100010
-        and #%00001111                                  ;       00000000 00000010
+        lda FlagsSelection
+        and #%00001111
         beq SetCurrentSelectionto8
-        dec FlagsSelection                                       ; 5     28
+        dec FlagsSelection                              ; 5     28
         sec
         bcs SkipSetCurrentSelectionto8
 SetCurrentSelectionto8
@@ -475,8 +642,8 @@ CursorLeft
         bne CursorRight                                 ; 2/3   36/37
         lda #10                                         ; 2     38
         sta DebounceCtr                                 ; 3     41
-        lda FlagsSelection                                       ;       10100000 10101000
-        and #%00001000                                  ;       00000000 00001000
+        lda FlagsSelection
+        and #%00001000
         bne SetCurrentSelectionto0
         inc FlagsSelection
         sec
@@ -493,16 +660,16 @@ SkipCursorMove
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;; Selection Detection ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #0
-        sta PlayGfxSelect
-        sta DurGfxSelect
-        sta VolGfxSelect
-        sta FrqGfxSelect
-        sta CtlGfxSelect
-        sta PlayAllGfxSelect
-        sta AddGfxSelect
-        sta RemoveGfxSelect
-        sta ChannelGfxSelect
+        ;lda #0
+        ;sta PlayGfxSelect
+        ;sta DurGfxSelect
+        ;sta VolGfxSelect
+        ;sta FrqGfxSelect
+        ;sta CtlGfxSelect
+        ;sta PlayAllGfxSelect
+        ;sta AddGfxSelect
+        ;sta RemoveGfxSelect
+        ;sta ChannelGfxSelect
 
         lda FlagsSelection
         and #%00001111
@@ -510,7 +677,7 @@ SkipCursorMove
         cmp #0
         bne Selection0
         lda #%11100000
-        sta PlayGfxSelect
+        ;sta PlayGfxSelect
 
         ldy INPT4
         bmi Selection0
@@ -525,7 +692,7 @@ Selection0
         cmp #1
         bne Selection1
         lda #%01111111
-        sta DurGfxSelect
+        ;sta DurGfxSelect
         ldy INPT4
         bmi PlayNote1
         tay
@@ -582,7 +749,7 @@ Selection1
         jmp Selection2
 SkipSelection2Jump
         lda #%00111110
-        sta VolGfxSelect
+        ;sta VolGfxSelect
         ldy INPT4
         bmi PlayNote2
         tay
@@ -685,7 +852,7 @@ Selection2
         cmp #3
         bne Selection3
         lda #%11111111
-        sta FrqGfxSelect
+        ;sta FrqGfxSelect
         ldy INPT4
         bmi PlayNote3
         lda FlagsSelection               ;00000   00100
@@ -776,12 +943,12 @@ Selection3
         cmp #4
         bne Selection4
         lda #%11111000
-        sta CtlGfxSelect
+        ;sta CtlGfxSelect
         ldy INPT4
         bmi PlayNote4
-        lda FlagsSelection               ;00000   00100
-        and #%11101111          ;00000   00000 
-        sta FlagsSelection               ;00000   00000
+        lda FlagsSelection
+        and #%11101111
+        sta FlagsSelection
 PlayNote4
         lda DebounceCtr
         beq AllowBtn4
@@ -831,7 +998,7 @@ Selection4
         cmp #5
         bne Selection5
         lda #%11100000
-        sta PlayAllGfxSelect
+        ;sta PlayAllGfxSelect
 
         ldy INPT4
         bmi Selection5
@@ -839,18 +1006,18 @@ Selection4
         beq AllowBtn5
         jmp SkipSelectionSet
 AllowBtn5
-        lda #128
+        lda #PLAY_TRACK_FLAG
         bit FlagsSelection
         bne SetPlayAllFlagToZero 
-        lda FlagsSelection               ;0000   0000
-        and #%01111111          ;0000   0000 
-        eor #128                  ;1000   1000     
-        sta FlagsSelection               ;1000   1000
+        lda FlagsSelection
+        and #%01111111
+        eor #PLAY_TRACK_FLAG
+        sta FlagsSelection
         jmp SelectionSet
 SetPlayAllFlagToZero
-        lda FlagsSelection               ;0000   0010
-        and #%01111111          ;0000   0000 
-        sta FlagsSelection               ;0000   0000 
+        lda FlagsSelection
+        and #%01111111
+        sta FlagsSelection
         jmp SelectionSet
 Selection5
 
@@ -858,7 +1025,7 @@ Selection5
         cmp #6
         bne Selection6
         lda #%00011111
-        sta AddGfxSelect
+        ;sta AddGfxSelect
 
         ldy INPT4
         bmi Selection6
@@ -866,10 +1033,10 @@ Selection5
         beq AllowBtn6
         jmp SkipSelectionSet
 AllowBtn6
-        lda FlagsSelection               ;0000   0010
-        and #%11011111          ;0000   0000 
-        eor #32                  ;0010   0010     
-        sta FlagsSelection               ;0010   0010
+        lda FlagsSelection
+        and #%11011111
+        eor #ADD_NOTE_FLAG
+        sta FlagsSelection
         jmp SelectionSet
 Selection6
 
@@ -877,7 +1044,7 @@ Selection6
         cmp #7
         bne Selection7
         lda #%11111000
-        sta RemoveGfxSelect
+        ;sta RemoveGfxSelect
 
         ldy INPT4
         bmi Selection7
@@ -885,10 +1052,10 @@ Selection6
         beq AllowBtn7
         jmp SkipSelectionSet
 AllowBtn7
-        lda FlagsSelection               ;00000   00100
-        and #%10111111          ;00000   00000 
-        eor #64                  ;00100   00100    
-        sta FlagsSelection               ;00100   00100
+        lda FlagsSelection
+        and #%10111111
+        eor #REMOVE_NOTE_FLAG
+        sta FlagsSelection
         jmp SelectionSet
 Selection7
 
@@ -896,7 +1063,7 @@ Selection7
         cmp #8
         bne Selection8
         lda #%00011111
-        sta ChannelGfxSelect
+        ;sta ChannelGfxSelect
         
         lda DebounceCtr
         beq AllowBtn8
@@ -950,15 +1117,12 @@ SkipSelectionSet
         asl
         clc
         adc AudFrqDur
-        ;ora YTemp
-        ;sta AudFrqDur
-
         clc
         adc DurGfxPtr
         sta DurGfxPtr
 
-        lda DurGfxPtr+1
-        sta DurGfxPtr+1
+        ; lda DurGfxPtr+1
+        ; sta DurGfxPtr+1
         lda LineTemp
         sta AudFrqDur
 
@@ -984,15 +1148,14 @@ SkipSelectionSet
         sta AudVolCtl
         asl
         asl
-        ;clc
+        clc
         adc AudVolCtl
-        ;clc
+        clc
         adc VolGfxPtr
         sta VolGfxPtr
 GetVolIdx
-        ;asl
-        lda VolGfxPtr+1
-        sta VolGfxPtr+1
+        ; lda VolGfxPtr+1
+        ; sta VolGfxPtr+1
 
         lda LineTemp
         sta AudVolCtl
@@ -1019,14 +1182,14 @@ GetVolIdx
         sta AudFrqDur
         asl
         asl
-        ;clc
+        clc
         adc AudFrqDur
-        ;clc
+        clc
         adc FrqGfxPtr
         sta FrqGfxPtr
 GetFrqIdx
-        lda FrqGfxPtr+1
-        sta FrqGfxPtr+1
+        ; lda FrqGfxPtr+1
+        ; sta FrqGfxPtr+1
         lda LineTemp
         sta AudFrqDur
 
@@ -1056,10 +1219,10 @@ GetFrqIdx
         adc CtlGfxPtr
         sta CtlGfxPtr
 GetCtlIdx
-        lda CtlGfxPtr
-        ldx CtlGfxPtr+1
-        sta CtlGfxPtr
-        stx CtlGfxPtr+1 
+        ; lda CtlGfxPtr+
+        ; ldx CtlGfxPtr+1
+        ; sta CtlGfxPtr
+        ; stx CtlGfxPtr+1 
 
         lda LineTemp
         sta AudVolCtl
@@ -1079,20 +1242,20 @@ GetCtlIdx
         clc
         adc AudChannel
 
-        ldy #0
+        ; ldy #0
         clc
         adc ChannelGfxPtr
         sta ChannelGfxPtr
 GetChannelIdx
-        lda ChannelGfxPtr+1
-        sta ChannelGfxPtr+1
+        ; lda ChannelGfxPtr+1
+        ; sta ChannelGfxPtr+1
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Note Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldx AudChannel
-        lda #16
+        lda #PLAY_NOTE_FLAG
         bit FlagsSelection
         bne SkipPlayNote
         lda AudFrqDur
@@ -1139,10 +1302,10 @@ TurnOffNote
         sta AUDF0,x
         sta AUDC0,x
         sta FrameCtrTrk0,x
-        lda FlagsSelection               ;00000   00100
-        and #%11101111          ;00000   00000 
-        eor #16                  ;00100   00100    
-        sta FlagsSelection               ;00100   00100
+        lda FlagsSelection
+        and #%11101111
+        eor #PLAY_NOTE_FLAG
+        sta FlagsSelection
 
 LoadPlayButton
         lda #<PlayButton
@@ -1158,13 +1321,14 @@ SkipPlayNote
         sta YTemp
         sta LineTemp
         sta LetterBuffer
+        sta ControlChannelGfxSelect
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Add Note ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda #32
+        lda #ADD_NOTE_FLAG
         bit FlagsSelection
         beq SkipAddNote
 
@@ -1183,9 +1347,9 @@ SkipPlayNote
         iny
         lda AudVolCtl
         sta (Track0BuilderPtr),y
-        iny
-        lda #0
-        sta (Track0BuilderPtr),y
+        ; iny
+        ; lda #0
+        ; sta (Track0BuilderPtr),y
         
         lda Track0BuilderPtr
         clc
@@ -1206,9 +1370,9 @@ AddNoteChannel1
         iny
         lda AudVolCtl
         sta (Track1BuilderPtr),y
-        iny
-        lda #0
-        sta (Track1BuilderPtr),y
+        ; iny
+        ; lda #0
+        ; sta (Track1BuilderPtr),y
         
         lda Track1BuilderPtr
         clc
@@ -1216,15 +1380,15 @@ AddNoteChannel1
         sta Track1BuilderPtr
 
 AddNoteChannel0
-        lda FlagsSelection               ;0000   0010
-        and #%11011111          ;0000   0000 
-        sta FlagsSelection               ;0000   0000      
+        lda FlagsSelection
+        and #%11011111
+        sta FlagsSelection
 SkipAddNote
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Remove Note ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda #64
+        lda #REMOVE_NOTE_FLAG
         bit FlagsSelection
         beq SkipRemoveNote
 
@@ -1237,8 +1401,8 @@ SkipAddNote
         beq SkipRemoveNote
         
         lda #0
-        ldy #0        
-        sta (Track0BuilderPtr),y
+        ; ldy #0        
+        ; sta (Track0BuilderPtr),y
 
         ldy #$FF
         sta (Track0BuilderPtr),y
@@ -1258,8 +1422,8 @@ RemNoteChannel1
         beq SkipRemoveNote
         
         lda #0
-        ldy #0        
-        sta (Track1BuilderPtr),y
+        ; ldy #0        
+        ; sta (Track1BuilderPtr),y
 
         ldy #$FF
         sta (Track1BuilderPtr),y
@@ -1272,13 +1436,13 @@ RemNoteChannel1
         sbc #2
         sta Track1BuilderPtr
 RemNoteChannel0
-        lda FlagsSelection               ;00000   00100
-        and #%10111111          ;00000   00000 
-        sta FlagsSelection               ;00000   00000      
+        lda FlagsSelection
+        and #%10111111
+        sta FlagsSelection
 SkipRemoveNote
         
 
-        lda #128
+        lda #PLAY_TRACK_FLAG
         bit FlagsSelection
         bne SkipRamMusicPlayerJump
         jmp SkipRamMusicPlayer
@@ -1304,8 +1468,8 @@ SkipRamMusicPlayerJump
         lda #0                                          ; 2     Load Zero to
         sta FrameCtrTrk0                                ; 3     Reset the Frame counter
 NextRamNote
+        ldy #0 
         lda (NotePtrCh0),y                              ; 5     Load first note duration to A
-        and #%00000111
         cmp #0                                          ; 2     See if the notes duration equals 255
         bne SkipResetRamTrack0                          ; 2/3   If so go back to the beginning of the track
 
@@ -1313,14 +1477,13 @@ NextRamNote
         sta NotePtrCh0                                  ; 3     the Note Pointer
 SkipResetRamTrack0
 
-        ;iny                                             ; 2     Increment Y (Y=1) to point to the Note Volume
         lda (NotePtrCh0),y                              ; 5     Load Volume to A
         and #%11111000
         lsr
         lsr
         lsr
         sta AUDF0                                       ; 3     and set the Note Volume
-        iny                                             ; 2     Increment Y (Y=2) to point to the Note Frequency
+        iny                                             ; 2     Increment Y (Y=1) to point to the Note Frequency
         lda (NotePtrCh0),y                              ; 5     Load Frequency to A
         and #%11110000
         lsr
@@ -1328,7 +1491,6 @@ SkipResetRamTrack0
         lsr
         lsr
         sta AUDV0                                       ; 3     and set the Note Frequency
-        ;iny                                             ; 2     Increment Y (Y=3) to point to the Note Control
         lda (NotePtrCh0),y                              ; 5     Load Control to A
         and #%00001111
         sta AUDC0                                       ; 3     and set the Note Control
@@ -1352,8 +1514,8 @@ SkipResetRamTrack0
         lda #0                                          ; 2     Load Zero to
         sta FrameCtrTrk1                                ; 3     Reset the Frame counter
 NextRamNote1
+        ldy #0 
         lda (NotePtrCh1),y                              ; 5     Load first note duration to A
-        and #%00000111
         cmp #0                                          ; 2     See if the notes duration equals 255
         bne SkipResetRamTrack1                          ; 2/3   If so go back to the beginning of the track
 
@@ -1361,14 +1523,13 @@ NextRamNote1
         sta NotePtrCh1                                  ; 3     the Note Pointer
 SkipResetRamTrack1
 
-        ;iny                                             ; 2     Increment Y (Y=1) to point to the Note Volume
         lda (NotePtrCh1),y                              ; 5     Load Volume to A
         and #%11111000
         lsr
         lsr
         lsr
         sta AUDF1                                       ; 3     and set the Note Volume
-        iny                                             ; 2     Increment Y (Y=2) to point to the Note Frequency
+        iny                                             ; 2     Increment Y (Y=1) to point to the Note Frequency
         lda (NotePtrCh1),y                              ; 5     Load Frequency to A
         and #%11110000
         lsr
@@ -1376,7 +1537,6 @@ SkipResetRamTrack1
         lsr
         lsr
         sta AUDV1                                       ; 3     and set the Note Frequency
-        ;iny                                             ; 2     Increment Y (Y=3) to point to the Note Control
         lda (NotePtrCh1),y                              ; 5     Load Control to A
         and #%00001111
         sta AUDC1                                       ; 3     and set the Note Control
@@ -1396,7 +1556,7 @@ LoadPauseAllButton
         bcs SkipResetPlayAllButton
 
 SkipRamMusicPlayer
-        lda #16
+        lda #PLAY_NOTE_FLAG
         bit FlagsSelection
         beq SkipResetAud
 
@@ -1432,7 +1592,7 @@ SkipDecDebounceCtr
 
 ; Reset Player positions for title
         ldx #0
-        lda #TITLETEXTXSTARTPOSITION
+        lda #TITLE_H_POS
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -1440,7 +1600,7 @@ SkipDecDebounceCtr
         sta HMCLR
 
         ldx #1
-        lda #TITLETEXTXSTARTPOSITION+8
+        lda #TITLE_H_POS+8
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -1455,13 +1615,13 @@ SkipDecDebounceCtr
         sta CXCLR  
         ldy #26                                         ; 2
 
-        lda FlagsSelection               ;00000   00100
-        and #%10111111          ;00000   00000 
-        sta FlagsSelection               ;00000   00000 
+        lda FlagsSelection
+        and #%10111111
+        sta FlagsSelection
         
-        lda FlagsSelection               ;0000   0010
-        and #%11011111          ;0000   0000 
-        sta FlagsSelection               ;0000   0000  
+        lda FlagsSelection
+        and #%11011111
+        sta FlagsSelection
 WaitLoop
         lda INTIM
         bne WaitLoop
@@ -1523,7 +1683,7 @@ CalcXPos:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-NoteDurations   .byte 0         ; control note - 0
+NoteDurations   .byte 1         ; control note - 0
                 .byte 3
                 .byte 9         ; 32nd note - 9/?       2^3 8
                 .byte 18        ; 16th note - 18/15     2^4 16
