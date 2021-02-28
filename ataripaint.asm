@@ -84,12 +84,13 @@ Track1Builder           ds #TRACKSIZE+1         ; Memory Allocation to store the
 ; TODO: Finalize Colors and Decor and Name
 
         
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;PATTERN                = $80                   ; storage Location (1st byte in RAM)
 TITLE_H_POS             = #57
-TRACKDISPLAY_H_POS      = #20
+TRACKDISPLAY_LEFT_H_POS = #20
+TRACKDISPLAY_RIGHT_H_POS      = #68
 TRACKSIZE               = #24                   ; Must be a multiple of 2
 
 PLAY_NOTE_FLAG          = #16
@@ -98,16 +99,17 @@ REMOVE_NOTE_FLAG        = #64
 PLAY_TRACK_FLAG         = #128
 
 SLEEPTIMER_TITLE        = TITLE_H_POS/3 +51
-SLEEPTIMER_TRACK        = TRACKDISPLAY_H_POS/3 +51
+SLEEPTIMER_TRACK_LEFT        = TRACKDISPLAY_LEFT_H_POS/3 +51
+SLEEPTIMER_TRACK_RIGHT        = TRACKDISPLAY_RIGHT_H_POS/3 +51
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;; End Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 
         
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;; Console Initialization ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         SEG
         ORG $F000
 Reset
@@ -165,9 +167,9 @@ Clear
         lda #<Track1Builder
         sta Track1BuilderPtr
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;; End Console Initialization ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 StartOfFrame
@@ -259,7 +261,6 @@ TopBuffer
         cpx #20                                         ; 2     61
         sta WSYNC                                       ; 3     64
         bne TopBuffer                                   ; 2/3   2/3
-
 
         inx                                             ; 2     4
         txa                                             ; 2     6
@@ -524,9 +525,10 @@ SkipSelectRemoveChannel
         stx LineTemp
         lda #9
         sta COLUPF
+
 ; Reset Player positions for title
         ldx #0
-        lda #TRACKDISPLAY_H_POS
+        lda #TRACKDISPLAY_LEFT_H_POS
         jsr CalcXPos
         sta WSYNC
         sta HMOVE ; <--- need to make this happen on cycle 74 :eyeroll:
@@ -535,7 +537,7 @@ SkipSelectRemoveChannel
 
 
         ldx #1
-        lda #TRACKDISPLAY_H_POS+8
+        lda #TRACKDISPLAY_LEFT_H_POS+8
         jsr CalcXPos
         sta WSYNC
         sta HMOVE
@@ -554,7 +556,7 @@ ViewableScreenStart2
         bne ViewableScreenStart2                         ; 2/3   2/3
 
 
-        SLEEP SLEEPTIMER_TRACK
+        SLEEP SLEEPTIMER_TRACK_LEFT
         inx                                             ; 2
 DrawText2
         stx LineTemp                                    ; 3     6
@@ -590,8 +592,6 @@ DrawText2
         nop                                             ; 2     74
         nop                                             ; 2     76
         bne DrawText2                                    ; 2/3   2/3
-
-
 EndofScreenBuffer
         inx                                             ; 2
         cpx #192                                        ; 2
@@ -660,24 +660,12 @@ SkipCursorMove
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;; Selection Detection ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;lda #0
-        ;sta PlayGfxSelect
-        ;sta DurGfxSelect
-        ;sta VolGfxSelect
-        ;sta FrqGfxSelect
-        ;sta CtlGfxSelect
-        ;sta PlayAllGfxSelect
-        ;sta AddGfxSelect
-        ;sta RemoveGfxSelect
-        ;sta ChannelGfxSelect
 
         lda FlagsSelection
         and #%00001111
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 0 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         cmp #0
         bne Selection0
-        lda #%11100000
-        ;sta PlayGfxSelect
 
         ldy INPT4
         bmi Selection0
@@ -691,8 +679,6 @@ Selection0
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 1 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         cmp #1
         bne Selection1
-        lda #%01111111
-        ;sta DurGfxSelect
         ldy INPT4
         bmi PlayNote1
         tay
@@ -748,8 +734,6 @@ Selection1
         beq SkipSelection2Jump
         jmp Selection2
 SkipSelection2Jump
-        lda #%00111110
-        ;sta VolGfxSelect
         ldy INPT4
         bmi PlayNote2
         tay
@@ -851,8 +835,6 @@ Selection2
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 3 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         cmp #3
         bne Selection3
-        lda #%11111111
-        ;sta FrqGfxSelect
         ldy INPT4
         bmi PlayNote3
         lda FlagsSelection               ;00000   00100
@@ -942,8 +924,6 @@ Selection3
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 4 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         cmp #4
         bne Selection4
-        lda #%11111000
-        ;sta CtlGfxSelect
         ldy INPT4
         bmi PlayNote4
         lda FlagsSelection
@@ -997,9 +977,6 @@ Selection4
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 5 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         cmp #5
         bne Selection5
-        lda #%11100000
-        ;sta PlayAllGfxSelect
-
         ldy INPT4
         bmi Selection5
         lda DebounceCtr
@@ -1024,9 +1001,6 @@ Selection5
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 6 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         cmp #6
         bne Selection6
-        lda #%00011111
-        ;sta AddGfxSelect
-
         ldy INPT4
         bmi Selection6
         lda DebounceCtr
@@ -1043,9 +1017,6 @@ Selection6
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 7 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         cmp #7
         bne Selection7
-        lda #%11111000
-        ;sta RemoveGfxSelect
-
         ldy INPT4
         bmi Selection7
         lda DebounceCtr
@@ -1062,9 +1033,6 @@ Selection7
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 8 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         cmp #8
         bne Selection8
-        lda #%00011111
-        ;sta ChannelGfxSelect
-        
         lda DebounceCtr
         beq AllowBtn8
         jmp SkipSelectionSet
