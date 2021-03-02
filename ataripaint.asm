@@ -2086,6 +2086,8 @@ RSpace     .byte  #%11000000
            .byte  #%10100000
            .byte  #0
 
+
+        echo "----",([$FFFC-.]d), "bytes free in Bank 0"
 ;-------------------------------------------------------------------------------
         ORG $EFFA
 InterruptVectorsBank1
@@ -2119,6 +2121,8 @@ Clear
         lda $1FF8
         rts
 
+
+        echo "----",([$FFFC-.]d), "bytes free in Bank 1"
 ;-------------------------------------------------------------------------------
         ORG $FFFA
 InterruptVectorsBank2
