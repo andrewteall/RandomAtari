@@ -63,8 +63,8 @@ Track0Builder           ds #TRACKSIZE+1         ; Memory Allocation to store the
 Track1Builder           ds #TRACKSIZE+1         ; Memory Allocation to store the bytes(notes) saved to track 1
 
 
-        echo "----",(* - $80) , "bytes of RAM Used"
-        echo "----",($100 - *) , "bytes of RAM left"
+        echo "----",([* - $80]d) , "bytes of RAM Used"
+        echo "----",([$100 - *]d) , "bytes of RAM left"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Ram ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
