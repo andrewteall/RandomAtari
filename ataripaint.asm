@@ -2,74 +2,6 @@
         include includes/vcs.h
         include includes/macro.h
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Ram ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        SEG.U vars
-        ORG $80
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Audio Working Values
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-AudVolCtl               ds 1                    ; 0000XXXX - Volume | XXXX0000 - Control
-AudFrqDur               ds 1                    ; 00000XXX - Frquency | XXXXX000 - Duration
-;AudChannelDebouceCtr    ds 1
-AudChannel              ds 1
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Flags
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-FlagsSelection          ds 1                    ; 0-4 Current Selection (#0-#8) - (#9-#15 Not Used)
-                                                ; 5 - Play note flag - 0 plays note
-                                                ; 6 - Add note flag - 1 adds note
-                                                ; 7 - Remove note flag - 1 removes note
-                                                ; 8 - Play track flag - 1 plays tracks
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Counters
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-FrameCtrTrk0            ds 1
-FrameCtrTrk1            ds 1
-DebounceCtr             ds 1                    ; XXXX0000 - Top 4 bits not used
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Rom Pointers
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-PlayButtonMaskPtr       ds 2                    
-PlayAllButtonMaskPtr    ds 2 
-ChannelGfxPtr           ds 2
-CtlGfxPtr               ds 2
-VolGfxPtr               ds 2
-DurGfxPtr               ds 2
-FrqGfxPtr               ds 2
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Ram Pointers
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-Track0BuilderPtr        ds 1                    ; 
-YTemp                   ds 1                    ; This will get zeroed so that the Trackpointer load
-Track1BuilderPtr        ds 1                    ; 
-LineTemp                ds 1                    ; will seem like it has 2 bytes
-
-NotePtrCh0              ds 2                     
-; Space Available
-NotePtrCh1              ds 1
-LetterBuffer            ds 1
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Ram Music Tracks
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-Track0Builder           ds #TRACKSIZE+1         ; Memory Allocation to store the bytes(notes) saved to track 0
-Track1Builder           ds #TRACKSIZE+1         ; Memory Allocation to store the bytes(notes) saved to track 1
-
-
-        echo "----",([* - $80]d) , "bytes of RAM Used"
-        echo "----",([$100 - *]d) , "bytes of RAM left"
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Ram ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
 ; TODO: Flag to not use Channel 1 - doubles play time
 ;       - Could also have channel 1 count from top so the tracks meet in the middle
 
@@ -77,11 +9,10 @@ Track1Builder           ds #TRACKSIZE+1         ; Memory Allocation to store the
 ; TODO: Draw Note letters from memory location
 
 ; TODO: Add note count left on track
-
-; TODO: Reuse Rom Pointers like Channel Pointer
+; TODO: Add total Duration of of each track
+; TODO: Add Step through notes and display values
 
 ; TODO: Finalize Colors and Decor and Name
-
         
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -127,13 +58,84 @@ MISSLE_SIZE_EIGHT_CLOCKS        = #48
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Ram ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+        SEG.U vars
+        ORG $80
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Audio Working Values
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+AudVolCtl               ds 1                    ; 0000XXXX - Volume | XXXX0000 - Control
+AudFrqDur               ds 1                    ; 00000XXX - Frquency | XXXXX000 - Duration
+
+AudChannel              ds 1
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Flags
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+FlagsSelection          ds 1                    ; 0-4 Current Selection (#0-#8) - (#9-#15 Not Used)
+                                                ; 5 - Play note flag - 0 plays note
+                                                ; 6 - Add note flag - 1 adds note
+                                                ; 7 - Remove note flag - 1 removes note
+                                                ; 8 - Play track flag - 1 plays tracks
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Counters
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+FrameCtrTrk0            ds 1
+FrameCtrTrk1            ds 1
+DebounceCtr             ds 1                    ; XXXX0000 - Top 4 bits not used
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Rom Pointers
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+PlayButtonMaskPtr       ds 2                    
+PlayAllButtonMaskPtr    ds 2 
+CtlChnlGfxPtr           ds 2
+VolGfxPtr               ds 2
+DurGfxPtr               ds 2
+FrqGfxPtr               ds 2
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Ram Pointers
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+Track0BuilderPtr        ds 1                    ; 
+YTemp                   ds 1                    ; This will get zeroed so that the Trackpointer load
+Track1BuilderPtr        ds 1                    ; 
+LineTemp                ds 1                    ; will seem like it has 2 bytes
+
+NotePtrCh0              ds 2                     
+; Space Available
+NotePtrCh1              ds 1
+LetterBuffer            ds 1
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Ram Music Tracks
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+Track0Builder           ds #TRACKSIZE+1         ; Memory Allocation to store the bytes(notes) saved to track 0
+Track1Builder           ds #TRACKSIZE+1         ; Memory Allocation to store the bytes(notes) saved to track 1
+
+
+        echo "----",([* - $80]d) , (* - $80) ,"bytes of RAM Used"
+        echo "----",([$100 - *]d) , ($100 - *) , "bytes of RAM left"
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Ram ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
         
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Console Initialization ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         SEG
-        ORG $E000
+        ORG $1000
         RORG $F000
+
+SwitchToBank1
+        lda $1FF9
+
 Reset
         ldx #0
         txa
@@ -145,6 +147,8 @@ Clear
         cld                                             ;       Clear Decimal. Seems to be an issue 
                                                         ;       when the processor status is 
                                                         ;       randomized in Stella
+        lda #30
+        sta DebounceCtr
 
         ldx #0
         lda #TITLE_H_POS
@@ -190,7 +194,7 @@ Clear
         sta Track1BuilderPtr
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;; End Console Initialization ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Console Initialization ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
@@ -240,7 +244,9 @@ ViewableScreenStart
         sta WSYNC                                       ; 3     
         bne ViewableScreenStart                         ; 2/3   2/3
 
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Title Text
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         SLEEP SLEEPTIMER_TITLE
         inx                                             ; 2
 DrawText
@@ -278,23 +284,25 @@ DrawText
         nop                                             ; 2     76
         bne DrawText                                    ; 2/3   2/3
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 TopBuffer
         inx                                             ; 2     59
         cpx #20                                         ; 2     61
         sta WSYNC                                       ; 3     64
         bne TopBuffer                                   ; 2/3   2/3
 
-        inx                                             ; 2     4
-        txa                                             ; 2     6
-        sbc #19                                         ; 2     8
-        lsr                                             ; 2     10      Divide by 2 to get index twice for double height
-        lsr                                             ; 2     12      Divide by 2 to get index twice for quad height
-        sta WSYNC                                       ; 3     14     
-       
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Note Row - 1-Line Kernel 
-; Line 1 - 74 Cycles
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Note Values Row 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        inx                                     ; 2     4
+        txa                                     ; 2     6
+        sbc #19                                 ; 2     8
+        lsr                                     ; 2     10      Divide by 2 to get index twice for double height
+        lsr                                     ; 2     12      Divide by 2 to get index twice for quad height
+        sta WSYNC                               ; 3     14     
         SLEEP 4                                 ; 4     4       Account for 4 cycle branch to keep timing aligned
 NoteRow 
         lsr                                     ; 2     6       Divide by 2 to get index twice for octuple height
@@ -317,7 +325,7 @@ NoteRow
         lda (FrqGfxPtr),y                       ; 5     45      Get the Score From our Frequency Gfx Array
         sta PF2                                 ; 3     48      Store the value to PF2
         
-        lda (CtlGfxPtr),y                       ; 5     53      Get the Score From our Control Gfx Array
+        lda (CtlChnlGfxPtr),y                       ; 5     53      Get the Score From our Control Gfx Array
         sta PF1                                 ; 3     56      Store the value to PF1        
 
         inx                                     ; 2     58      Increment our line number
@@ -330,16 +338,13 @@ NoteRow
         lsr                                     ; 2     71      Divide by 2 to get index twice for quadruple height
         sty PF1                                 ; 3     74      Reset and clear the playfield
 
-        cpx #60                                 ; 2     76      Have we reached line #60        
-        bne.x NoteRow                           ; 2/4   2/4     No then repeat,Currently Crossing Page Boundary 
+        cpx #60                                 ; 2     76      Have we reached line #60   
+        bne NoteRow                             ; 2/4   2/4     No then repeat,Currently Crossing Page Boundary 
                                                 ;               So Add one cycle
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Note Selection - 1-Line Kernel 
-; Line 1 - 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Note Values Selection Row
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldy #0
         sty PF2                                         ; 3     65      Reset and clear the playfield
         inx                                             ; 2     6
@@ -348,8 +353,6 @@ NoteRow
         sta WSYNC                                       ; 3     3
         SLEEP 3                                         ; 3     3
         
-        
-
 NoteSelection
         stx LineTemp
         lda FlagsSelection                              ; 3
@@ -400,23 +403,41 @@ SkipSelectControl
 
         lda #0                                          ; 2     64
         sta PF1                                         ; 3     67
-        sta PF2                                         ; 3     67
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Spacer - 1-Line Kernel 
-; Line 1 - 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Spacer 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #SELECTION_COLOR
         sta COLUPF
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;; Build Audio Channel Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #<(Zero)
+        sta CtlChnlGfxPtr
+
+        lda #>(Zero)
+        sta CtlChnlGfxPtr+1  
+
+        lda AudChannel
+        asl
+        asl
+        clc
+        adc AudChannel
+
+        clc
+        adc CtlChnlGfxPtr
+        sta CtlChnlGfxPtr
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 Spacer
         inx                                             ; 2     4
         cpx #80                                         ; 2     6
         sta WSYNC                                       ; 3     9
         bne Spacer                                      ; 2/3   2/3
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Control Row - 1-Line Kernel 
-; Line 1 - 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Track Controls Row 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ControlRow
         txa                                             ; 2     5
         sbc #79                                         ; 2     7
@@ -436,7 +457,7 @@ ControlRow
         lda MinusBtn,y                                  ; 4     38      Get the Score From our Player 0 Score Array
         sta PF2                                         ; 3     41
         
-        lda (ChannelGfxPtr),y                           ; 4     45      Get the Score From our Player 0 Score Array
+        lda (CtlChnlGfxPtr),y                           ; 4     45      Get the Score From our Player 0 Score Array
         sta PF2                                         ; 3     48      Store Score to PF2
         
         SLEEP 4                                         ; 7     62
@@ -451,21 +472,18 @@ ControlRow
         sta WSYNC                                       ; 3     9
         bne ControlRow                                  ; 2/3   2/3
 
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Control Selection - 1-Line Kernel 
-; Line 1 - 
+; Track Selection Row
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #CONTROLS_COLOR
         sta COLUPF
         ldy #0
         inx                                             ; 2     4
         sta WSYNC                                       ; 3     3
-        SLEEP 3                                         ; 3     3
+        SLEEP 4                                         ; 3     3
 
 ControlSelection
-        stx LineTemp
+        stx.w LineTemp
         lda FlagsSelection                              ; 3
         and #FLAGS_MASK                                 ; 2
 
@@ -488,12 +506,12 @@ SkipSelectAddNote
         sta PF2
 SkipSelectRemoveNote
 
-        SLEEP 11
+        SLEEP 9
 
         cmp #8
         sty PF2
         bne SkipSelectRemoveChannel
-        lda #%00111111
+        lda #%00011111
         sta PF2
 SkipSelectRemoveChannel
 
@@ -507,10 +525,6 @@ SkipSelectRemoveChannel
         sta WSYNC                                       ; 3     9
         bne ControlSelection                            ; 2/3   2/3
 
-        lda #0                                          ; 2     64
-        sta PF1                                         ; 3     67
-        sta PF2                                         ; 3     67
-        sta PF0                                         ; 3     67
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Spacer - 1-Line Kernel 
 ; Line 1 - 
@@ -519,72 +533,6 @@ SkipSelectRemoveChannel
         lda #SELECTION_COLOR
         sta COLUPF
 
-; Reset Player positions for title
-        ldx #0
-        lda #TRACKDISPLAY_LEFT_H_POS
-        jsr CalcXPos
-        sta WSYNC
-        sta HMOVE ; <--- need to make this happen on cycle 74 :eyeroll:
-        SLEEP 24
-        sta HMCLR
-
-
-        ldx #1
-        lda #TRACKDISPLAY_LEFT_H_POS+8
-        jsr CalcXPos
-        sta WSYNC
-        sta HMOVE
-        SLEEP 24
-        sta HMCLR
-
-        ldx LineTemp
-        inx
-        inx
-        inx
-ViewableScreenStart2
-        inx                                             ; 2     
-        ldy #0
-        cpx #138                                        ; 2     
-        sta WSYNC                                       ; 3     
-        bne ViewableScreenStart2                        ; 2/3   2/3
-
-
-        SLEEP SLEEPTIMER_TRACK_LEFT
-        inx                                             ; 2
-DrawText2
-        stx LineTemp                                    ; 3     6
-        sty YTemp                                       ; 3     9
-        
-        ldx RSpace,y                                    ; 4     13
-        stx LetterBuffer                                ; 3     16
-        
-        ldx KE,y                                        ; 4     20
-
-        lda MU,y                                        ; 4     24
-        sta GRP0                                        ; 3     27      MU -> [GRP0]
-        
-        lda SI,y                                        ; 4     31
-        sta GRP1                                        ; 3     34      SI -> [GRP1], [GRP0] -> GRP0
-        
-        lda CSpace,y                                    ; 4     38
-        sta GRP0                                        ; 3     41      C  -> [GRP0]. [GRP1] -> GRP1
-        
-        lda MA,y                                        ; 4     45
-        ldy LetterBuffer                                ; 3     48
-        sta GRP1                                        ; 3     51      MA -> [GRP1], [GRP0] -> GRP0
-        stx GRP0                                        ; 3     54      KE -> [GRP0], [GRP1] -> GRP1
-        sty GRP1                                        ; 3     57      R  -> [GRP1], [GRP0] -> GRP0
-        stx GRP0                                        ; 3     60      ?? -> [GRP0], [GRP1] -> GRP1
-        
-        ldx LineTemp                                    ; 3     63
-        ldy YTemp                                       ; 3     66
-        iny                                             ; 2     68
-
-        inx                                             ; 2     70
-        cpx #145                                        ; 2     72
-        nop                                             ; 2     74
-        nop                                             ; 2     76
-        bne DrawText2                                   ; 2/3   2/3
 EndofScreenBuffer
         inx                                             ; 2
         cpx #192                                        ; 2
@@ -609,18 +557,18 @@ EndofScreenBuffer
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; Left Right Cursor Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda DebounceCtr                                 ; 3     10
-        bne SkipCursorMove                              ; 2/3   12/13
+        lda DebounceCtr                                 
+        bne SkipCursorMove                              
         
-        lda #%01000000                                  ; 2     14
-        bit SWCHA                                       ; 4     16
-        bne CursorLeft                                  ; 2/3   18/19
-        lda #10                                         ; 2     20
-        sta DebounceCtr                                 ; 3     23
+        lda #%01000000                                  
+        bit SWCHA                                       
+        bne CursorLeft                                  
+        lda #10                                         
+        sta DebounceCtr                                 
         lda FlagsSelection
         and #FLAGS_MASK
         beq SetCurrentSelectionto8
-        dec FlagsSelection                              ; 5     28
+        dec FlagsSelection                              
         sec
         bcs SkipSetCurrentSelectionto8
 SetCurrentSelectionto8
@@ -630,11 +578,11 @@ SetCurrentSelectionto8
 SkipSetCurrentSelectionto8
 CursorLeft
 
-        lda #%10000000                                  ; 2     30
-        bit SWCHA                                       ; 4     34
-        bne CursorRight                                 ; 2/3   36/37
-        lda #10                                         ; 2     38
-        sta DebounceCtr                                 ; 3     41
+        lda #%10000000
+        bit SWCHA
+        bne CursorRight
+        lda #10
+        sta DebounceCtr
         lda FlagsSelection
         and #%00001000
         bne SetCurrentSelectionto0
@@ -1149,10 +1097,10 @@ SkipSelectionSet
 ;;;;;;;;;;;;;;;;;;;;;;; Build Audio Control Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #<(RSZero)
-        sta CtlGfxPtr
+        sta CtlChnlGfxPtr
 
         lda #>(RSZero)
-        sta CtlGfxPtr+1  
+        sta CtlChnlGfxPtr+1  
 
         lda AudVolCtl
         sta LineTemp
@@ -1167,29 +1115,29 @@ SkipSelectionSet
         adc AudVolCtl
 
         clc
-        adc CtlGfxPtr
-        sta CtlGfxPtr
+        adc CtlChnlGfxPtr
+        sta CtlChnlGfxPtr
         lda LineTemp
         sta AudVolCtl
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; Build Audio Channel Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #<(Zero)
-        sta ChannelGfxPtr
+        ; lda #<(Zero)
+        ; sta ChannelGfxPtr
 
-        lda #>(Zero)
-        sta ChannelGfxPtr+1  
+        ; lda #>(Zero)
+        ; sta ChannelGfxPtr+1  
 
-        lda AudChannel
-        asl
-        asl
-        clc
-        adc AudChannel
+        ; lda AudChannel
+        ; asl
+        ; asl
+        ; clc
+        ; adc AudChannel
 
-        clc
-        adc ChannelGfxPtr
-        sta ChannelGfxPtr
+        ; clc
+        ; adc ChannelGfxPtr
+        ; sta ChannelGfxPtr
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Note Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1513,10 +1461,19 @@ SkipResetPlayAllButton
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         lda DebounceCtr
-        beq SkipDecDebounceCtr
+        beq SkipDecDebounceCtr_Bank0
         dec DebounceCtr
-SkipDecDebounceCtr
+SkipDecDebounceCtr_Bank0
         
+
+        lda SWCHB
+        and #%00000010
+        ora DebounceCtr
+        bne SkipSwitchToBank1
+        ; Put game select logic code here
+
+        jmp SwitchToBank1
+SkipSwitchToBank1
 
 ; Reset Player positions for title
         ldx #0
@@ -1535,6 +1492,13 @@ SkipDecDebounceCtr
         SLEEP 24
         sta HMCLR
 
+        lda #THREE_COPIES_CLOSE
+        sta NUSIZ0
+        sta NUSIZ1
+
+        lda #1
+        sta VDELP0
+        sta VDELP1
 
 
 ; Reset Backgruond,Audio,Collisions,Note Flags
@@ -2089,16 +2053,31 @@ RSpace     .byte  #%11000000
 
         echo "----",([$FFFC-.]d), "bytes free in Bank 0"
 ;-------------------------------------------------------------------------------
-        ORG $EFFA
+        ORG $1FFA
+        RORG $FFFA
 InterruptVectorsBank1
     .word Reset          ; NMI
     .word Reset          ; RESET
     .word Reset          ; IRQ
 ENDBank1
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        ORG $F000
+        ORG $2000
         RORG $F000
+
+SwitchToBank0
+        lda $1FF8
+
 Reset
         ldx #0
         txa
@@ -2107,24 +2086,72 @@ Clear
         txs
         pha
         bne Clear
-        cld        
+        cld
 
-        lda #<Reset
-        sta PlayButtonMaskPtr
+        lda #30
+        sta DebounceCtr
 
-        lda #>Reset
-        sta PlayButtonMaskPtr+1
+_StartOfFrame
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Start VBLANK Processing
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #0
+        sta VBLANK
+
+; 3 VSYNC Lines
+        lda #2
+        sta VSYNC ; Turn on VSYNC
+
+        sta WSYNC
+        sta WSYNC
+        sta WSYNC
+        lda #0
+        sta VSYNC ; Turn off VSYNC
+
+; 37 VBLANK lines
+        ldx #37                                         ; 2
+VerticalBlank2
+        sta WSYNC                                       ; 3
+        dex                                             ; 2
+        bne VerticalBlank2                               ; 2/3
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; End VBLANK Processing
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+        ldx #192
+Screen
+        stx COLUBK
+        sta WSYNC
+        dex
+        bne Screen
+
+        lda DebounceCtr
+        beq SkipDecDebounceCtr_Bank1
+        dec DebounceCtr
+SkipDecDebounceCtr_Bank1
+
+        lda SWCHB
+        and #%00000010
+        ora DebounceCtr
+        bne SkipSwitchToBank0
+        ; Put game select logic code here
         
-        pha 
-        lda PlayButtonMaskPtr
-        pha
-        lda $1FF8
-        rts
+        jmp SwitchToBank0
+SkipSwitchToBank0
+
+        ldx #30
+Overscan2
+        sta WSYNC
+        dex
+        bne Overscan2
+        jmp _StartOfFrame
+
 
 
         echo "----",([$FFFC-.]d), "bytes free in Bank 1"
 ;-------------------------------------------------------------------------------
-        ORG $FFFA
+        ORG $2FFA
+        RORG $FFFA
 InterruptVectorsBank2
     .word Reset          ; NMI
     .word Reset          ; RESET
