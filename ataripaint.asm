@@ -8,9 +8,9 @@
 ; TODO: Multiplex Characters for more than 12 chars per line
 ; TODO: Draw Note letters from memory location
 
-; TODO: Add note count left on track
-; TODO: Add total Duration of of each track
+; TODO: Add total Duration of of each track?
 ; TODO: Add Step through notes and display values
+; TODO: Add Labels under controls to display usage
 
 ; TODO: Finalize Colors and Decor and Name
         
@@ -21,7 +21,7 @@
 TITLE_H_POS                     = #57
 TRACKDISPLAY_LEFT_H_POS         = #20
 TRACKDISPLAY_RIGHT_H_POS        = #68
-TRACKSIZE                       = #24                   ; Must be a multiple of 2
+TRACKSIZE                       = #48                   ; Must be a multiple of 2
 
 PLAY_NOTE_FLAG                  = #16
 ADD_NOTE_FLAG                   = #32
@@ -73,8 +73,7 @@ MISSLE_SIZE_EIGHT_CLOCKS        = #48
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 AudVolCtl               ds 1                    ; 0000XXXX - Volume | XXXX0000 - Control
 AudFrqDur               ds 1                    ; 00000XXX - Frquency | XXXXX000 - Duration
-
-AudChannel              ds 1
+AudCntChnl              ds 1                    ; XXXXXXX0 - Channel | 0000000X - Note Count Left
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Flags
@@ -96,10 +95,12 @@ DebounceCtr             ds 1                    ; XXXX0000 - Top 4 bits not used
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 PlayButtonMaskPtr       ds 2                    
 PlayAllButtonMaskPtr    ds 2 
-CtlChnlGfxPtr           ds 2
+
 VolGfxPtr               ds 2
 DurGfxPtr               ds 2
-FrqGfxPtr               ds 2
+
+FrqCntGfxPtr            ds 2
+CtlChnlGfxPtr           ds 2
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Ram Pointers
@@ -324,10 +325,10 @@ NoteRow
 
         nop                                     ; 2     40      Waste 2 cycles to line up the next Pf draw
 
-        lda (FrqGfxPtr),y                       ; 5     45      Get the Score From our Frequency Gfx Array
+        lda (FrqCntGfxPtr),y                    ; 5     45      Get the Score From our Frequency Gfx Array
         sta PF2                                 ; 3     48      Store the value to PF2
         
-        lda (CtlChnlGfxPtr),y                       ; 5     53      Get the Score From our Control Gfx Array
+        lda (CtlChnlGfxPtr),y                   ; 5     53      Get the Score From our Control Gfx Array
         sta PF1                                 ; 3     56      Store the value to PF1        
 
         inx                                     ; 2     58      Increment our line number
@@ -414,21 +415,46 @@ SkipSelectControl
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; Build Audio Channel Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #<(Zero)
+        lda #<(ZeroChnl)
         sta CtlChnlGfxPtr
 
-        lda #>(Zero)
+        lda #>(ZeroChnl)
         sta CtlChnlGfxPtr+1  
-
-        lda AudChannel
+        
+        lda AudCntChnl
+        and #1
+        sta LineTemp
         asl
         asl
         clc
-        adc AudChannel
+        adc LineTemp
 
         clc
         adc CtlChnlGfxPtr
         sta CtlChnlGfxPtr
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;; Build Notes Left Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #<(RSDZero)
+        sta FrqCntGfxPtr
+
+        lda #>(RSDZero)
+        sta FrqCntGfxPtr+1  
+
+        lda AudCntChnl
+        and #%11111110
+        lsr
+        sta LineTemp
+        asl
+        asl
+        clc
+        adc LineTemp
+
+        clc
+        adc FrqCntGfxPtr
+        sta FrqCntGfxPtr
+        inx
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Spacer
@@ -436,7 +462,8 @@ Spacer
         cpx #80                                         ; 2     6
         sta WSYNC                                       ; 3     9
         bne Spacer                                      ; 2/3   2/3
-
+        SLEEP 3
+        
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Track Controls Row 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -448,30 +475,34 @@ ControlRow
         lsr                                             ; 2     13      Divide by 2 to get index twice for double height
         tay                                             ; 2     15      Transfer A to Y so we can index off Y
         
-        lda (PlayAllButtonMaskPtr),y                    ; 4     19      Get the Score From our Player 0 Score Array
-        sta PF0                                         ; 3     22      
+        lda (PlayAllButtonMaskPtr),y                    ; 5     20      Get the Score From our Player 0 Score Array
+        sta PF0                                         ; 3     23      
 
-        lda PlusBtn,y                                   ; 4     26      Get the Score From our Player 0 Score Array
-        sta PF1                                         ; 3     29      
+        lda PlusBtn,y                                   ; 4     27      Get the Score From our Player 0 Score Array
+        sta PF1                                         ; 3     30      
         
-        SLEEP 5                                         ; 5     34
+        SLEEP 3                                         ; 3     33
         
-        lda MinusBtn,y                                  ; 4     38      Get the Score From our Player 0 Score Array
-        sta PF2                                         ; 3     41
+        lda MinusBtn,y                                  ; 4     37      Get the Score From our Player 0 Score Array
+        sta PF2                                         ; 3     40
         
-        lda (CtlChnlGfxPtr),y                           ; 4     45      Get the Score From our Player 0 Score Array
+        lda (CtlChnlGfxPtr),y                           ; 5     45      Get the Score From our Player 0 Score Array
         sta PF2                                         ; 3     48      Store Score to PF2
         
-        SLEEP 4                                         ; 7     62
+        lda (FrqCntGfxPtr),y                            ; 5     53      Get the Score From our Player 0 Score Array
+        sta PF1                                         ; 3     56      Store Score to PF2
         
-        lda #0                                          ; 2     64
-        sta PF1                                         ; 3     70
-        sta PF0                                         ; 3     67
-        sta PF2                                         ; 3     73
+        lda #0                                          ; 2     58
+        sta PF0                                         ; 3     61
+        
+        
 
-        inx                                             ; 2     4
-        cpx #120                                        ; 2     6
-        sta WSYNC                                       ; 3     9
+        inx                                             ; 2     63
+        cpx #120                                        ; 2     65
+        sta PF2                                         ; 3     68
+        sta PF1                                         ; 3     71
+        sta WSYNC                                       ; 3     74
+        
         bne ControlRow                                  ; 2/3   2/3
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -485,7 +516,7 @@ ControlRow
         SLEEP 4                                         ; 3     3
 
 ControlSelection
-        stx.w LineTemp
+        stx LineTemp
         lda FlagsSelection                              ; 3
         and #SELECTION_MASK                                 ; 2
 
@@ -513,7 +544,7 @@ SkipSelectRemoveNote
         cmp #8
         sty PF2
         bne SkipSelectRemoveChannel
-        lda #%00011111
+        lda #%01111100
         sta PF2
 SkipSelectRemoveChannel
 
@@ -954,14 +985,16 @@ AllowBtn8
         bit SWCHA
         bne Chl0Down
         lda #1
-        sta AudChannel
+        ora AudCntChnl
+        sta AudCntChnl
         jmp SelectionSet
 Chl0Down
         lda #%00100000            
         bit SWCHA
         bne Chl0Up
-        lda #0
-        sta AudChannel
+        lda #%11111110
+        and AudCntChnl
+        sta AudCntChnl
         jmp SelectionSet
 Chl0Up
 Selection8
@@ -1039,10 +1072,10 @@ SkipSelectionSet
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         lda #<(Zero)
-        sta FrqGfxPtr
+        sta FrqCntGfxPtr
 
         lda #>(Zero)
-        sta FrqGfxPtr+1  
+        sta FrqCntGfxPtr+1  
  
         lda AudFrqDur
         sta LineTemp
@@ -1059,8 +1092,8 @@ SkipSelectionSet
         clc
         adc AudFrqDur
         clc
-        adc FrqGfxPtr
-        sta FrqGfxPtr
+        adc FrqCntGfxPtr
+        sta FrqCntGfxPtr
         lda LineTemp
         sta AudFrqDur
 
@@ -1101,11 +1134,11 @@ SkipSelectionSet
         ; lda #>(Zero)
         ; sta ChannelGfxPtr+1  
 
-        ; lda AudChannel
+        ; lda AudCntChnl
         ; asl
         ; asl
         ; clc
-        ; adc AudChannel
+        ; adc AudCntChnl
 
         ; clc
         ; adc ChannelGfxPtr
@@ -1114,7 +1147,9 @@ SkipSelectionSet
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Note Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ldx AudChannel
+        lda AudCntChnl
+        and #1
+        tax
         lda #PLAY_NOTE_FLAG
         bit FlagsSelection
         bne SkipPlayNote
@@ -1155,7 +1190,9 @@ LoadPauseButton
         sec
         bcs SkipPlayNote
 TurnOffNote
-        ldx AudChannel
+        lda AudCntChnl
+        and #1
+        tax
         lda #0
         sta AUDV0,x
         sta AUDF0,x
@@ -1190,7 +1227,9 @@ SkipPlayNote
         bit FlagsSelection
         beq SkipAddNote
 
-        ldx AudChannel
+        lda AudCntChnl
+        and #1
+        tax
         cpx #1
         beq AddNoteChannel1
 
@@ -1244,7 +1283,9 @@ SkipAddNote
         bit FlagsSelection
         beq SkipRemoveNote
 
-        ldx AudChannel
+        lda AudCntChnl
+        and #1
+        tax
         cpx #1
         beq RemNoteChannel1
 
@@ -1432,6 +1473,28 @@ SkipResetPlayAllButton
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+        lda AudCntChnl
+        and #1
+        sta AudCntChnl
+        bne LoadChannel1Cnt
+        lda Track0Builder+#TRACKSIZE
+        sec
+        sbc Track0BuilderPtr
+        ;lsr
+        and #%11111110
+        ora AudCntChnl
+        sta AudCntChnl
+        jmp LoadChannel0Cnt
+LoadChannel1Cnt
+        lda Track1Builder+#TRACKSIZE
+        sec
+        sbc Track1BuilderPtr
+        ;lsr
+        and #%11111110
+        ora AudCntChnl
+        sta AudCntChnl
+LoadChannel0Cnt
+
         lda DebounceCtr
         beq SkipDecDebounceCtr_Bank0
         dec DebounceCtr
@@ -1556,6 +1619,18 @@ NoteDurations   .byte 1         ; control note - 0
                 .byte 72        ; quarter note - 72/60  2^7 128
                 .byte 144       ; half note - 144/120   2^9 256
                 ;.byte 216       ; whole(3/4) note - 216 or maybe half triplets
+
+ZeroChnl   .byte  #%11100
+           .byte  #%10100
+           .byte  #%10100
+           .byte  #%10100
+           .byte  #%11100
+
+OneChnl    .byte  #%11000
+           .byte  #%01000
+           .byte  #%01000
+           .byte  #%01000
+           .byte  #%11100
 
         align 256
 Zero       .byte  #%111
@@ -1945,6 +2020,392 @@ RSF         .byte  #%11100000
            .byte  #%00100000
            .byte  #%00100000
 
+RSOneZero  .byte  #%11100110
+           .byte  #%10100100
+           .byte  #%10100100
+           .byte  #%10100100
+           .byte  #%11101110
+
+RSOneOne   .byte  #%01100110
+           .byte  #%01000100
+           .byte  #%01000100
+           .byte  #%01000100
+           .byte  #%11101110
+
+RSOneTwo   .byte  #%11100110
+           .byte  #%10000100
+           .byte  #%11100100
+           .byte  #%00100100
+           .byte  #%11101110
+
+RSOneThree .byte  #%11100110
+           .byte  #%10000100
+           .byte  #%11100100
+           .byte  #%10000100
+           .byte  #%11101110
+
+RSOneFour  .byte  #%10100110
+           .byte  #%10100100
+           .byte  #%11100100
+           .byte  #%10000100
+           .byte  #%10001110
+
+RSOneFive  .byte  #%11100110
+           .byte  #%00100100
+           .byte  #%11100100
+           .byte  #%10000100
+           .byte  #%11101110
+
+RSOneSix   .byte  #%11100110
+           .byte  #%00100100
+           .byte  #%11100100
+           .byte  #%10100100
+           .byte  #%11101110
+
+RSOneSeven .byte  #%11100110
+           .byte  #%10000100
+           .byte  #%10000100
+           .byte  #%10000100
+           .byte  #%10001110
+
+RSOneEight .byte  #%11100110
+           .byte  #%10100100
+           .byte  #%11100100
+           .byte  #%10100100
+           .byte  #%11101110
+
+RSOneNine  .byte  #%11100110
+           .byte  #%10100100
+           .byte  #%11100100
+           .byte  #%10000100
+           .byte  #%11101110
+
+RSOneA     .byte  #%11100110
+           .byte  #%10100100
+           .byte  #%11100100
+           .byte  #%10100100
+           .byte  #%10101110
+
+RSOneB     .byte  #%01100110
+           .byte  #%10100100
+           .byte  #%01100100
+           .byte  #%10100100
+           .byte  #%01101110
+
+RSOneC     .byte  #%11100110
+           .byte  #%00100100
+           .byte  #%00100100
+           .byte  #%00100100
+           .byte  #%11101110
+
+RSOneD     .byte  #%01100110
+           .byte  #%10100100
+           .byte  #%10100100
+           .byte  #%10100100
+           .byte  #%01101110
+
+RSOneE     .byte  #%11100110
+           .byte  #%00100100
+           .byte  #%11100100
+           .byte  #%00100100
+           .byte  #%11101110
+
+RSOneF     .byte  #%11100110
+           .byte  #%00100100
+           .byte  #%11100100
+           .byte  #%00100100
+           .byte  #%00101110
+
+RSTwoZero  .byte  #%11101110
+           .byte  #%10101000
+           .byte  #%10101110
+           .byte  #%10100010
+           .byte  #%11101110
+
+RSTwoOne   .byte  #%01101110
+           .byte  #%01001000
+           .byte  #%01001110
+           .byte  #%01000010
+           .byte  #%11101110
+
+RSTwoTwo   .byte  #%11101110
+           .byte  #%10001000
+           .byte  #%11101110
+           .byte  #%00100010
+           .byte  #%11101110
+
+RSTwoThree .byte  #%11101110
+           .byte  #%10001000
+           .byte  #%11101110
+           .byte  #%10000010
+           .byte  #%11101110
+
+RSTwoFour  .byte  #%10101110
+           .byte  #%10101000
+           .byte  #%11101110
+           .byte  #%10000010
+           .byte  #%10001110
+
+RSTwoFive  .byte  #%11101110
+           .byte  #%00101000
+           .byte  #%11101110
+           .byte  #%10000010
+           .byte  #%11101110
+
+RSTwoSix   .byte  #%11101110
+           .byte  #%00101000
+           .byte  #%11101110
+           .byte  #%10100010
+           .byte  #%11101110
+
+RSTwoSeven .byte  #%11101110
+           .byte  #%10001000
+           .byte  #%10001110
+           .byte  #%10000010
+           .byte  #%10001110
+
+RSTwoEight .byte  #%11101110
+           .byte  #%10101000
+           .byte  #%11101110
+           .byte  #%10100010
+           .byte  #%11101110
+
+RSTwoNine  .byte  #%11101110
+           .byte  #%10101000
+           .byte  #%11101110
+           .byte  #%10000010
+           .byte  #%11101110
+
+RSTwoA     .byte  #%11101110
+           .byte  #%10101000
+           .byte  #%11101110
+           .byte  #%10100010
+           .byte  #%10101110
+
+RSTwoB     .byte  #%01101110
+           .byte  #%10101000
+           .byte  #%01101110
+           .byte  #%10100010
+           .byte  #%01101110
+
+RSTwoC     .byte  #%11101110
+           .byte  #%00101000
+           .byte  #%00101110
+           .byte  #%00100010
+           .byte  #%11101110
+
+RSTwoD     .byte  #%01101110
+           .byte  #%10101000
+           .byte  #%10101110
+           .byte  #%10100010
+           .byte  #%01101110
+
+RSTwoE     .byte  #%11101110
+           .byte  #%00101000
+           .byte  #%11101110
+           .byte  #%00100010
+           .byte  #%11101110
+
+RSTwoF     .byte  #%11101110
+           .byte  #%00101000
+           .byte  #%11101110
+           .byte  #%00100010
+           .byte  #%00101110
+
+RSThrZero  .byte  #%11101110
+           .byte  #%10101000
+           .byte  #%10101100
+           .byte  #%10101000
+           .byte  #%11101110
+
+        align 256
+RSDZero      .byte  #%11100000
+           .byte  #%10100000
+           .byte  #%10100000
+           .byte  #%10100000
+           .byte  #%11100000
+
+RSDOne       .byte  #%01100000
+           .byte  #%01000000
+           .byte  #%01000000
+           .byte  #%01000000
+           .byte  #%11100000
+
+RSDTwo       .byte  #%11100000
+           .byte  #%10000000
+           .byte  #%11100000
+           .byte  #%00100000
+           .byte  #%11100000
+
+RSDThree     .byte  #%11100000
+           .byte  #%10000000
+           .byte  #%11100000
+           .byte  #%10000000
+           .byte  #%11100000
+
+RSDFour      .byte  #%10100000
+           .byte  #%10100000
+           .byte  #%11100000
+           .byte  #%10000000
+           .byte  #%10000000
+
+RSDFive      .byte  #%11100000
+           .byte  #%00100000
+           .byte  #%11100000
+           .byte  #%10000000
+           .byte  #%11100000
+
+RSDSix       .byte  #%11100000
+           .byte  #%00100000
+           .byte  #%11100000
+           .byte  #%10100000
+           .byte  #%11100000
+
+RSDSeven     .byte  #%11100000
+           .byte  #%10000000
+           .byte  #%10000000
+           .byte  #%10000000
+           .byte  #%10000000
+
+RSDEight     .byte  #%11100000
+           .byte  #%10100000
+           .byte  #%11100000
+           .byte  #%10100000
+           .byte  #%11100000
+
+RSDNine      .byte  #%11100000
+           .byte  #%10100000
+           .byte  #%11100000
+           .byte  #%10000000
+           .byte  #%11100000
+
+
+RSDOneZero  .byte  #%11100110
+           .byte  #%10100100
+           .byte  #%10100100
+           .byte  #%10100100
+           .byte  #%11101110
+
+RSDOneOne   .byte  #%01100110
+           .byte  #%01000100
+           .byte  #%01000100
+           .byte  #%01000100
+           .byte  #%11101110
+
+RSDOneTwo   .byte  #%11100110
+           .byte  #%10000100
+           .byte  #%11100100
+           .byte  #%00100100
+           .byte  #%11101110
+
+RSDOneThree .byte  #%11100110
+           .byte  #%10000100
+           .byte  #%11100100
+           .byte  #%10000100
+           .byte  #%11101110
+
+RSDOneFour  .byte  #%10100110
+           .byte  #%10100100
+           .byte  #%11100100
+           .byte  #%10000100
+           .byte  #%10001110
+
+RSDOneFive  .byte  #%11100110
+           .byte  #%00100100
+           .byte  #%11100100
+           .byte  #%10000100
+           .byte  #%11101110
+
+RSDOneSix   .byte  #%11100110
+           .byte  #%00100100
+           .byte  #%11100100
+           .byte  #%10100100
+           .byte  #%11101110
+
+RSDOneSeven .byte  #%11100110
+           .byte  #%10000100
+           .byte  #%10000100
+           .byte  #%10000100
+           .byte  #%10001110
+
+RSDOneEight .byte  #%11100110
+           .byte  #%10100100
+           .byte  #%11100100
+           .byte  #%10100100
+           .byte  #%11101110
+
+RSDOneNine  .byte  #%11100110
+           .byte  #%10100100
+           .byte  #%11100100
+           .byte  #%10000100
+           .byte  #%11101110
+
+RSDTwoZero  .byte  #%11101110
+           .byte  #%10101000
+           .byte  #%10101110
+           .byte  #%10100010
+           .byte  #%11101110
+
+RSDTwoOne   .byte  #%01101110
+           .byte  #%01001000
+           .byte  #%01001110
+           .byte  #%01000010
+           .byte  #%11101110
+
+RSDTwoTwo   .byte  #%11101110
+           .byte  #%10001000
+           .byte  #%11101110
+           .byte  #%00100010
+           .byte  #%11101110
+
+RSDTwoThree .byte  #%11101110
+           .byte  #%10001000
+           .byte  #%11101110
+           .byte  #%10000010
+           .byte  #%11101110
+
+RSDTwoFour  .byte  #%10101110
+           .byte  #%10101000
+           .byte  #%11101110
+           .byte  #%10000010
+           .byte  #%10001110
+
+RSDTwoFive  .byte  #%11101110
+           .byte  #%00101000
+           .byte  #%11101110
+           .byte  #%10000010
+           .byte  #%11101110
+
+RSDTwoSix   .byte  #%11101110
+           .byte  #%00101000
+           .byte  #%11101110
+           .byte  #%10100010
+           .byte  #%11101110
+
+RSDTwoSeven .byte  #%11101110
+           .byte  #%10001000
+           .byte  #%10001110
+           .byte  #%10000010
+           .byte  #%10001110
+
+RSDTwoEight .byte  #%11101110
+           .byte  #%10101000
+           .byte  #%11101110
+           .byte  #%10100010
+           .byte  #%11101110
+
+RSDTwoNine  .byte  #%11101110
+           .byte  #%10101000
+           .byte  #%11101110
+           .byte  #%10000010
+           .byte  #%11101110
+
+RSDThrZero  .byte  #%11101110
+           .byte  #%10101000
+           .byte  #%10101100
+           .byte  #%10101000
+           .byte  #%11101110
+
         align 256
 
 PlayButton .byte  #%00100000
@@ -1975,7 +2436,7 @@ PlusBtn    .byte  #%00000100
 
 MinusBtn   .byte  #%00000000
            .byte  #%00000000
-           .byte  #%11111110
+           .byte  #%11111000
            .byte  #%00000000
            .byte  #%00000000
         
