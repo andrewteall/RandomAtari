@@ -27,11 +27,13 @@ PLAY_NOTE_FLAG                  = #16
 ADD_NOTE_FLAG                   = #32
 REMOVE_NOTE_FLAG                = #64
 PLAY_TRACK_FLAG                 = #128
+
 DURATION_MASK                   = #%00000111
 FREQUENCY_MASK                  = #%11111000
 VOLUME_MASK                     = #%11110000
 CONTROL_MASK                    = #%00001111
-FLAGS_MASK                      = #%00001111
+SELECTION_MASK                  = #%00001111
+PLAY_NOTE_FLAG_MASK             = #%11101111
 
 SLEEPTIMER_TITLE                = TITLE_H_POS/3 +51
 SLEEPTIMER_TRACK_LEFT           = TRACKDISPLAY_LEFT_H_POS/3 +51
@@ -356,7 +358,7 @@ NoteRow
 NoteSelection
         stx LineTemp
         lda FlagsSelection                              ; 3
-        and #FLAGS_MASK                                 ; 2
+        and #SELECTION_MASK                             ; 2
 
         bne SkipSelectPlayButton                        ; 2/3
         ldx #%11100000                                  ; 2
@@ -485,7 +487,7 @@ ControlRow
 ControlSelection
         stx.w LineTemp
         lda FlagsSelection                              ; 3
-        and #FLAGS_MASK                                 ; 2
+        and #SELECTION_MASK                                 ; 2
 
         cmp #5
         bne SkipSelectPlayAllButton                     ; 2/3
@@ -566,7 +568,7 @@ EndofScreenBuffer
         lda #10                                         
         sta DebounceCtr                                 
         lda FlagsSelection
-        and #FLAGS_MASK
+        and #SELECTION_MASK
         beq SetCurrentSelectionto8
         dec FlagsSelection                              
         sec
@@ -598,99 +600,97 @@ CursorRight
 
 SkipCursorMove
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;; Selection Detection ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Control Selection Detection ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda FlagsSelection
-        and #FLAGS_MASK
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 0 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        cmp #0
-        bne Selection0
+        lda FlagsSelection                      ; Load Flags and Control Selection from Ram to the Accumulator
+        and #SELECTION_MASK                     ; AND Accumulator with the SELECTION_MASK to get the selected control
+        tax                                     ; Transfer the Accumulator to the X Register to free up the Accumulator
+                                                ; and so we can determine which control is selected later
 
-        ldy INPT4
-        bmi Selection0
-        tay
-        lda FlagsSelection
-        and #%11101111
-        sta FlagsSelection
-        tya 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Check To See if Debounce Backoff is in Effect ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda DebounceCtr                         ; Check the Debounce Counter to be 0 before moving onward
+        beq SetPlayNoteFlag                     ; If so then check to see if we need to enable the Play Note Flag
+        jmp SkipSelectionSet                    ; If not then skip checking to enable Play Note Flag
+SetPlayNoteFlag
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Check To Enable Play Note Flag  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        cpx #5                                  ; Check to see if any of top row controls are selected
+        bpl SkipSetPlayNoteFlag                 ; If not then skip checking to enable Play Note Flag
+
+        ldy INPT4                               ; Check to see if the Fire Button is being pressed
+        bmi SkipSetPlayNoteFlag                 ; If not then skip checking to enable Play Note Flag
+                                                
+        lda FlagsSelection                      ; If so then load the Flags and Controls Selection variable from Ram
+        and #PLAY_NOTE_FLAG_MASK                ; Set the Play Note Flag to 0 so it is enabled while keeping all other
+        sta FlagsSelection                      ; values the same. Store the values back to the Flags and Controls 
+                                                ; Selection variable
+
+        jmp SelectionSet                        ; Jump to the SelectionSet label to enable the Debounce backoff
+
+SkipSetPlayNoteFlag
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 0 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        cpx #0                                  ; See if the Play Note Control is currently selected
+        bne Selection0                          ; If not then Skip the Selection0 Routine          
+
+        ; Nothing to Do Currently
 Selection0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 1 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        cpx #1                                  ; See if the Note Duration Control is currently selected
+        bne Selection1                          ; If not then Skip the Selection1 Routine          
+DurationCheckJoystickUp
+        lda #%00010000                          ; Check to see if the the Joystick is pressed up
+        bit SWCHA                               ; If not the skip the Joystick Up routine
+        bne DurationCheckJoystickDown           ; If so then increment the Duration Value by 1
+        
+        lda AudFrqDur                           ; Load the Frequency and Duration variable to the Accumulator
+        and #DURATION_MASK                      ; Get the lower 3 bits to compare for duration
+        cmp #7                                  ; See if Duration Value is equal to #7(Max Duration Value)
+        bne IncrementDuration                   ; If so set the Duration to 0 since we are increasing the duration
+        
+        lda AudFrqDur                           ; Load the Frequency and Duration variable to the Accumulator
+        and #FREQUENCY_MASK                     ; Get the upper 5 bits for the Frequency Value and zero out Duration
+        sta AudFrqDur                           ; Store the existing Frequency Value and zeroed duration back to the
+                                                ; Frequency and Duration variable
+        jmp SelectionSet                        ; Jump to the SelectionSet label to enable the Debounce backoff 
+IncrementDuration
+        inc AudFrqDur                           ; Increment the the Frequency and Duration variable by 1 since 
+                                                ; Duration is the lower 3 bits and we are not at our max Duration value
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 1 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        cmp #1
-        bne Selection1
-        ldy INPT4
-        bmi PlayNote1
-        tay
-        lda FlagsSelection
-        and #%11101111
-        sta FlagsSelection
-        tya 
-PlayNote1
-        lda DebounceCtr
-        beq AllowBtn1
-        jmp SkipSelectionSet
-AllowBtn1
-        lda #%00010000
-        bit SWCHA
-        bne Dur0Down
-        lda AudFrqDur
-        and #DURATION_MASK
-        cmp #7
-        bne IncAudDur0
-        lda AudFrqDur
-        and #FREQUENCY_MASK
-        sta AudFrqDur
-        sec
-        bcs SetAud0ToZero
-IncAudDur0
-        inc AudFrqDur
-SetAud0ToZero
-        jmp SelectionSet
-Dur0Down
-        lda #%00100000
-        bit SWCHA
-        bne Dur0Up
+        jmp SelectionSet                        ; Jump to the SelectionSet label to enable the Debounce backoff
+        
+DurationCheckJoystickDown
+        lda #%00100000                          ; Check to see if the the Joystick is pressed down
+        bit SWCHA                               ; If not the skip the Joystick Down routine
+        bne Selection1                          ; If so then decrement the Duration Value by 1
 
-        lda AudFrqDur
-        and #DURATION_MASK
-        cmp #0
-        bne DecAudDur0
-        lda AudFrqDur
-        ora #DURATION_MASK
-        sta AudFrqDur
-        sec
-        bcs SetAud0To8
-DecAudDur0
-        dec AudFrqDur
-SetAud0To8
+        lda AudFrqDur                           ; Load the Frequency and Duration variable to the Accumulator
+        and #DURATION_MASK                      ; Get the lower 3 bits to compare for duration
+        cmp #0                                  ; See if Duration Value is equal to #0(Min Duration Value)
+        bne DecrementDuration                   ; If so set the Duration to 7 since we are decreasing the duration
 
-        jmp SelectionSet
-Dur0Up
+        lda AudFrqDur                           ; Load the Frequency and Duration variable to the Accumulator
+        ora #DURATION_MASK                      ; Get the upper 5 bits for the Frequency Value and Max out Duration
+        sta AudFrqDur                           ; Store the existing Frequency Value and zeroed duration back to the
+                                                ; Frequency and Duration variable
+        jmp SelectionSet                        ; Jump to the SelectionSet label to enable the Debounce backoff
+DecrementDuration
+        dec AudFrqDur                           ; Decrement the the Frequency and Duration variable by 1 since 
+                                                ; Duration is the lower 3 bits and we are not at our min Duration value
+
+        jmp SelectionSet                        ; Jump to the SelectionSet label to enable the Debounce backoff
 Selection1
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 2 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        cmp #2
+        cpx #2
         beq SkipSelection2Jump
         jmp Selection2
 SkipSelection2Jump
-        ldy INPT4
-        bmi PlayNote2
-        tay
-        lda FlagsSelection
-        and #%11101111
-        sta FlagsSelection
-        tya 
-PlayNote2
-        lda DebounceCtr
-        beq AllowBtn2
-        jmp SkipSelectionSet
-AllowBtn2
+
         lda #%00010000            
         bit SWCHA
         bne Vol0Down
-
 
         lda AudVolCtl
         and #VOLUME_MASK
@@ -726,13 +726,11 @@ IncAudVol0
         sta AudVolCtl
 SetAudVol0ToZero
 
-
         jmp SelectionSet
 Vol0Down
         lda #%00100000            
         bit SWCHA
         bne Vol0Up
-
 
         lda AudVolCtl
         and #VOLUME_MASK
@@ -768,23 +766,18 @@ DecAudVol0
         sta AudVolCtl
 SetAudVol0To15
 
-
         jmp SelectionSet
 Vol0Up
 Selection2
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 3 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        cmp #3
+        cpx #3
         bne Selection3
-        ldy INPT4
-        bmi PlayNote3
-        lda FlagsSelection
-        and #%11101111
-        sta FlagsSelection
-PlayNote3
-        lda DebounceCtr
-        beq AllowBtn3
-        jmp SkipSelectionSet
+
+; PlayNote3
+;         lda DebounceCtr
+;         beq AllowBtn3
+;         jmp SkipSelectionSet
 AllowBtn3
         lda #%00010000            
         bit SWCHA
@@ -863,17 +856,8 @@ Frq0Up
 Selection3
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 4 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        cmp #4
+        cpx #4
         bne Selection4
-        ldy INPT4
-        bmi PlayNote4
-        lda FlagsSelection
-        and #%11101111
-        sta FlagsSelection
-PlayNote4
-        lda DebounceCtr
-        beq AllowBtn4
-        jmp SkipSelectionSet
 AllowBtn4
         lda #%00010000            
         bit SWCHA
@@ -905,8 +889,7 @@ Ctl0Down
         lda AudVolCtl
         ora #CONTROL_MASK
         sta AudVolCtl
-        sec
-        bcs SetAudCtl0To15
+        jmp SelectionSet
 DecAudCtl0
         dec AudVolCtl
 SetAudCtl0To15
@@ -916,13 +899,10 @@ Ctl0Up
 Selection4
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 5 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        cmp #5
+        cpx #5
         bne Selection5
         ldy INPT4
         bmi Selection5
-        lda DebounceCtr
-        beq AllowBtn5
-        jmp SkipSelectionSet
 AllowBtn5
         lda #PLAY_TRACK_FLAG
         bit FlagsSelection
@@ -940,13 +920,10 @@ SetPlayAllFlagToZero
 Selection5
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 6 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        cmp #6
+        cpx #6
         bne Selection6
         ldy INPT4
         bmi Selection6
-        lda DebounceCtr
-        beq AllowBtn6
-        jmp SkipSelectionSet
 AllowBtn6
         lda FlagsSelection
         and #%11011111
@@ -956,13 +933,10 @@ AllowBtn6
 Selection6
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 7 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        cmp #7
+        cpx #7
         bne Selection7
         ldy INPT4
         bmi Selection7
-        lda DebounceCtr
-        beq AllowBtn7
-        jmp SkipSelectionSet
 AllowBtn7
         lda FlagsSelection
         and #%10111111
@@ -972,11 +946,9 @@ AllowBtn7
 Selection7
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 8 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        cmp #8
+        cpx #8
         bne Selection8
-        lda DebounceCtr
-        beq AllowBtn8
-        jmp SkipSelectionSet
+
 AllowBtn8
         lda #%00010000            
         bit SWCHA
@@ -1190,7 +1162,7 @@ TurnOffNote
         sta AUDC0,x
         sta FrameCtrTrk0,x
         lda FlagsSelection
-        and #%11101111
+        and #PLAY_NOTE_FLAG_MASK
         eor #PLAY_NOTE_FLAG
         sta FlagsSelection
 
@@ -1338,7 +1310,7 @@ SkipRamMusicPlayerJump
 
         lda NotePtrCh0                                  ; 3     Load the Note Pointer to A
         clc                                             ; 2     Clear the carry 
-        adc #2                                          ; 2     Add 4 to move the Notep pointer to the next note
+        adc #2                                          ; 2     Add 4 to move the Note pointer to the next note
         sta NotePtrCh0                                  ; 3     Store the new note pointer
 
         lda #0                                          ; 2     Load Zero to
@@ -1373,7 +1345,7 @@ SkipResetRamTrack0
         inc FrameCtrTrk0                                ; 5     Increment the Frame Counter to duration compare later
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldy #0                                          ; 2     Initialize Y-Index to 0
         lda (NotePtrCh1),y                              ; 5     Load first note duration to A
         and #DURATION_MASK
@@ -1418,7 +1390,7 @@ SkipResetRamTrack1
         sta AUDC1                                       ; 3     and set the Note Control
         inc FrameCtrTrk1                                ; 5     Increment the Frame Counter to duration compare later
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 
