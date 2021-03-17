@@ -10,6 +10,8 @@
 
 ; TODO: Add total Duration of of each track?
 ; TODO: Add Step through notes and display values
+;       - Arrows on both sides
+;       - Fire button plays notes
 ; TODO: Add Labels under controls to display usage
 
 ; TODO: Finalize Colors and Decor and Name
@@ -557,6 +559,350 @@ SkipSelectRemoveChannel
         cpx #128                                        ; 2     6
         sta WSYNC                                       ; 3     9
         bne ControlSelection                            ; 2/3   2/3
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+        lda #SELECTION_COLOR
+        sta COLUPF
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldy #0
+        lda #<(Zero)
+        sta DurGfxPtr
+
+        lda #>(Zero)
+        sta DurGfxPtr+1 
+
+        lda (NotePtrCh0),y
+        sta LineTemp
+        and #FREQUENCY_MASK
+        sta YTemp
+        lda (NotePtrCh0),y
+        and #DURATION_MASK
+        sta (NotePtrCh0),y
+        asl
+        asl
+        clc
+        adc (NotePtrCh0),y
+        clc
+        adc DurGfxPtr
+        sta DurGfxPtr
+        lda LineTemp
+        sta (NotePtrCh0),y
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldy #1
+        lda #<(RZero)
+        sta VolGfxPtr
+
+        lda #>(RZero)
+        sta VolGfxPtr+1
+
+        lda (NotePtrCh0),y
+        sta LineTemp
+        and #CONTROL_MASK
+        sta YTemp
+        lda (NotePtrCh0),y
+        and #VOLUME_MASK
+        lsr
+        lsr
+        lsr
+        lsr
+        sta (NotePtrCh0),y
+        asl
+        asl
+        clc
+        adc (NotePtrCh0),y
+        clc
+        adc VolGfxPtr
+        sta VolGfxPtr
+        lda LineTemp
+        sta (NotePtrCh0),y
+        inx
+        inx
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldy #0
+        lda #<(Zero)
+        sta FrqCntGfxPtr
+
+        lda #>(Zero)
+        sta FrqCntGfxPtr+1  
+ 
+        lda (NotePtrCh0),y
+        sta LineTemp
+        and #DURATION_MASK
+        sta YTemp
+        lda (NotePtrCh0),y
+        and #FREQUENCY_MASK
+        lsr
+        lsr
+        lsr
+        sta (NotePtrCh0),y
+        asl
+        asl
+        clc
+        adc (NotePtrCh0),y
+        clc
+        adc FrqCntGfxPtr
+        sta FrqCntGfxPtr
+        lda LineTemp
+        sta (NotePtrCh0),y
+        inx
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldy #1
+        lda #<(RSZero)
+        sta CtlChnlGfxPtr
+
+        lda #>(RSZero)
+        sta CtlChnlGfxPtr+1  
+
+        lda (NotePtrCh0),y
+        sta LineTemp
+        and #VOLUME_MASK
+        sta YTemp
+        lda (NotePtrCh0),y
+        and #CONTROL_MASK
+        sta (NotePtrCh0),y
+        asl
+        asl
+        clc
+        adc (NotePtrCh0),y
+
+        clc
+        adc CtlChnlGfxPtr
+        sta CtlChnlGfxPtr
+        lda LineTemp
+        sta (NotePtrCh0),y
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+BottomSpacer
+        inx                                             ; 2     4
+        cpx #140                                        ; 2     6
+        sta WSYNC                                       ; 3     9
+        bne BottomSpacer                                ; 2/3   2/3
+        
+        inx                                     ; 2     4
+        txa                                     ; 2     6
+        sbc #139                                ; 2     8
+        nop
+        lsr                                     ; 2     12      Divide by 2 to get index twice for quad height
+        sta WSYNC                               ; 3     14     
+        SLEEP 4                                 ; 4     4       Account for 4 cycle branch to keep timing aligned
+BottomRow 
+        lsr                                     ; 2     6       Divide by 2 to get index twice for octuple height
+        tay                                     ; 2     8       Transfer A to Y so we can index off Y
+        
+        ;lda (PlayButtonMaskPtr),y               ; 5     13      Get the Score From our Play Button Mask Array
+        ;sta PF0                                 ; 3     16      Store the value to PF0
+        SLEEP 8
+
+        lda (DurGfxPtr),y                       ; 5     21      Get the Score From our Duration Gfx Array
+        asl                                     ; 2     23
+        asl                                     ; 2     25
+        sta PF1                                 ; 3     28      Store the value to PF1
+        
+        lda (VolGfxPtr),y                       ; 5     33      Get the Score From our Volume Gfx Array
+        asl                                     ; 2     35
+        sta PF2                                 ; 3     38      Store the value to PF2
+
+        nop                                     ; 2     40      Waste 2 cycles to line up the next Pf draw
+
+        lda (FrqCntGfxPtr),y                    ; 5     45      Get the Score From our Frequency Gfx Array
+        sta PF2                                 ; 3     48      Store the value to PF2
+
+        lda (CtlChnlGfxPtr),y                   ; 5     53      Get the Score From our Control Gfx Array
+        sta PF1                                 ; 3     56      Store the value to PF1        
+
+        inx                                     ; 2     58      Increment our line number
+        
+        ldy #0                                  ; 2     60      Reset and clear the playfield
+        txa                                     ; 2     62      Transfer the line number in preparation for the next line
+        sbc #139                                ; 2     64      Subtract #19 since the carry is cleared above
+        nop
+        sty PF0                                 ; 3     69      Reset and clear the playfield
+        lsr                                     ; 2     71      Divide by 2 to get index twice for quadruple height
+        sty PF1                                 ; 3     74      Reset and clear the playfield
+
+        cpx #160                                ; 2     76      Have we reached line #60   
+        
+        bne BottomRow                           ; 2/3   2/3
+        
+        ldy #0
+        sty PF2                                 ; 3     65      Reset and clear the playfield
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldy #0
+        lda #<(Zero)
+        sta DurGfxPtr
+
+        lda #>(Zero)
+        sta DurGfxPtr+1 
+
+        lda (NotePtrCh1),y
+        sta LineTemp
+        and #FREQUENCY_MASK
+        sta YTemp
+        lda (NotePtrCh1),y
+        and #DURATION_MASK
+        sta (NotePtrCh1),y
+        asl
+        asl
+        clc
+        adc (NotePtrCh1),y
+        clc
+        adc DurGfxPtr
+        sta DurGfxPtr
+        lda LineTemp
+        sta (NotePtrCh1),y
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldy #1
+        lda #<(RZero)
+        sta VolGfxPtr
+
+        lda #>(RZero)
+        sta VolGfxPtr+1
+
+        lda (NotePtrCh1),y
+        sta LineTemp
+        and #CONTROL_MASK
+        sta YTemp
+        lda (NotePtrCh1),y
+        and #VOLUME_MASK
+        lsr
+        lsr
+        lsr
+        lsr
+        sta (NotePtrCh1),y
+        asl
+        asl
+        clc
+        adc (NotePtrCh1),y
+        clc
+        adc VolGfxPtr
+        sta VolGfxPtr
+        lda LineTemp
+        sta (NotePtrCh1),y
+        inx
+        inx
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldy #0
+        lda #<(Zero)
+        sta FrqCntGfxPtr
+
+        lda #>(Zero)
+        sta FrqCntGfxPtr+1  
+ 
+        lda (NotePtrCh1),y
+        sta LineTemp
+        and #DURATION_MASK
+        sta YTemp
+        lda (NotePtrCh1),y
+        and #FREQUENCY_MASK
+        lsr
+        lsr
+        lsr
+        sta (NotePtrCh1),y
+        asl
+        asl
+        clc
+        adc (NotePtrCh1),y
+        clc
+        adc FrqCntGfxPtr
+        sta FrqCntGfxPtr
+        lda LineTemp
+        sta (NotePtrCh1),y
+        inx
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldy #1
+        lda #<(RSZero)
+        sta CtlChnlGfxPtr
+
+        lda #>(RSZero)
+        sta CtlChnlGfxPtr+1  
+
+        lda (NotePtrCh1),y
+        sta LineTemp
+        and #VOLUME_MASK
+        sta YTemp
+        lda (NotePtrCh1),y
+        and #CONTROL_MASK
+        sta (NotePtrCh1),y
+        asl
+        asl
+        clc
+        adc (NotePtrCh1),y
+
+        clc
+        adc CtlChnlGfxPtr
+        sta CtlChnlGfxPtr
+        lda LineTemp
+        sta (NotePtrCh1),y
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        jmp SkipBuffer
+        REPEAT 30
+        nop
+        REPEND
+SkipBuffer
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+BottomSpacer2
+        inx                                             ; 2     4
+        cpx #165                                        ; 2     6
+        sta WSYNC                                       ; 3     9
+        bne BottomSpacer2                                ; 2/3   2/3
+        
+        inx                                     ; 2     4
+        txa                                     ; 2     6
+        sbc #164                                ; 2     8
+        nop
+        lsr                                     ; 2     12      Divide by 2 to get index twice for quad height
+        sta WSYNC                               ; 3     14     
+        SLEEP 3                                 ; 4     4       Account for 4 cycle branch to keep timing aligned
+BottomRow2 
+        lsr                                     ; 2     6       Divide by 2 to get index twice for octuple height
+        tay                                     ; 2     8       Transfer A to Y so we can index off Y
+        
+        ;lda (PlayButtonMaskPtr),y               ; 5     13      Get the Score From our Play Button Mask Array
+        ;sta PF0                                 ; 3     16      Store the value to PF0
+        SLEEP 8
+
+        lda (DurGfxPtr),y                       ; 5     21      Get the Score From our Duration Gfx Array
+        asl                                     ; 2     23
+        asl                                     ; 2     25
+        sta PF1                                 ; 3     28      Store the value to PF1
+        
+        lda (VolGfxPtr),y                       ; 5     33      Get the Score From our Volume Gfx Array
+        asl                                     ; 2     35
+        sta PF2                                 ; 3     38      Store the value to PF2
+
+        nop                                     ; 2     40      Waste 2 cycles to line up the next Pf draw
+
+        lda (FrqCntGfxPtr),y                    ; 5     45      Get the Score From our Frequency Gfx Array
+        sta PF2                                 ; 3     48      Store the value to PF2
+
+        lda (CtlChnlGfxPtr),y                   ; 5     53      Get the Score From our Control Gfx Array
+        sta PF1                                 ; 3     56      Store the value to PF1        
+
+        inx                                     ; 2     58      Increment our line number
+        
+        ldy #0                                  ; 2     60      Reset and clear the playfield
+        txa                                     ; 2     62      Transfer the line number in preparation for the next line
+        sbc #164                                ; 2     64      Subtract #19 since the carry is cleared above
+        nop
+        sty PF0                                 ; 3     69      Reset and clear the playfield
+        lsr                                     ; 2     71      Divide by 2 to get index twice for quadruple height
+        sty PF1                                 ; 3     74      Reset and clear the playfield
+
+        cpx #185                                ; 2     76      Have we reached line #60   
+        
+        bne BottomRow2                           ; 2/3   2/3
+        
+        ldy #0
+        sty PF2                                 ; 3     65      Reset and clear the playfield
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Spacer - 1-Line Kernel 
