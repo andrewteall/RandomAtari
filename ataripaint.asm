@@ -952,7 +952,7 @@ EndofScreenBuffer
         bcs SkipSetCurrentSelectionto8
 SetCurrentSelectionto8
         lda FlagsSelection
-        eor #%00001000
+        eor #%00001001
         sta FlagsSelection
 SkipSetCurrentSelectionto8
 CursorLeft
@@ -963,14 +963,15 @@ CursorLeft
         lda #10
         sta DebounceCtr
         lda FlagsSelection
-        and #%00001000
-        bne SetCurrentSelectionto0
+        and #%00001001
+        cmp #9
+        beq SetCurrentSelectionto0
         inc FlagsSelection
         sec
         bcs SkipSetCurrentSelectionto0
 SetCurrentSelectionto0
         lda FlagsSelection
-        eor #%00001000
+        and #%11110000
         sta FlagsSelection                          
 SkipSetCurrentSelectionto0                
 CursorRight
@@ -1344,6 +1345,46 @@ Chl0Down
         jmp SelectionSet
 Chl0Up
 Selection8
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 9 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        cpx #9
+        bne Selection9
+
+AllowBtn9
+        lda #%00010000            
+        bit SWCHA
+        bne PtrRight
+        lda #1
+        
+        lda NotePtrCh0                                  ; 3     Load the Note Pointer to A
+        clc                                             ; 2     Clear the carry 
+        adc #2                                          ; 2     Add 4 to move the Note pointer to the next note
+        sta NotePtrCh0                                  ; 3     Store the new note pointer
+
+        lda #0                                          ; 2     Load Zero to
+        sta FrameCtrTrk0                                ; 3     Reset the Frame counter
+PtrInc
+        ldy #0 
+        lda (NotePtrCh0),y                              ; 5     Load first note duration to A
+        cmp #0                                          ; 2     See if the notes duration equals 255
+        bne SkipResetPtr0                               ; 2/3   If so go back to the beginning of the track
+
+        lda #<Track0Builder                             ; 4     Store the low byte of the track to 
+        sta NotePtrCh0                                  ; 3     the Note Pointer
+SkipResetPtr0
+
+
+        jmp SelectionSet
+PtrRight
+        lda #%00100000            
+        bit SWCHA
+        bne PtrLeft
+        lda #%11111110
+        and AudCntChnl
+        sta AudCntChnl
+        jmp SelectionSet
+PtrLeft
+Selection9
 
         jmp SkipSelectionSet
 SelectionSet
