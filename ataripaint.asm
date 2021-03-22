@@ -9,6 +9,7 @@
 ; TODO: Draw Note letters from memory location
 
 ; TODO: Add total Duration of each track?
+
 ; TODO: Add Step through notes and display values
 ;       - Fire button plays notes
 ;       - Need to line up note playing with actual durations
@@ -90,9 +91,6 @@ AudVolCtl               ds 1                    ; 0000XXXX - Volume | XXXX0000 -
 AudFrqDur               ds 1                    ; 00000XXX - Frquency | XXXXX000 - Duration
 AudCntChnl              ds 1                    ; XXXXXXX0 - Channel | 0000000X - Note Count Left
 
-DurationLeftNoteA       ds 1
-DurationLeftNoteB       ds 1
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Flags
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -107,6 +105,8 @@ FlagsSelection          ds 1                    ; 0-4 Current Selection (#0-#9) 
 FrameCtrTrk0            ds 1
 FrameCtrTrk1            ds 1
 DebounceCtr             ds 1                    ; XXXX0000 - Top 4 bits not used
+DurationLeftNoteA       ds 1
+DurationLeftNoteB       ds 1
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Rom Pointers
@@ -194,9 +194,9 @@ Clear
         lda #%00100101
         sta CTRLPF       
 
-        ; lda #THREE_COPIES_CLOSE
-        ; sta NUSIZ0
-        ; sta NUSIZ1
+        lda #THREE_COPIES_CLOSE
+        sta NUSIZ0
+        sta NUSIZ1
 
         lda #1
         sta VDELP0
@@ -362,7 +362,7 @@ NoteRow
         lsr                                     ; 2     66      Divide by 2 to get index twice for double height
         sty PF0                                 ; 3     69      Reset and clear the playfield
         lsr                                     ; 2     71      Divide by 2 to get index twice for quadruple height
-        sty PF1                                 ; 3     74      Reset and clear the playfield
+        sty.w PF1                                 ; 3     74      Reset and clear the playfield
 
         cpx #60                                 ; 2     76      Have we reached line #60   
         bne NoteRow                             ; 2/4   2/4     No then repeat,Currently Crossing Page Boundary 
@@ -981,8 +981,7 @@ EndofScreenBuffer
         and #SELECTION_MASK
         beq SetCurrentSelectionto9
         dec FlagsSelection                              
-        sec
-        bcs SkipSetCurrentSelectionto9
+        jmp SkipSetCurrentSelectionto9
 SetCurrentSelectionto9
         lda FlagsSelection
         eor #%00001001
@@ -1000,8 +999,7 @@ CursorLeft
         cmp #9
         beq SetCurrentSelectionto0
         inc FlagsSelection
-        sec
-        bcs SkipSetCurrentSelectionto0
+        jmp SkipSetCurrentSelectionto0
 SetCurrentSelectionto0
         lda FlagsSelection
         and #%11110000
@@ -1461,8 +1459,8 @@ SkipDurationACheck
         cmp #0                                          
         bne SkipResetPtrTrackOne                          
 
-        lda #<Track1Builder                             
-        sta NotePtrCh1                                  
+        lda #<Track1Builder
+        sta NotePtrCh1
         
         lda (NotePtrCh1),y                              
         and #DURATION_MASK
@@ -1500,10 +1498,11 @@ AdvancePointerA
 
         ; Subtract the Duration of NoteA from NoteB
         lda DurationLeftNoteB
+        beq SkipSubtractA
         sec 
         sbc DurationLeftNoteA
         sta DurationLeftNoteB
-
+SkipSubtractA
         ; Get the new Note Duration Left for Track0
         ldy #0 
         lda (NotePtrCh0),y                              
@@ -1532,10 +1531,11 @@ AdvancePointerB
 
         ; Subtract the Duration of NoteB from NoteA
         lda DurationLeftNoteA
+        beq SkipSubtractB
         sec 
         sbc DurationLeftNoteB
         sta DurationLeftNoteA
-
+SkipSubtractB
         ; Get the new Note Duration Left for Track1
         ldy #0 
         lda (NotePtrCh1),y                              
@@ -1581,7 +1581,7 @@ SkipResetPtrTrk0
 
         lda NotePtrCh1                                  ; 3     Load the Note Pointer to A
         clc                                             ; 2     Clear the carry 
-        adc #2                                          ; 2     Add 4 to move the Note pointer to the next note
+        adc #2                                          ; 2     Add 2 to move the Note pointer to the next note
         sta NotePtrCh1                                  ; 3     Store the new note pointer
 
         ldy #0 
@@ -1605,11 +1605,11 @@ AdvanceDone
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         jmp SelectionSet
 SkipPtrRight
-;         lda #P0_JOYSTICK_DOWN            
-;         bit SWCHA
-;         beq PtrLeft
-;         jmp SkipPtrLeft
-; PtrLeft
+        lda #P0_JOYSTICK_DOWN            
+        bit SWCHA
+        beq PtrLeft
+        jmp SkipPtrLeft
+PtrLeft
 ;         lda DurationLeftNoteA
 ;         bne SkipDurationCheckDec
 ;         lda DurationLeftNoteB
@@ -1637,7 +1637,7 @@ SkipPtrRight
 ;         cmp #0                                          
 ;         bne SkipResetPointerTrackOne                          
 
-;         lda #<Track0Builder                             
+;         lda #<Track1Builder                             
 ;         sta NotePtrCh1                                  
         
 ;         lda (NotePtrCh1),y                              
@@ -1768,7 +1768,7 @@ SkipPtrRight
 ; DecDone
 
 ;         jmp SelectionSet
-; SkipPtrLeft
+SkipPtrLeft
 
 Selection9
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
