@@ -12,6 +12,8 @@
 
 ; TODO: Add Step through notes and display values
 ;       - Fire button plays notes
+;               maybe individual track selection
+;       - Step backwards through notes
 ;       - Need to line up note playing with actual durations
 ;       - Add indicator to know you're in the right section
 
@@ -128,17 +130,15 @@ YTemp                   ds 1                    ; This will get zeroed so that t
 Track1BuilderPtr        ds 1                    ; 
 LineTemp                ds 1                    ; will seem like it has 2 bytes
 
-NotePtrCh0              ds 2                     
-; Space Available
+NotePtrCh0              ds 2                    ; 
+;Space Available
 NotePtrCh1              ds 1
 LetterBuffer            ds 1
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Ram Music Tracks
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 Track0Builder           ds #TRACKSIZE+1         ; Memory Allocation to store the bytes(notes) saved to track 0
 Track1Builder           ds #TRACKSIZE+1         ; Memory Allocation to store the bytes(notes) saved to track 1
-
 
         echo "----",([* - $80]d) , (* - $80) ,"bytes of RAM Used"
         echo "----",([$100 - *]d) , ($100 - *) , "bytes of RAM left"
@@ -241,6 +241,8 @@ StartOfFrame
         lda #0
         sta VSYNC ; Turn off VSYNC
 
+        lda #0
+        sta Track1Builder+TRACKSIZE
 ; 37 VBLANK lines
         ldx #37                                         ; 2
 VerticalBlank
@@ -1607,168 +1609,225 @@ AdvanceDone
 SkipPtrRight
         lda #P0_JOYSTICK_DOWN            
         bit SWCHA
-        beq PtrLeft
-        jmp SkipPtrLeft
-PtrLeft
-;         lda DurationLeftNoteA
-;         bne SkipDurationCheckDec
-;         lda DurationLeftNoteB
-;         bne SkipDurationCheckDec
+        beq PtrRightDec
+        jmp SkipDecPtrLeft
+PtrRightDec
 
-;         ldy #0 
-;         lda (NotePtrCh0),y                              
-;         and #DURATION_MASK
-;         cmp #0                                          
-;         bne SkipResetPointerTrackZero                          
-
-;         lda #<Track0Builder                             
-;         sta NotePtrCh0                                  
         
-;         lda (NotePtrCh0),y                              
-;         and #DURATION_MASK
-; SkipResetPointerTrackZero
-;         tay
-;         lda NoteDurations,y
-;         sta DurationLeftNoteA
+        lda NotePtrCh0
+        cmp #<Track0Builder
+        beq SkipAdd0
+        clc
+        adc #$FE
+SkipAdd0
+        sta LineTemp
 
-;         ldy #0 
-;         lda (NotePtrCh1),y                              
-;         and #DURATION_MASK
-;         cmp #0                                          
-;         bne SkipResetPointerTrackOne                          
+        lda NotePtrCh1
+        cmp #<Track1Builder
+        beq SkipAdd1
+        clc
+        adc #$FE
+SkipAdd1
+        sta YTemp
 
-;         lda #<Track1Builder                             
-;         sta NotePtrCh1                                  
+        lda #<Track0Builder                             
+        sta NotePtrCh0 
+
+        lda #<Track1Builder                             
+        sta NotePtrCh1
+
+DecPointerLoop
+
+        lda NotePtrCh0
+        cmp LineTemp
+        bne SkipDecCheck0
+        cmp YTemp
+        bpl SkipDecCheck0
+        jmp DecFin
+SkipDecCheck0
+
+        lda NotePtrCh1
+        cmp YTemp
+        bne SkipDecCheck1
+        cmp LineTemp
+        bpl SkipDecCheck1
+        jmp DecFin
+SkipDecCheck1
+
+        lda DurationLeftNoteA
+        bne SkipDecDurationACheck
+
+        ldy #0 
+        lda (NotePtrCh0),y                              
+        and #DURATION_MASK
+        cmp #0                                          
+        bne SkipRstPtrTrackZero                          
+
+        lda #<Track0Builder                             
+        sta NotePtrCh0                                  
         
-;         lda (NotePtrCh1),y                              
-;         and #DURATION_MASK
-; SkipResetPointerTrackOne
-;         tay
-;         lda NoteDurations,y
-;         sta DurationLeftNoteB
+        lda (NotePtrCh0),y                              
+        and #DURATION_MASK
+SkipRstPtrTrackZero
+        tay
+        lda NoteDurations,y
+        sta DurationLeftNoteA
 
-; SkipDurationCheckDec
-; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;         ; Check to see which duration is longer
-;         lda DurationLeftNoteA
-;         cmp DurationLeftNoteB
-;         bne SkipJmp
-;         jmp DecBothPointers
-; SkipJmp
-;         bpl DecPointerB
-; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;         ;Advance Pointer for Track0
-;         lda NotePtrCh0                                  
-;         clc                                             
-;         adc #$FE                                          
-;         sta NotePtrCh0                                  
-
-;         ; Subtract the Duration of NoteA from NoteB
-;         lda DurationLeftNoteB
-;         sec 
-;         sbc DurationLeftNoteA
-;         sta DurationLeftNoteB
-
-;         ; Get the new Note Duration Left for Track0
-;         ldy #0 
-;         lda (NotePtrCh0),y                              
-;         and #DURATION_MASK
-;         cmp #0                                          
-;         bne SkipRstPtrTrack0                          
-
-;         lda #<Track0Builder                             
-;         sta NotePtrCh0                                  
+SkipDecDurationACheck
         
-;         lda (NotePtrCh0),y                              
-;         and #DURATION_MASK
-; SkipRstPtrTrack0
-;         tay
-;         lda NoteDurations,y
-;         sta DurationLeftNoteA
+        lda DurationLeftNoteB
+        bne SkipDecDurationBCheck
 
-;         jmp DecDone
-; DecPointerB
+        ldy #0 
+        lda (NotePtrCh1),y                              
+        and #DURATION_MASK
+        cmp #0                                          
+        bne SkipRstPtrTrackOne                          
 
-;         ;Advance Pointer for Track1
-;         lda NotePtrCh1                                  
-;         clc                                             
-;         adc #$FE                                          
-;         sta NotePtrCh1                                  
-
-;         ; Subtract the Duration of NoteB from NoteA
-;         lda DurationLeftNoteA
-;         sec 
-;         sbc DurationLeftNoteB
-;         sta DurationLeftNoteA
-
-;         ; Get the new Note Duration Left for Track1
-;         ldy #0 
-;         lda (NotePtrCh1),y                              
-;         and #DURATION_MASK
-;         cmp #0                                          
-;         bne SkipRstPtrTrack1                          
-
-;         lda #<Track1Builder                             
-;         sta NotePtrCh1                                  
+        lda #<Track1Builder
+        sta NotePtrCh1
         
-;         lda (NotePtrCh1),y                              
-;         and #DURATION_MASK
-; SkipRstPtrTrack1
-;         tay
-;         lda NoteDurations,y
-;         sta DurationLeftNoteB
+        lda (NotePtrCh1),y                              
+        and #DURATION_MASK
+SkipRstPtrTrackOne
+        tay
+        lda NoteDurations,y
+        sta DurationLeftNoteB
 
-;         jmp DecDone
+SkipDecDurationBCheck
 
+SkipDecDurationCheck
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ; Check to see which duration is longer
+        lda DurationLeftNoteA
+        cmp DurationLeftNoteB
+        bne SkipDecJump
+        jmp DecBothPointers
+SkipDecJump
+        lda DurationLeftNoteA
+        beq DecPointerB
 
-; DecBothPointers
-;         lda NotePtrCh0                                  ; 3     Load the Note Pointer to A
-;         clc                                             ; 2     Clear the carry 
-;         adc #2                                          ; 2     Add 4 to move the Note pointer to the next note
-;         sta NotePtrCh0                                  ; 3     Store the new note pointer
+        lda DurationLeftNoteB
+        beq DecPointerA
 
-;         ldy #0 
-;         lda (NotePtrCh0),y                              
-;         and #DURATION_MASK
-;         cmp #0                                          
-;         bne SkipRstPtrTrk0                          
+        lda DurationLeftNoteA
+        cmp DurationLeftNoteB
+        bpl DecPointerB
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+DecPointerA
+        ;Advance Pointer for Track0
+        lda NotePtrCh0                                  
+        clc                                             
+        adc #2                                          
+        sta NotePtrCh0                                  
 
-;         lda #<Track0Builder                             
-;         sta NotePtrCh0                                  
+        ; Subtract the Duration of NoteA from NoteB
+        lda DurationLeftNoteB
+        beq SkipDecSubtractA
+        sec 
+        sbc DurationLeftNoteA
+        sta DurationLeftNoteB
+SkipDecSubtractA
+        ; Get the new Note Duration Left for Track0
+        ldy #0 
+        lda (NotePtrCh0),y                              
+        and #DURATION_MASK
+        cmp #0                                          
+        bne SkipRstPtrTrack0                          
+
+        lda #<Track0Builder                             
+        sta NotePtrCh0                                  
         
-;         lda (NotePtrCh0),y                              
-;         and #DURATION_MASK
-; SkipRstPtrTrk0
-;         tay
-;         lda NoteDurations,y
-;         sta DurationLeftNoteA
+        lda (NotePtrCh0),y                              
+        and #DURATION_MASK
+SkipRstPtrTrack0
+        tay
+        lda NoteDurations,y
+        sta DurationLeftNoteA
 
+        jmp DecDone
+DecPointerB
 
-;         lda NotePtrCh1                                  ; 3     Load the Note Pointer to A
-;         clc                                             ; 2     Clear the carry 
-;         adc #2                                          ; 2     Add 4 to move the Note pointer to the next note
-;         sta NotePtrCh1                                  ; 3     Store the new note pointer
+        ;Advance Pointer for Track1
+        lda NotePtrCh1                                  
+        clc                                             
+        adc #2                                          
+        sta NotePtrCh1                                  
 
-;         ldy #0 
-;         lda (NotePtrCh1),y                              
-;         and #DURATION_MASK
-;         cmp #0                                          
-;         bne SkipRstPtrTrk1                          
+        ; Subtract the Duration of NoteB from NoteA
+        lda DurationLeftNoteA
+        beq SkipDecSubtractB
+        sec 
+        sbc DurationLeftNoteB
+        sta DurationLeftNoteA
+SkipDecSubtractB
+        ; Get the new Note Duration Left for Track1
+        ldy #0 
+        lda (NotePtrCh1),y                              
+        and #DURATION_MASK
+        cmp #0                                          
+        bne SkipRstPtrTrack1                          
 
-;         lda #<Track1Builder                             
-;         sta NotePtrCh1                                  
+        lda #<Track1Builder                             
+        sta NotePtrCh1                                  
         
-;         lda (NotePtrCh1),y                              
-;         and #DURATION_MASK
-; SkipRstPtrTrk1
-;         tay
-;         lda NoteDurations,y
-;         sta DurationLeftNoteB
-; DecDone
+        lda (NotePtrCh1),y                              
+        and #DURATION_MASK
+SkipRstPtrTrack1
+        tay
+        lda NoteDurations,y
+        sta DurationLeftNoteB
 
-;         jmp SelectionSet
-SkipPtrLeft
+        jmp DecDone
+
+DecBothPointers
+        lda NotePtrCh0                                  ; 3     Load the Note Pointer to A
+        clc                                             ; 2     Clear the carry 
+        adc #2                                          ; 2     Add 4 to move the Note pointer to the next note
+        sta NotePtrCh0                                  ; 3     Store the new note pointer
+
+        ldy #0 
+        lda (NotePtrCh0),y                              
+        and #DURATION_MASK
+        cmp #0                                          
+        bne SkipRstPtrTrk0                          
+
+        lda #<Track0Builder                             
+        sta NotePtrCh0                                  
+        
+        lda (NotePtrCh0),y                              
+        and #DURATION_MASK
+SkipRstPtrTrk0
+        tay
+        lda NoteDurations,y
+        sta DurationLeftNoteA
+
+        lda NotePtrCh1                                  ; 3     Load the Note Pointer to A
+        clc                                             ; 2     Clear the carry 
+        adc #2                                          ; 2     Add 2 to move the Note pointer to the next note
+        sta NotePtrCh1                                  ; 3     Store the new note pointer
+
+        ldy #0 
+        lda (NotePtrCh1),y                              
+        and #DURATION_MASK
+        cmp #0                                          
+        bne SkipRstPtrTrk1                          
+
+        lda #<Track1Builder                             
+        sta NotePtrCh1                                  
+        
+        lda (NotePtrCh1),y                              
+        and #DURATION_MASK
+SkipRstPtrTrk1
+        tay
+        lda NoteDurations,y
+        sta DurationLeftNoteB
+
+DecDone
+        jmp DecPointerLoop
+DecFin
+        jmp SelectionSet
+SkipDecPtrLeft
 
 Selection9
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2294,30 +2353,30 @@ SkipDecDebounceCtr_Bank0
         jmp SwitchToBank1
 SkipSwitchToBank1
 
-; Reset Player positions for title
-        ldx #0
-        lda #TITLE_H_POS
-        jsr CalcXPos
-        sta WSYNC
-        sta HMOVE
-        SLEEP 24
-        sta HMCLR
+; ; Reset Player positions for title
+;         ldx #0
+;         lda #TITLE_H_POS
+;         jsr CalcXPos
+;         sta WSYNC
+;         sta HMOVE
+;         SLEEP 24
+;         sta HMCLR
 
-        ldx #1
-        lda #TITLE_H_POS+8
-        jsr CalcXPos
-        sta WSYNC
-        sta HMOVE
-        SLEEP 24
-        sta HMCLR
+;         ldx #1
+;         lda #TITLE_H_POS+8
+;         jsr CalcXPos
+;         sta WSYNC
+;         sta HMOVE
+;         SLEEP 24
+;         sta HMCLR
 
-        lda #THREE_COPIES_CLOSE
-        sta NUSIZ0
-        sta NUSIZ1
+;         lda #THREE_COPIES_CLOSE
+;         sta NUSIZ0
+;         sta NUSIZ1
 
-        lda #1
-        sta VDELP0
-        sta VDELP1
+;         lda #1
+;         sta VDELP0
+;         sta VDELP1
 
 
 ; Reset Backgruond,Audio,Collisions,Note Flags
