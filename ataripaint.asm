@@ -1602,10 +1602,11 @@ SkipResetPtrTrk1
         lda NoteDurations,y
         sta DurationLeftNoteB
 AdvanceDone
+        jmp SelectionSet
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;; Decrement Pointers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        jmp SelectionSet
+
 SkipPtrRight
         lda #P0_JOYSTICK_DOWN            
         bit SWCHA
@@ -1613,7 +1614,6 @@ SkipPtrRight
         jmp SkipDecPtrLeft
 PtrRightDec
 
-        
         lda NotePtrCh0
         cmp #<Track0Builder
         beq SkipAdd0
@@ -1699,11 +1699,24 @@ SkipDecDurationBCheck
 SkipDecDurationCheck
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ; Check to see which duration is longer
+;         lda NotePtrCh0
+;         cmp LineTemp
+;         bne SkipDecPointerA
+;         jmp DecPointerB
+; SkipDecPointerA
+
+;         lda NotePtrCh1
+;         cmp YTemp
+;         bne SkipDecPointerB
+;         jmp DecPointerA
+; SkipDecPointerB
+
         lda DurationLeftNoteA
         cmp DurationLeftNoteB
         bne SkipDecJump
         jmp DecBothPointers
 SkipDecJump
+
         lda DurationLeftNoteA
         beq DecPointerB
 
@@ -1801,6 +1814,25 @@ SkipRstPtrTrk0
         tay
         lda NoteDurations,y
         sta DurationLeftNoteA
+
+;         lda NotePtrCh0
+;         cmp LineTemp
+;         bne SkipDecCheck20
+;         cmp YTemp
+;         bpl SkipDecCheck20
+;         jmp DecFin
+; SkipDecCheck20
+
+;         lda NotePtrCh1
+;         cmp YTemp
+;         bne SkipDecCheck21
+;         cmp LineTemp
+;         bpl SkipDecCheck21
+;         jmp DecFin
+; SkipDecCheck21
+
+        lda DurationLeftNoteB
+        beq DecDone
 
         lda NotePtrCh1                                  ; 3     Load the Note Pointer to A
         clc                                             ; 2     Clear the carry 
