@@ -140,6 +140,8 @@ LetterBuffer            ds 1
 Track0Builder           ds #TRACKSIZE+1         ; Memory Allocation to store the bytes(notes) saved to track 0
 Track1Builder           ds #TRACKSIZE+1         ; Memory Allocation to store the bytes(notes) saved to track 1
 
+;TestCounter             ds 1
+
         echo "----",([* - $80]d) , (* - $80) ,"bytes of RAM Used"
         echo "----",([$100 - *]d) , ($100 - *) , "bytes of RAM left"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -218,6 +220,10 @@ Clear
         and #FREQUENCY_MASK
         ora #00000001
         sta AudFrqDur
+
+        ; lda #0
+        ; sta TestCounter
+        
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Console Initialization ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
@@ -1430,6 +1436,7 @@ SkipJumpSelection9
         beq PtrRight
         jmp SkipPtrRight
 PtrRight
+        ;inc TestCounter
 
         lda DurationLeftNoteA
         bne SkipDurationACheck
@@ -1445,6 +1452,7 @@ PtrRight
         
         lda (NotePtrCh0),y                              
         and #DURATION_MASK
+
 SkipResetPtrTrackZero
         tay
         lda NoteDurations,y
@@ -1512,9 +1520,11 @@ SkipSubtractA
         cmp #0                                          
         bne SkipResetPtrTrack0                          
 
-        lda #<Track0Builder                             
-        sta NotePtrCh0                                  
-        
+        ; lda #<Track0Builder                             
+        ; sta NotePtrCh0
+
+        dec NotePtrCh0
+        dec NotePtrCh0
         lda (NotePtrCh0),y                              
         and #DURATION_MASK
 SkipResetPtrTrack0
@@ -1545,9 +1555,11 @@ SkipSubtractB
         cmp #0                                          
         bne SkipResetPtrTrack1                          
 
-        lda #<Track1Builder                             
-        sta NotePtrCh1                                  
+        ; lda #<Track1Builder                             
+        ; sta NotePtrCh1                                  
         
+        dec NotePtrCh1
+        dec NotePtrCh1
         lda (NotePtrCh1),y                              
         and #DURATION_MASK
 SkipResetPtrTrack1
@@ -1570,9 +1582,11 @@ AdvanceBothPointers
         cmp #0                                          
         bne SkipResetPtrTrk0                          
 
-        lda #<Track0Builder                             
-        sta NotePtrCh0                                  
+        ; lda #<Track0Builder                             
+        ; sta NotePtrCh0                                  
         
+        dec NotePtrCh0
+        dec NotePtrCh0
         lda (NotePtrCh0),y                              
         and #DURATION_MASK
 SkipResetPtrTrk0
@@ -1592,9 +1606,11 @@ SkipResetPtrTrk0
         cmp #0                                          
         bne SkipResetPtrTrk1                          
 
-        lda #<Track1Builder                             
-        sta NotePtrCh1                                  
+        ; lda #<Track1Builder                             
+        ; sta NotePtrCh1                                  
         
+        dec NotePtrCh1
+        dec NotePtrCh1
         lda (NotePtrCh1),y                              
         and #DURATION_MASK
 SkipResetPtrTrk1
@@ -1613,6 +1629,9 @@ SkipPtrRight
         beq PtrRightDec
         jmp SkipDecPtrLeft
 PtrRightDec
+        ; dec TestCounter
+        ; lda #0
+        ; sta LetterBuffer
 
         lda NotePtrCh0
         cmp #<Track0Builder
@@ -1636,8 +1655,17 @@ SkipAdd1
         lda #<Track1Builder                             
         sta NotePtrCh1
 
-DecPointerLoop
+        lda #0
+        sta DurationLeftNoteA
+        sta DurationLeftNoteB
 
+DecPointerLoop
+;         lda TestCounter
+;         cmp LetterBuffer
+;         bne SkipFin
+;         jmp DecFin
+; SkipFin
+;         inc LetterBuffer
         lda NotePtrCh0
         cmp LineTemp
         bne SkipDecCheck0
@@ -1831,8 +1859,8 @@ SkipRstPtrTrk0
 ;         jmp DecFin
 ; SkipDecCheck21
 
-        lda DurationLeftNoteB
-        beq DecDone
+        ; lda DurationLeftNoteB
+        ; beq DecDone
 
         lda NotePtrCh1                                  ; 3     Load the Note Pointer to A
         clc                                             ; 2     Clear the carry 
@@ -1855,7 +1883,12 @@ SkipRstPtrTrk1
         lda NoteDurations,y
         sta DurationLeftNoteB
 
+
 DecDone
+        ; inc LetterBuffer
+        ; lda TestCounter
+        ; cmp LetterBuffer
+        ; beq DecFin
         jmp DecPointerLoop
 DecFin
         jmp SelectionSet
