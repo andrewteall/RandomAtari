@@ -13,9 +13,9 @@
 ; TODO: Add Step through notes and display values
 ;       - Fire button plays notes
 ;               maybe individual track selection
-;       - Step backwards through notes
+;       - Make Track B solo Step backwards through notes
 ;       - Need to line up note playing with actual durations
-;       - Add indicator to know you're in the right section
+;       - Add indicator to know you're in the right section(selection)
 
 ; TODO: Add Labels under controls to display usage
 
@@ -1666,21 +1666,30 @@ DecPointerLoop
 ;         jmp DecFin
 ; SkipFin
 ;         inc LetterBuffer
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Something here needs to be re-worked to make decremenmt work when Track A is
+; empty or Track B had the greater amount of notes
         lda NotePtrCh0
         cmp LineTemp
         bne SkipDecCheck0
+        lda NotePtrCh1
         cmp YTemp
-        bpl SkipDecCheck0
+        bmi SkipDecCheck0
         jmp DecFin
 SkipDecCheck0
 
         lda NotePtrCh1
         cmp YTemp
         bne SkipDecCheck1
+        lda NotePtrCh0
         cmp LineTemp
-        bpl SkipDecCheck1
+        bmi SkipDecCheck1
         jmp DecFin
 SkipDecCheck1
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         lda DurationLeftNoteA
         bne SkipDecDurationACheck
@@ -1787,6 +1796,8 @@ SkipRstPtrTrack0
         sta DurationLeftNoteA
 
         jmp DecDone
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 DecPointerB
 
         ;Advance Pointer for Track1
@@ -1820,7 +1831,7 @@ SkipRstPtrTrack1
         sta DurationLeftNoteB
 
         jmp DecDone
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 DecBothPointers
         lda NotePtrCh0                                  ; 3     Load the Note Pointer to A
         clc                                             ; 2     Clear the carry 
@@ -1883,7 +1894,7 @@ SkipRstPtrTrk1
         lda NoteDurations,y
         sta DurationLeftNoteB
 
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 DecDone
         ; inc LetterBuffer
         ; lda TestCounter
