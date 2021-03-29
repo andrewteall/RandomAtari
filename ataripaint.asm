@@ -13,8 +13,6 @@
 ; TODO: Add Step through notes and display values
 ;       - Fire button plays notes
 ;               maybe individual track selection
-;       - Make Track B solo Step backwards through notes
-;       - Need to line up note playing with actual durations
 ;       - Add indicator to know you're in the right section(selection)
 
 ; TODO: Add Labels under controls to display usage
@@ -107,8 +105,8 @@ FlagsSelection          ds 1                    ; 0-4 Current Selection (#0-#9) 
 FrameCtrTrk0            ds 1
 FrameCtrTrk1            ds 1
 DebounceCtr             ds 1                    ; XXXX0000 - Top 4 bits not used
-DurationLeftNoteA       ds 1
-DurationLeftNoteB       ds 1
+DurRemainTrk0           ds 1
+DurRemainTrk1           ds 1
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Rom Pointers
@@ -139,8 +137,6 @@ LetterBuffer            ds 1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 Track0Builder           ds #TRACKSIZE+1         ; Memory Allocation to store the bytes(notes) saved to track 0
 Track1Builder           ds #TRACKSIZE+1         ; Memory Allocation to store the bytes(notes) saved to track 1
-
-;TestCounter             ds 1
 
         echo "----",([* - $80]d) , (* - $80) ,"bytes of RAM Used"
         echo "----",([$100 - *]d) , ($100 - *) , "bytes of RAM left"
@@ -220,10 +216,6 @@ Clear
         and #FREQUENCY_MASK
         ora #00000001
         sta AudFrqDur
-
-        ; lda #0
-        ; sta TestCounter
-        
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Console Initialization ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
@@ -1433,19 +1425,19 @@ SkipJumpSelection9
 
         lda #P0_JOYSTICK_UP            
         bit SWCHA
-        beq PtrRight
-        jmp SkipPtrRight
-PtrRight
-        ;inc TestCounter
+        beq StepForwardThroughNotes
+        jmp SkipStepForwardThroughNotes
 
-        lda DurationLeftNoteA
-        bne SkipDurationACheck
+StepForwardThroughNotes
+        lda DurRemainTrk0
+        bne SkipInitTrk0
 
+; Check to Initialize the two tracks for stepping through
         ldy #0 
         lda (NotePtrCh0),y                              
         and #DURATION_MASK
         cmp #0                                          
-        bne SkipResetPtrTrackZero                          
+        bne SkipLoadInitValTrk0                          
 
         lda #<Track0Builder                             
         sta NotePtrCh0                                  
@@ -1453,53 +1445,50 @@ PtrRight
         lda (NotePtrCh0),y                              
         and #DURATION_MASK
 
-SkipResetPtrTrackZero
+SkipLoadInitValTrk0
         tay
         lda NoteDurations,y
-        sta DurationLeftNoteA
-
-SkipDurationACheck
+        sta DurRemainTrk0
+SkipInitTrk0
         
-        lda DurationLeftNoteB
-        bne SkipDurationBCheck
+        lda DurRemainTrk1
+        bne SkipInitTrk1
 
         ldy #0 
         lda (NotePtrCh1),y                              
         and #DURATION_MASK
         cmp #0                                          
-        bne SkipResetPtrTrackOne                          
+        bne SkipLoadInitValTrk1                          
 
         lda #<Track1Builder
         sta NotePtrCh1
         
         lda (NotePtrCh1),y                              
         and #DURATION_MASK
-SkipResetPtrTrackOne
+SkipLoadInitValTrk1
         tay
         lda NoteDurations,y
-        sta DurationLeftNoteB
+        sta DurRemainTrk1
+SkipInitTrk1
 
-SkipDurationBCheck
-
-SkipDurationCheck
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Figure out which track to advance based on duration left
         ; Check to see which duration is longer
-        lda DurationLeftNoteA
-        cmp DurationLeftNoteB
-        bne SkipJump
-        jmp AdvanceBothPointers
-SkipJump
-        lda DurationLeftNoteA
-        beq AdvancePointerB
+        lda DurRemainTrk0
+        cmp DurRemainTrk1
+        beq AdvanceBothTracks
 
-        lda DurationLeftNoteB
-        beq AdvancePointerA
+        lda DurRemainTrk0
+        beq AdvanceTrk1
 
-        lda DurationLeftNoteA
-        cmp DurationLeftNoteB
-        bpl AdvancePointerB
+        lda DurRemainTrk1
+        beq AdvanceTrk0
+
+        lda DurRemainTrk0
+        cmp DurRemainTrk1
+        bpl AdvanceTrk1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-AdvancePointerA
+
+AdvanceTrk0
         ;Advance Pointer for Track0
         lda NotePtrCh0                                  
         clc                                             
@@ -1507,34 +1496,31 @@ AdvancePointerA
         sta NotePtrCh0                                  
 
         ; Subtract the Duration of NoteA from NoteB
-        lda DurationLeftNoteB
-        beq SkipSubtractA
+        lda DurRemainTrk1
+        beq SkipSubtractDurTrk0
         sec 
-        sbc DurationLeftNoteA
-        sta DurationLeftNoteB
-SkipSubtractA
+        sbc DurRemainTrk0
+        sta DurRemainTrk1
+SkipSubtractDurTrk0
         ; Get the new Note Duration Left for Track0
         ldy #0 
         lda (NotePtrCh0),y                              
         and #DURATION_MASK
         cmp #0                                          
-        bne SkipResetPtrTrack0                          
-
-        ; lda #<Track0Builder                             
-        ; sta NotePtrCh0
+        bne SkipResetPtrTrack0AdvTrk0                          
 
         dec NotePtrCh0
         dec NotePtrCh0
         lda (NotePtrCh0),y                              
         and #DURATION_MASK
-SkipResetPtrTrack0
+SkipResetPtrTrack0AdvTrk0
         tay
         lda NoteDurations,y
-        sta DurationLeftNoteA
+        sta DurRemainTrk0
 
         jmp AdvanceDone
-AdvancePointerB
 
+AdvanceTrk1
         ;Advance Pointer for Track1
         lda NotePtrCh1                                  
         clc                                             
@@ -1542,35 +1528,31 @@ AdvancePointerB
         sta NotePtrCh1                                  
 
         ; Subtract the Duration of NoteB from NoteA
-        lda DurationLeftNoteA
-        beq SkipSubtractB
+        lda DurRemainTrk0
+        beq SkipSubtractDurTrk1
         sec 
-        sbc DurationLeftNoteB
-        sta DurationLeftNoteA
-SkipSubtractB
+        sbc DurRemainTrk1
+        sta DurRemainTrk0
+SkipSubtractDurTrk1
         ; Get the new Note Duration Left for Track1
         ldy #0 
         lda (NotePtrCh1),y                              
         and #DURATION_MASK
         cmp #0                                          
-        bne SkipResetPtrTrack1                          
-
-        ; lda #<Track1Builder                             
-        ; sta NotePtrCh1                                  
-        
+        bne SkipResetPtrTrack1AdvTrk1
+                                       
         dec NotePtrCh1
         dec NotePtrCh1
         lda (NotePtrCh1),y                              
         and #DURATION_MASK
-SkipResetPtrTrack1
+SkipResetPtrTrack1AdvTrk1
         tay
         lda NoteDurations,y
-        sta DurationLeftNoteB
+        sta DurRemainTrk1
 
         jmp AdvanceDone
 
-
-AdvanceBothPointers
+AdvanceBothTracks
         lda NotePtrCh0                                  ; 3     Load the Note Pointer to A
         clc                                             ; 2     Clear the carry 
         adc #2                                          ; 2     Add 4 to move the Note pointer to the next note
@@ -1580,19 +1562,16 @@ AdvanceBothPointers
         lda (NotePtrCh0),y                              
         and #DURATION_MASK
         cmp #0                                          
-        bne SkipResetPtrTrk0                          
-
-        ; lda #<Track0Builder                             
-        ; sta NotePtrCh0                                  
-        
+        bne SkipResetPtrTrack0AdvBothTrk
+                                     
         dec NotePtrCh0
         dec NotePtrCh0
         lda (NotePtrCh0),y                              
         and #DURATION_MASK
-SkipResetPtrTrk0
+SkipResetPtrTrack0AdvBothTrk
         tay
         lda NoteDurations,y
-        sta DurationLeftNoteA
+        sta DurRemainTrk0
 
 
         lda NotePtrCh1                                  ; 3     Load the Note Pointer to A
@@ -1604,49 +1583,43 @@ SkipResetPtrTrk0
         lda (NotePtrCh1),y                              
         and #DURATION_MASK
         cmp #0                                          
-        bne SkipResetPtrTrk1                          
+        bne SkipResetPtrTrack1AdvBothTrk                          
 
-        ; lda #<Track1Builder                             
-        ; sta NotePtrCh1                                  
-        
         dec NotePtrCh1
         dec NotePtrCh1
         lda (NotePtrCh1),y                              
         and #DURATION_MASK
-SkipResetPtrTrk1
+SkipResetPtrTrack1AdvBothTrk
         tay
         lda NoteDurations,y
-        sta DurationLeftNoteB
+        sta DurRemainTrk1
 AdvanceDone
         jmp SelectionSet
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;; Decrement Pointers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-SkipPtrRight
+SkipStepForwardThroughNotes
         lda #P0_JOYSTICK_DOWN            
         bit SWCHA
-        beq PtrRightDec
-        jmp SkipDecPtrLeft
-PtrRightDec
-        ; dec TestCounter
-        ; lda #0
-        ; sta LetterBuffer
+        beq StepBackwardThroughNotes
+        jmp SkipStepBackwardThroughNotes
+StepBackwardThroughNotes
 
         lda NotePtrCh0
         cmp #<Track0Builder
-        beq SkipAdd0
+        beq SkipRecedeTrk0
         clc
         adc #$FE
-SkipAdd0
+SkipRecedeTrk0
         sta LineTemp
 
         lda NotePtrCh1
         cmp #<Track1Builder
-        beq SkipAdd1
+        beq SkipRecedeTrk1
         clc
         adc #$FE
-SkipAdd1
+SkipRecedeTrk1
         sta YTemp
 
         lda #<Track0Builder                             
@@ -1656,42 +1629,29 @@ SkipAdd1
         sta NotePtrCh1
 
         lda #0
-        sta DurationLeftNoteA
-        sta DurationLeftNoteB
+        sta DurRemainTrk0
+        sta DurRemainTrk1
 
-DecPointerLoop
-;         lda TestCounter
-;         cmp LetterBuffer
-;         bne SkipFin
-;         jmp DecFin
-; SkipFin
-;         inc LetterBuffer
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Something here needs to be re-worked to make decremenmt work when Track A is
-; empty or Track B had the greater amount of notes
+RecedeTrackLoop
         lda NotePtrCh0
         cmp LineTemp
-        bne SkipDecCheck0
+        bne SkipRecedeFinCheck0
         lda NotePtrCh1
         cmp YTemp
-        bmi SkipDecCheck0
+        bmi SkipRecedeFinCheck0
         jmp DecFin
-SkipDecCheck0
+SkipRecedeFinCheck0
 
         lda NotePtrCh1
         cmp YTemp
-        bne SkipDecCheck1
+        bne SkipRecedeFinCheck1
         lda NotePtrCh0
         cmp LineTemp
-        bmi SkipDecCheck1
+        bmi SkipRecedeFinCheck1
         jmp DecFin
-SkipDecCheck1
+SkipRecedeFinCheck1
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-        lda DurationLeftNoteA
+        lda DurRemainTrk0
         bne SkipDecDurationACheck
 
         ldy #0 
@@ -1708,11 +1668,11 @@ SkipDecCheck1
 SkipRstPtrTrackZero
         tay
         lda NoteDurations,y
-        sta DurationLeftNoteA
+        sta DurRemainTrk0
 
 SkipDecDurationACheck
         
-        lda DurationLeftNoteB
+        lda DurRemainTrk1
         bne SkipDecDurationBCheck
 
         ldy #0 
@@ -1729,39 +1689,25 @@ SkipDecDurationACheck
 SkipRstPtrTrackOne
         tay
         lda NoteDurations,y
-        sta DurationLeftNoteB
+        sta DurRemainTrk1
 
 SkipDecDurationBCheck
 
 SkipDecDurationCheck
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ; Check to see which duration is longer
-;         lda NotePtrCh0
-;         cmp LineTemp
-;         bne SkipDecPointerA
-;         jmp DecPointerB
-; SkipDecPointerA
-
-;         lda NotePtrCh1
-;         cmp YTemp
-;         bne SkipDecPointerB
-;         jmp DecPointerA
-; SkipDecPointerB
-
-        lda DurationLeftNoteA
-        cmp DurationLeftNoteB
+        lda DurRemainTrk0
+        cmp DurRemainTrk1
         bne SkipDecJump
         jmp DecBothPointers
 SkipDecJump
 
-        lda DurationLeftNoteA
+        lda DurRemainTrk0
         beq DecPointerB
 
-        lda DurationLeftNoteB
+        lda DurRemainTrk1
         beq DecPointerA
 
-        lda DurationLeftNoteA
-        cmp DurationLeftNoteB
+        lda DurRemainTrk0
+        cmp DurRemainTrk1
         bpl DecPointerB
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 DecPointerA
@@ -1772,11 +1718,11 @@ DecPointerA
         sta NotePtrCh0                                  
 
         ; Subtract the Duration of NoteA from NoteB
-        lda DurationLeftNoteB
+        lda DurRemainTrk1
         beq SkipDecSubtractA
         sec 
-        sbc DurationLeftNoteA
-        sta DurationLeftNoteB
+        sbc DurRemainTrk0
+        sta DurRemainTrk1
 SkipDecSubtractA
         ; Get the new Note Duration Left for Track0
         ldy #0 
@@ -1793,7 +1739,7 @@ SkipDecSubtractA
 SkipRstPtrTrack0
         tay
         lda NoteDurations,y
-        sta DurationLeftNoteA
+        sta DurRemainTrk0
 
         jmp DecDone
 
@@ -1807,11 +1753,11 @@ DecPointerB
         sta NotePtrCh1                                  
 
         ; Subtract the Duration of NoteB from NoteA
-        lda DurationLeftNoteA
+        lda DurRemainTrk0
         beq SkipDecSubtractB
         sec 
-        sbc DurationLeftNoteB
-        sta DurationLeftNoteA
+        sbc DurRemainTrk1
+        sta DurRemainTrk0
 SkipDecSubtractB
         ; Get the new Note Duration Left for Track1
         ldy #0 
@@ -1828,7 +1774,7 @@ SkipDecSubtractB
 SkipRstPtrTrack1
         tay
         lda NoteDurations,y
-        sta DurationLeftNoteB
+        sta DurRemainTrk1
 
         jmp DecDone
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1852,26 +1798,7 @@ DecBothPointers
 SkipRstPtrTrk0
         tay
         lda NoteDurations,y
-        sta DurationLeftNoteA
-
-;         lda NotePtrCh0
-;         cmp LineTemp
-;         bne SkipDecCheck20
-;         cmp YTemp
-;         bpl SkipDecCheck20
-;         jmp DecFin
-; SkipDecCheck20
-
-;         lda NotePtrCh1
-;         cmp YTemp
-;         bne SkipDecCheck21
-;         cmp LineTemp
-;         bpl SkipDecCheck21
-;         jmp DecFin
-; SkipDecCheck21
-
-        ; lda DurationLeftNoteB
-        ; beq DecDone
+        sta DurRemainTrk0
 
         lda NotePtrCh1                                  ; 3     Load the Note Pointer to A
         clc                                             ; 2     Clear the carry 
@@ -1892,18 +1819,14 @@ SkipRstPtrTrk0
 SkipRstPtrTrk1
         tay
         lda NoteDurations,y
-        sta DurationLeftNoteB
+        sta DurRemainTrk1
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 DecDone
-        ; inc LetterBuffer
-        ; lda TestCounter
-        ; cmp LetterBuffer
-        ; beq DecFin
-        jmp DecPointerLoop
+        jmp RecedeTrackLoop
 DecFin
         jmp SelectionSet
-SkipDecPtrLeft
+SkipStepBackwardThroughNotes
 
 Selection9
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2373,8 +2296,8 @@ LoadPlayAllButton
         lda #<Track1Builder                              ; 4     Store the low byte of the track to 
         sta NotePtrCh1
         lda #0
-        sta DurationLeftNoteA
-        sta DurationLeftNoteB
+        sta DurRemainTrk0
+        sta DurRemainTrk1
 SkipResetTrack
 
         lda #0
