@@ -2,22 +2,7 @@
         include includes/vcs.h
         include includes/macro.h
 
-; TODO: Flag to not use Channel 1 - doubles play time
-;       - Could also have channel 1 count from top so the tracks meet in the middle
-
-; TODO: Multiplex Characters for more than 12 chars per line
-; TODO: Draw Note letters from memory location
-
-; TODO: Add total Duration of each track?
-
-; TODO: Add Step through notes and display values
-;       - Fire button plays notes
-;               maybe individual track selection
-;       - Add indicator to know you're in the right section(selection)
-
 ; TODO: Add Labels under controls to display usage
-
-; TODO: Reuse Play Button Pointers
 
 ; TODO: Finalize Colors and Decor and Name
         
@@ -94,11 +79,12 @@ AudCntChnl              ds 1                    ; XXXXXXX0 - Channel | 0000000X 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Flags
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-FlagsSelection          ds 1                    ; 0-4 Current Selection (#0-#9) - (#10-#15 Not Used)
-                                                ; 5 - Play note flag - 0 plays note
-                                                ; 6 - Add note flag - 1 adds note
-                                                ; 7 - Remove note flag - 1 removes note
-                                                ; 8 - Play track flag - 1 plays tracks
+FlagsSelection          ds 1                    ; 0-3 Current Selection (#0-#9) - (#10-#15 Not Used)
+                                                ; 4 - Play note flag - 0 plays note
+                                                ; 5 - Add note flag - 1 adds note
+                                                ; 6 - Remove note flag - 1 removes note
+                                                ; 7 - Play track flag - 1 plays tracks
+                                                ; (#10) - Play Track Note Flag Combined Selection #9
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Counters
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -112,7 +98,6 @@ DurRemainTrk1           ds 1
 ; Rom Pointers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 PlayButtonMaskPtr       ds 2                    
-PlayAllButtonMaskPtr    ds 2 
 
 VolGfxPtr               ds 2
 DurGfxPtr               ds 2
@@ -239,8 +224,8 @@ StartOfFrame
         lda #0
         sta VSYNC ; Turn off VSYNC
 
-        lda #0
-        sta Track1Builder+TRACKSIZE
+        ; lda #0
+        ; sta Track1Builder+TRACKSIZE
 ; 37 VBLANK lines
         ldx #37                                         ; 2
 VerticalBlank
@@ -318,7 +303,22 @@ TopBuffer
         cpx #20                                         ; 2     61
         sta WSYNC                                       ; 3     64
         bne TopBuffer                                   ; 2/3   2/3
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #PLAY_NOTE_FLAG
+        bit FlagsSelection
+        beq SkipSetPlayNote
 
+        lda #<PlayButton
+        sta PlayButtonMaskPtr
+        lda #>PlayButton
+        sta PlayButtonMaskPtr+1
+        jmp SkipSetPauseNote
+SkipSetPlayNote
+        lda #<PauseButton
+        sta PlayButtonMaskPtr
+        lda #>PauseButton
+        sta PlayButtonMaskPtr+1
+SkipSetPauseNote
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Note Values Row 
@@ -480,25 +480,47 @@ SkipSelectControl
         inx
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+        lda #PLAY_TRACK_FLAG
+        bit FlagsSelection
+        bne SkipSetPlayTrack
+
+        lda #<PlayButton
+        sta PlayButtonMaskPtr
+        lda #>PlayButton
+        sta PlayButtonMaskPtr+1
+        jmp SkipSetPauseTrack
+SkipSetPlayTrack
+        lda #<PauseButton
+        sta PlayButtonMaskPtr
+        lda #>PauseButton
+        sta PlayButtonMaskPtr+1
+SkipSetPauseTrack
+        jmp SkipBuffer2
+
+        REPEAT 15
+        nop
+        REPEND
+SkipBuffer2
+
 Spacer
         inx                                             ; 2     4
-        cpx #80                                         ; 2     6
+        cpx #78                                         ; 2     6
         sta WSYNC                                       ; 3     9
         bne Spacer                                      ; 2/3   2/3
-        SLEEP 3
-        
+        ;SLEEP 3
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Track Controls Row 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ControlRow
         txa                                             ; 2     5
-        sbc #79                                         ; 2     7
+        sbc #77                                         ; 2     7
         lsr                                             ; 2     9       Divide by 2 to get index twice for double height
         lsr                                             ; 2     11      Divide by 2 to get index twice for double height
         lsr                                             ; 2     13      Divide by 2 to get index twice for double height
         tay                                             ; 2     15      Transfer A to Y so we can index off Y
         
-        lda (PlayAllButtonMaskPtr),y                    ; 5     20      Get the Score From our Player 0 Score Array
+        lda (PlayButtonMaskPtr),y                    ; 5     20      Get the Score From our Player 0 Score Array
         sta PF0                                         ; 3     23      
 
         lda PlusBtn,y                                   ; 4     27      Get the Score From our Player 0 Score Array
@@ -521,7 +543,7 @@ ControlRow
         
 
         inx                                             ; 2     63
-        cpx #120                                        ; 2     65
+        cpx #118                                        ; 2     65
         sta PF2                                         ; 3     68
         sta PF1                                         ; 3     71
         sta WSYNC                                       ; 3     74
@@ -536,7 +558,7 @@ ControlRow
         ldy #0
         inx                                             ; 2     4
         sta WSYNC                                       ; 3     3
-        SLEEP 4                                         ; 3     3
+        SLEEP 3                                         ; 3     3
 
 ControlSelection
         stx LineTemp
@@ -562,7 +584,7 @@ SkipSelectAddNote
         sta PF2
 SkipSelectRemoveNote
 
-        SLEEP 9
+        SLEEP 10
 
         cmp #8
         sty PF2
@@ -577,7 +599,7 @@ SkipSelectRemoveChannel
         
         ldx LineTemp
         inx                                             ; 2     4
-        cpx #128                                        ; 2     6
+        cpx #125                                        ; 2     6
         sta WSYNC                                       ; 3     9
         bne ControlSelection                            ; 2/3   2/3
 
@@ -696,33 +718,45 @@ SkipSelectRemoveChannel
         lda LineTemp
         sta (NotePtrCh0),y
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ; lda #<TopPlayButton
-        ; sta PlayButtonMaskPtr
-        ; lda #>TopPlayButton
-        ; sta PlayButtonMaskPtr+1
+        lda FlagsSelection
+        and #SELECTION_MASK
+        cmp #10
+        beq SkipSetPlayTracks
 
+        lda #<PlayButton
+        sta PlayButtonMaskPtr
+        lda #>PlayButton
+        sta PlayButtonMaskPtr+1
+        jmp SkipSetPauseTracks
+SkipSetPlayTracks
+        lda #<PauseButton
+        sta PlayButtonMaskPtr
+        lda #>PauseButton
+        sta PlayButtonMaskPtr+1
+SkipSetPauseTracks
+        inx
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 BottomSpacer
         inx                                             ; 2     4
-        cpx #140                                        ; 2     6
+        cpx #135                                        ; 2     6
         sta WSYNC                                       ; 3     9
         bne BottomSpacer                                ; 2/3   2/3
-        
+        inx
         inx                                     ; 2     4
         txa                                     ; 2     6
-        sbc #139                                ; 2     8
+        sbc #134                                ; 2     8
         nop
         lsr                                     ; 2     12      Divide by 2 to get index twice for quad height
         sta WSYNC                               ; 3     14     
-        SLEEP 4                                 ; 4     4       Account for 4 cycle branch to keep timing aligned
+        SLEEP 3                                 ; 4     4       Account for 4 cycle branch to keep timing aligned
 BottomRow 
         lsr                                     ; 2     6       Divide by 2 to get index twice for octuple height
         tay                                     ; 2     8       Transfer A to Y so we can index off Y
         
-        ;lda (PlayButtonMaskPtr),y               ; 5     13      Get the Score From our Play Button Mask Array
-        ;sta PF0                                 ; 3     16      Store the value to PF0
-        SLEEP 8
+        lda (PlayButtonMaskPtr),y               ; 5     13      Get the Score From our Play Button Mask Array
+        sta PF0                                 ; 3     16      Store the value to PF0
+        ;SLEEP 8
 
         lda (DurGfxPtr),y                       ; 5     21      Get the Score From our Duration Gfx Array
         asl                                     ; 2     23
@@ -734,6 +768,7 @@ BottomRow
         sta PF2                                 ; 3     38      Store the value to PF2
 
         nop                                     ; 2     40      Waste 2 cycles to line up the next Pf draw
+        
 
         lda (FrqCntGfxPtr),y                    ; 5     45      Get the Score From our Frequency Gfx Array
         sta PF2                                 ; 3     48      Store the value to PF2
@@ -745,21 +780,22 @@ BottomRow
         
         ldy #0                                  ; 2     60      Reset and clear the playfield
         txa                                     ; 2     62      Transfer the line number in preparation for the next line
-        sbc #139                                ; 2     64      Subtract #19 since the carry is cleared above
+        sbc #135                                ; 2     64      Subtract #19 since the carry is cleared above
         nop
         sty PF0                                 ; 3     69      Reset and clear the playfield
         lsr                                     ; 2     71      Divide by 2 to get index twice for quadruple height
-        sty PF1                                 ; 3     74      Reset and clear the playfield
+        sty.w PF1                                 ; 3     74      Reset and clear the playfield
 
-        cpx #160                                ; 2     76      Have we reached line #60   
+        cpx #155                                ; 2     76      Have we reached line #60   
         
         bne BottomRow                           ; 2/3   2/3
         
-        ldy #0
+        ldy #0                                  
         sty PF2                                 ; 3     65      Reset and clear the playfield
 
-
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ; lda #%11100000
+        ; sta PF0
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldy #0
         lda #<(Zero)
@@ -767,6 +803,11 @@ BottomRow
 
         lda #>(Zero)
         sta DurGfxPtr+1 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ; lda #%000000000
+        ; sta PF0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         lda (NotePtrCh1),y
         sta LineTemp
@@ -784,7 +825,8 @@ BottomRow
         sta DurGfxPtr
         lda LineTemp
         sta (NotePtrCh1),y
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
         ldy #1
         lda #<(RZero)
         sta VolGfxPtr
@@ -869,27 +911,44 @@ BottomRow
         sta (NotePtrCh1),y
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ; lda #<BottomPlayButton
-        ; sta PlayButtonMaskPtr
-        ; lda #>BottomPlayButton
-        ; sta PlayButtonMaskPtr+1
+        lda #<BottomPlayButton
+        sta PlayButtonMaskPtr
+        lda #>BottomPlayButton
+        sta PlayButtonMaskPtr+1
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        jmp SkipBuffer
-        REPEAT 30
-        nop
-        REPEND
-SkipBuffer
+;         jmp SkipBuffer
+;         REPEAT 15
+;         nop
+;         REPEND        
+; SkipBuffer
+        lda FlagsSelection
+        and #SELECTION_MASK
+        cmp #10
+        beq SkipSetPlayTracks2
+
+        lda #<PlayButton
+        sta PlayButtonMaskPtr
+        lda #>PlayButton
+        sta PlayButtonMaskPtr+1
+        jmp SkipSetPauseTracks2
+SkipSetPlayTracks2
+        lda #<PauseButton
+        sta PlayButtonMaskPtr
+        lda #>PauseButton
+        sta PlayButtonMaskPtr+1
+SkipSetPauseTracks2
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 BottomSpacer2
         inx                                             ; 2     4
-        cpx #165                                        ; 2     6
+        cpx #160                                        ; 2     6
         sta WSYNC                                       ; 3     9
         bne BottomSpacer2                                ; 2/3   2/3
-        
+       
         inx                                     ; 2     4
         txa                                     ; 2     6
-        sbc #164                                ; 2     8
+        sbc #159                                ; 2     8
         nop
         lsr                                     ; 2     12      Divide by 2 to get index twice for quad height
         sta WSYNC                               ; 3     14     
@@ -898,9 +957,9 @@ BottomRow2
         lsr                                     ; 2     6       Divide by 2 to get index twice for octuple height
         tay                                     ; 2     8       Transfer A to Y so we can index off Y
         
-        ;lda (PlayButtonMaskPtr),y               ; 5     13      Get the Score From our Play Button Mask Array
-        ;sta PF0                                 ; 3     16      Store the value to PF0
-        SLEEP 8
+        lda (PlayButtonMaskPtr),y               ; 5     13      Get the Score From our Play Button Mask Array
+        sta PF0                                 ; 3     16      Store the value to PF0
+        ;SLEEP 8
 
         lda (DurGfxPtr),y                       ; 5     21      Get the Score From our Duration Gfx Array
         asl                                     ; 2     23
@@ -923,19 +982,52 @@ BottomRow2
         
         ldy #0                                  ; 2     60      Reset and clear the playfield
         txa                                     ; 2     62      Transfer the line number in preparation for the next line
-        sbc #164                                ; 2     64      Subtract #19 since the carry is cleared above
+        sbc #159                                ; 2     64      Subtract #19 since the carry is cleared above
         nop
         sty PF0                                 ; 3     69      Reset and clear the playfield
         lsr                                     ; 2     71      Divide by 2 to get index twice for quadruple height
-        sty PF1                                 ; 3     74      Reset and clear the playfield
+        sty.w PF1                                 ; 3     74      Reset and clear the playfield
 
-        cpx #185                                ; 2     76      Have we reached line #60   
+        cpx #180                                ; 2     76      Have we reached line #60   
         
         bne BottomRow2                           ; 2/3   2/3
         
         ldy #0
         sty PF2                                 ; 3     65      Reset and clear the playfield
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Track1 Selection Row
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #CONTROLS_COLOR
+        sta COLUPF
+        ldy #0
+        inx                                             ; 2     4
+        sta WSYNC                                       ; 3     3
+        SLEEP 3                                         ; 3     3
+
+Track1ControlSelection
+        stx LineTemp
+        lda FlagsSelection                              ; 3
+        and #SELECTION_MASK                                 ; 2
+
+        cmp #9
+        bmi SkipSelectPlayTrack1Button                     ; 2/3
+SelectPlayTrack1Button
+        lda #%11100000                                  ; 2
+        sta PF0                                         ; 3
+SkipSelectPlayTrack1Button
+        SLEEP 8
+
+        sty PF1
+        sty PF0
+        sty PF2
+        
+        ldx LineTemp
+        inx                                             ; 2     4
+        cpx #188                                        ; 2     6
+        sta WSYNC                                       ; 3     9
+        bne Track1ControlSelection                       ; 2/3   2/3
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Spacer - 1-Line Kernel 
@@ -1018,13 +1110,51 @@ SkipCursorMove
         tax                                     ; Transfer the Accumulator to the X Register to free up the Accumulator
                                                 ; and so we can determine which control is selected later
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Check To Reset Play Track "Flag"  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+        cpx #11                                 ; Check to see if the note display is selected
+        bne SkipResetTrackFlag                ; If not then continue checking to enable Play Note Flag
+       
+       ; Maybe Set to 0 instead
+        dec FlagsSelection
+        dec FlagsSelection
+        lda FlagsSelection                      ; Load Flags and Control Selection from Ram to the Accumulator
+        and #SELECTION_MASK                     ; AND Accumulator with the SELECTION_MASK to get the selected control
+        tax                                     ; Transfer the Accumulator to the X Register to free up the Accumulator
+                                                ; and so we can determine which control is selected later
+SkipResetTrackFlag
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Check To See if Debounce Backoff is in Effect ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda DebounceCtr                         ; Check the Debounce Counter to be 0 before moving onward
         beq SetPlayNoteFlag                     ; If so then check to see if we need to enable the Play Note Flag
         jmp SkipSelectionSet                    ; If not then skip checking to enable Play Note Flag
 SetPlayNoteFlag
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Check To Enable Play Track "Flag"  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        cpx #9                                  ; Check to see if the note display is selected
+        bne SkipSetPlayTrackFlag                ; If not then continue checking to enable Play Note Flag
+
+        ldy INPT4                               ; Check to see if the Fire Button is being pressed
+        bmi SkipSetPlayTrackFlag                ; If not then skip checking to enable Play Note Flag        
+        inc FlagsSelection
+
+        jmp SelectionSet
+        
+
+SkipSetPlayTrackFlag
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Check To Disable Play Track "Flag"  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        cpx #10                                 ; Check to see if the note display is selected
+        bne SkipSetStopTrackFlag                ; If not then continue checking to enable Play Note Flag
+
+        ldy INPT4                               ; Check to see if the Fire Button is being pressed
+        bmi SkipSetStopTrackFlag                ; If not then skip checking to enable Play Note Flag        
+        dec FlagsSelection
+
+        jmp SelectionSet
+SkipSetStopTrackFlag
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Check To Enable Play Note Flag  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
         cpx #5                                  ; Check to see if any of top row controls are selected
         bpl SkipSetPlayNoteFlag                 ; If not then skip checking to enable Play Note Flag
 
@@ -1416,8 +1546,11 @@ Selection8
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Selection 9 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         cpx #9
         beq SkipJumpSelection9
+        cpx #10
+        beq SkipJumpSelection9
         jmp Selection9
 SkipJumpSelection9
+
         ; Turn off Track Player
         lda FlagsSelection
         and #%01111111
@@ -1974,16 +2107,110 @@ SkipSelectionSet
         ; clc
         ; adc ChannelGfxPtr
         ; sta ChannelGfxPtr
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Track Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+        lda FlagsSelection                      ; Load Flags and Control Selection from Ram to the Accumulator
+        and #SELECTION_MASK                     ; AND Accumulator with the SELECTION_MASK to get the selected control
+
+        cmp #9
+        beq TurnOffTrackNote
+
+        
+        cmp #10
+        beq TrackPlayNote
+        jmp SkipTrackPlayNote
+TrackPlayNote
+        ldx #0
+        lda (NotePtrCh0,x)
+        and #FREQUENCY_MASK
+        lsr
+        lsr
+        lsr
+        sta AUDF0
+
+        inc NotePtrCh0
+
+        lda (NotePtrCh0,x)
+        and #VOLUME_MASK
+        lsr
+        lsr
+        lsr
+        lsr
+        sta AUDV0
+
+        lda (NotePtrCh0,x)
+        and #CONTROL_MASK
+        sta AUDC0
+
+        dec NotePtrCh0
+
+;;;
+        lda (NotePtrCh1,x)
+        and #FREQUENCY_MASK
+        lsr
+        lsr
+        lsr
+        sta AUDF1
+
+        inc NotePtrCh1
+
+        lda (NotePtrCh1,x)
+        and #VOLUME_MASK
+        lsr
+        lsr
+        lsr
+        lsr
+        sta AUDV1
+
+        lda (NotePtrCh1,x)
+        and #CONTROL_MASK
+        sta AUDC1
+
+
+        dec NotePtrCh1
+LoadTrackPauseButton
+        ; lda #<PauseButton
+        ; sta PlayButtonMaskPtr
+        ; lda #>PauseButton
+        ; sta PlayButtonMaskPtr+1
+
+        jmp SkipPlayNote
+
+TurnOffTrackNote
+        lda #0
+        sta AUDV0
+        sta AUDF0
+        sta AUDC0
+        sta AUDV1
+        sta AUDF1
+        sta AUDC1
+
+
+LoadTrackPlayButton
+        ; lda #<PlayButton
+        ; sta PlayButtonMaskPtr
+        ; lda #>PlayButton
+        ; sta PlayButtonMaskPtr+1
+SkipTrackPlayNote
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Note Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda AudCntChnl
-        and #1
-        tax
         lda #PLAY_NOTE_FLAG
         bit FlagsSelection
         bne SkipPlayNote
+
+        lda FlagsSelection                      ; Load Flags and Control Selection from Ram to the Accumulator
+        and #SELECTION_MASK                     ; AND Accumulator with the SELECTION_MASK to get the selected control
+        cmp #5                                  ; Check to see if any of top row controls are selected
+        bpl TurnOffNote                         ; If not then skip checking to enable Play Note Flag 
+
+        lda AudCntChnl
+        and #1
+        tax
+PlayNote
         lda AudFrqDur
         and #DURATION_MASK
         tay
@@ -2010,16 +2237,14 @@ SkipSelectionSet
         and #CONTROL_MASK
         sta AUDC0,x
         inc FrameCtrTrk0,x
-
-
 LoadPauseButton
-        lda #<PauseButton
-        sta PlayButtonMaskPtr
-        lda #>PauseButton
-        sta PlayButtonMaskPtr+1
+        ; lda #<PauseButton
+        ; sta PlayButtonMaskPtr
+        ; lda #>PauseButton
+        ; sta PlayButtonMaskPtr+1
 
-        sec
-        bcs SkipPlayNote
+        jmp SkipPlayNote
+
 TurnOffNote
         lda AudCntChnl
         and #1
@@ -2035,10 +2260,10 @@ TurnOffNote
         sta FlagsSelection
 
 LoadPlayButton
-        lda #<PlayButton
-        sta PlayButtonMaskPtr
-        lda #>PlayButton
-        sta PlayButtonMaskPtr+1
+        ; lda #<PlayButton
+        ; sta PlayButtonMaskPtr
+        ; lda #>PlayButton
+        ; sta PlayButtonMaskPtr+1
 SkipPlayNote
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2268,10 +2493,10 @@ SkipResetRamTrack1
 
 
 LoadPauseAllButton
-        lda #<PauseButton
-        sta PlayAllButtonMaskPtr
-        lda #>PauseButton
-        sta PlayAllButtonMaskPtr+1
+        ; lda #<PauseButton
+        ; sta PlayAllButtonMaskPtr
+        ; lda #>PauseButton
+        ; sta PlayAllButtonMaskPtr+1
 
         jmp SkipResetPlayAllButton
 
@@ -2281,15 +2506,17 @@ SkipRamMusicPlayer
         beq SkipResetAud
 
 LoadPlayAllButton
-        lda #<PlayButton
-        sta PlayAllButtonMaskPtr
-        lda #>PlayButton
-        sta PlayAllButtonMaskPtr+1
+        ; lda #<PlayButton
+        ; sta PlayAllButtonMaskPtr
+        ; lda #>PlayButton
+        ; sta PlayAllButtonMaskPtr+1
 
 
         lda FlagsSelection
         and #SELECTION_MASK 
         cmp #9
+        beq SkipResetTrack
+        cmp #10
         beq SkipResetTrack
         lda #<Track0Builder                              ; 4     Store the low byte of the track to 
         sta NotePtrCh0                                   ; 3     the Note Pointer
@@ -2298,7 +2525,7 @@ LoadPlayAllButton
         lda #0
         sta DurRemainTrk0
         sta DurRemainTrk1
-SkipResetTrack
+
 
         lda #0
         sta AUDV0
@@ -2309,12 +2536,17 @@ SkipResetTrack
         sta AUDF1
         sta FrameCtrTrk0
         sta FrameCtrTrk1
+SkipResetTrack
 SkipResetAud
 SkipResetPlayAllButton
 ;;;;;;;;;;;;;;;;;; End Ram Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Calculate Remaining Notes ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda AudCntChnl
         and #1
         sta AudCntChnl
@@ -2381,7 +2613,7 @@ SkipSwitchToBank1
 ; Reset Backgruond,Audio,Collisions,Note Flags
         lda #0
         sta COLUBK
-        sta CXCLR  
+        ; sta CXCLR  
         ldy #26                                         ; 2
 
         lda FlagsSelection
@@ -2523,18 +2755,18 @@ PlayButton .byte  #%00100000
            .byte  #%00100000
            .byte  #0
 
-TopPlayButton           .byte  #%00100000
+TopPlayButton           .byte  #%0
+                        .byte  #%00100000
                         .byte  #%00100000
                         .byte  #%01100000
                         .byte  #%01100000
-                        .byte  #%11100000
                         .byte  #0
 
-BottomPlayButton        .byte  #%11100000
-                        .byte  #%01100000
+BottomPlayButton        .byte  #%01100000
                         .byte  #%01100000
                         .byte  #%00100000
                         .byte  #%00100000
+                        .byte  #0
                         .byte  #0
 
 PlayAllButton .byte  #%00100000
