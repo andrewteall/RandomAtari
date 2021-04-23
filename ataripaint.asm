@@ -3536,6 +3536,12 @@ P0HEIGHT           = #27
 E0HEIGHT           = #8 
 E1HEIGHT           = #8
 E2HEIGHT           = #8
+
+PLAYER2_H_POS      = #100
+SLEEPTIMER_PLAYER2 = PLAYER2_H_POS/3 +51
+
+P2_JOIN_FLASHRATE  = #52
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -3547,9 +3553,14 @@ Game2SelectionGfx       ds 2
 GameSelectFlag          ds 1
 SkipGameFlag            ds 1
 DebounceCtr             ds 1                    ; Gotta Keep this in spot 7 to match Bank0
+Fire                    ds 1
+LetterBuffer2           ds 1
+LineTemp2               ds 1
+YTemp2                  ds 1
+Flasher                 ds 1
 
-P0ScoreArr              ds 2
-P1ScoreArr              ds 2
+P0ScoreArr              ds 5
+P1ScoreArr              ds 5
 
 Player0XPos             ds 1
 Player0YPos             ds 1
@@ -3575,6 +3586,22 @@ Enemy2YPos              ds 1
 Enemy2YPosStr           ds 1
 DrawE2Sprite            ds 1
 E2SprIdx                ds 1
+
+P0Score1                ds 1
+P0Score2                ds 1
+P0Score1idx             ds 1
+P0Score1DigitPtr        ds 2
+P0ScoreTmp              ds 1
+P0Score2idx             ds 1
+P0Score2DigitPtr        ds 2
+
+P1Score1                ds 1
+P1Score2                ds 1
+P1Score1idx             ds 1
+P1Score1DigitPtr        ds 2
+P1ScoreTmp              ds 1
+P1Score2idx             ds 1
+P1Score2DigitPtr        ds 2
 
         echo "----"
         echo "Ram Total Bank1:"
@@ -3945,7 +3972,7 @@ GameScreen
         lda #1
         sta VDELP0
         sta VDELBL
-        lda #0
+        lda #1
         sta VDELP1
 
         lda #0
@@ -3994,7 +4021,30 @@ GameStartOfFrame
         sta VSYNC ; Turn off VSYNC
 
 ; 37 VBLANK lines
-        ldx #37                                         ; 2
+
+        ldx #0
+        sta GRP0
+        sta GRP1
+        lda #PLAYER2_H_POS
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
+
+        ldx #1
+        lda #PLAYER2_H_POS+8
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
+        lda #THREE_COPIES_CLOSE
+        sta NUSIZ0
+        sta NUSIZ1
+
+
+        ldx #33                                         ; 2
 GameVerticalBlank
         sta WSYNC                                       ; 3
         dex                                             ; 2
@@ -4002,12 +4052,100 @@ GameVerticalBlank
 
         lda #$0A
         sta COLUBK
+
+        ldy #1                                          ; 2
+        sty VDELP0
+        sty VDELP1
+
+        ldx #0
+        IF PLAYER2_H_POS <= 47
+         sta WSYNC                                      ; 3     
+        ENDIF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Viewable Screen Start ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        jmp Filler
+        REPEAT 20
+        nop
+        REPEND
+Filler
+        ldy #0
+        lda Flasher
+        cmp #P2_JOIN_FLASHRATE/2 +1
+        bpl GameViewableScreen
+
+FlashFire
+        inx
+        cpx #8
+        sta WSYNC
+        bne FlashFire
+        jmp Player2Buffer
+
+        
 GameViewableScreen
+        inx
+        cpx #3
+        sta WSYNC
+        bne GameViewableScreen
+
+
+        SLEEP SLEEPTIMER_PLAYER2
+        inx                                             ; 2
+DrawPlayer2JoinText
+        stx LineTemp2                                   ; 3     6
+        sty YTemp2                                      ; 3     9
+        
+        ldx E_,y                                        ; 4     13
+        stx LetterBuffer2                               ; 3     16
+        
+        ldx IR,y                                        ; 4     20
+
+        lda _P,y                                        ; 4     24
+        sta GRP0                                        ; 3     27       -> [GRP0]
+        
+        lda RE_bank1,y                                  ; 4     31
+        sta GRP1                                        ; 3     34       -> [GRP1], [GRP0] -> GRP0
+        
+        lda SS,y                                        ; 4     38
+        sta GRP0                                        ; 3     41       -> [GRP0]. [GRP1] -> GRP1
+        
+        lda _F,y                                        ; 4     45
+        ldy LetterBuffer2                               ; 3     48
+        sta GRP1                                        ; 3     51       -> [GRP1], [GRP0] -> GRP0
+        stx GRP0                                        ; 3     54       -> [GRP0], [GRP1] -> GRP1
+        sty GRP1                                        ; 3     57       -> [GRP1], [GRP0] -> GRP0
+        stx GRP0                                        ; 3     60      ?? -> [GRP0], [GRP1] -> GRP1
+        
+        ldx LineTemp2                                   ; 3     63
+        ldy YTemp2                                      ; 3     66
+        iny                                             ; 2     68
+
+        inx                                             ; 2     70
+        cpx #9                                          ; 2     72
+        nop                                             ; 2     74
+        nop                                             ; 2     76
+        bne DrawPlayer2JoinText                         ; 2/3   2/3
+
+        lda #0
+        sta NUSIZ0
+        sta NUSIZ1
+        lda #0
+        sta GRP0
+        sta GRP1
+        sta GRP0
+
+        
+
+Player2Buffer
+        inx
+        cpx #10
+        sta WSYNC
+        bne Player2Buffer
+        lda #0
+        sta NUSIZ0
+        sta NUSIZ1
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;; Drawing Score Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4022,43 +4160,49 @@ GameViewableScreen
 ; 48 cycles to draw each line of the scores 4-13
 ; 24 cycles to draw each remianing line 14-16
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldy #0
 ScoreArea 
-        cpx #3                                          ; 2     Draw Between lines 3 - 13 exclusive
-        bcc SkipDrawScore                               ; 2/3   Draw Between lines 3 - 13 exclusive
-        cpx #13                                         ; 2     Draw Between lines 3 - 13 exclusive
-        bcs SkipDrawScore                               ; 2/3   Draw Between lines 3 - 13 exclusive
-        
-        txa                                             ; 2     Transfer X to the Accumulator so we can subtract
-        sbc #2                                          ; 2     Subtract 2 to account for starting on line 3
-        lsr                                             ; 2     Divide by 2 to get index twice for double height
-        tay                                             ; 2     Transfer A to Y so we can index off Y
-
         lda P0ScoreArr,y                                ; 4     Get the Score From our Player 0 Score Array
         sta PF1                                         ; 3     Store Score to PF1
-
+        lda Zero_bank1,y                                ; 4     Get the Score From our Player 0 Score Array
+        lsr
+        sta PF2                                         ; 3     Store Score to PF1 
         nop                                             ; 2     Wait 2 cycles to get past drawing player 0's score
         nop                                             ; 2     Wait 2 cycles more to get past drawing player 0's score
 
         lda P1ScoreArr,y                                ; 4     Get the Score From our Player 1 Score Array
         sta PF1                                         ; 3     Store Score to PF1  
-        clc                                             ; 2     Clear to Carry so we always branch
-        bcc DrawScore                                   ; 2/3   Skip clearing the playfield
-SkipDrawScore
-        lda #0                                          ; 2     We're on lines that don't have the score so clear the playfield(PF1)
-        sta PF1                                         ; 3     We're on lines that don't have the score so clear the playfield(PF1)
-DrawScore
+        
+        iny
+        ; tya
+        ; lsr
+        ; tay
         inx                                             ; 2     Increment our line counter
-        cpx #16                                         ; 2     See if we're at line 16
+        cpx #15                                          ; 2     See if we're at line 16
         sta WSYNC                                       ; 3     Go to Next line
         bne ScoreArea                                   ; 2/3   If at line 16 then move on else branch back
+        lda #0                                          ; 2     We're on lines that don't have the score so clear the playfield(PF1)
+        sta PF1
+        sta PF2
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;; End Drawing Score Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-        inx
-        cpx #20
+        ldx #0
+        stx GRP0
+        stx GRP1
+        lda Player0XPos
+        jsr CalcXPos_bank1
         sta WSYNC
-        bne GameViewableScreen                          ; 2/3
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
+
+        ldx #17
+ScoreAreaBuffer
+        inx
+        cpx #32
+        sta WSYNC
+        bne ScoreAreaBuffer                          ; 2/3
 
 GameBoard
 ;;;;;;;;;;;;;;;; Drawing Players ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4086,14 +4230,26 @@ SkipSetDrawE1Flag
 ;         lda #1
 ;         sta DrawE2Sprite
 ; SkipSetDrawE2Flag
+        lda Fire
+        beq NoSlap
         
         lda DrawP0Sprite                        ; 3
-        beq SkipP0Draw                          ; 2/3
+        beq SkipP0DrawSlap                      ; 2/3
         ldy P0SprIdx                            ; 3
         lda PlayerGfx,y                         ; 4
         sta GRP0                                ; 3
         inc P0SprIdx                            ; 5
+SkipP0DrawSlap
+        jmp SkipDraw
+NoSlap
+        lda DrawP0Sprite                        ; 3
+        beq SkipP0Draw                          ; 2/3
+        ldy P0SprIdx                            ; 3
+        lda PlayerSlapGfx,y                         ; 4
+        sta GRP0                                ; 3
+        inc P0SprIdx                            ; 5
 SkipP0Draw
+SkipDraw        
 
         lda DrawE0Sprite
         beq SkipE0Draw
@@ -4163,13 +4319,10 @@ SkipE1ResetHeight
         inx                                             ; 2     67
         cpx #192                                        ; 2     69
         sta WSYNC                                       ; 3     72
-;         beq SkipJumpGameBoard                           ; 2/3   75
-;         jmp GameBoard
-; SkipJumpGameBoard
-        bne GameBoard
-
-        
-        
+        beq SkipJumpGameBoard                           ; 2/3   75
+        jmp GameBoard
+SkipJumpGameBoard
+        ;bne GameBoard
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4249,7 +4402,7 @@ SkipLeft
 SkipRight
        
         ldy Player0XPos
-        cpy #-2
+        cpy #0
         bne ZeroHPos
         ldy #0
         sty HMP0
@@ -4267,6 +4420,121 @@ MaxHPos
         sta WSYNC
         sta HMOVE
 ;;;;;;;;
+
+Score
+        lda P0Score1
+        sta P0Score1idx   
+        asl
+        asl
+        adc P0Score1idx
+        sta P0Score1idx
+        
+        lda #<(Zero_bank1)
+        sta P0Score1DigitPtr
+
+        lda #>(Zero_bank1)
+        sta P0Score1DigitPtr+1
+
+        lda P0Score2
+        sta P0Score2idx   
+        asl
+        asl
+        adc P0Score2idx
+        sta P0Score2idx
+        
+        lda #<(Zero_bank1)
+        sta P0Score2DigitPtr
+
+        lda #>(Zero_bank1)
+        sta P0Score2DigitPtr+1
+;;;;;;
+        lda P1Score1
+        sta P1Score1idx   
+        asl
+        asl
+        adc P1Score1idx
+        sta P1Score1idx
+        
+        lda #<(Zero_bank1)
+        sta P1Score1DigitPtr
+
+        lda #>(Zero_bank1)
+        sta P1Score1DigitPtr+1
+
+        lda P1Score2
+        sta P1Score2idx   
+        asl
+        asl
+        adc P1Score2idx
+        sta P1Score2idx
+        
+        lda #<(Zero_bank1)
+        sta P1Score2DigitPtr
+
+        lda #>(Zero_bank1)
+        sta P1Score2DigitPtr+1   
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldx #0
+CalcScore
+        ;P0
+        txa
+        adc P0Score1idx                                 ; 3
+        tay                                             ; 2
+        lda (P0Score1DigitPtr),y                        ; 5
+        and #%00001111                                  ; 2    
+        sta P0ScoreTmp                                  ; 3     
+
+        txa   
+        adc P0Score2idx                                 ; 3
+        tay                                             ; 2
+        lda (P0Score2DigitPtr),y                        ; 5
+        and #%11110000                                  ; 2     
+
+        ora P0ScoreTmp                                  ; 3     
+        sta P0ScoreArr,x                                ; 3
+
+        ;P1
+        txa
+        adc P1Score1idx                                 ; 3
+        tay                                             ; 2
+        lda (P1Score1DigitPtr),y                        ; 5
+        and #%00001111                                  ; 2    
+        sta P1ScoreTmp                                  ; 3     
+
+        txa   
+        adc P1Score2idx                                 ; 3
+        tay                                             ; 2
+        lda (P1Score2DigitPtr),y                        ; 5
+        and #%11110000                                  ; 2     
+
+        ora P1ScoreTmp                                  ; 3     
+        sta P1ScoreArr,x                                ; 3
+
+        inx
+        cpx #5
+        bcc CalcScore                                   ; 2/3 
+;;;;;;;;;;;;;;;;;;;;;;;
+        lda INPT4
+        bmi NotFire 
+        lda #0
+        sta Fire
+        jmp SkipFire
+NotFire
+        lda #1
+        sta Fire
+SkipFire
+
+        lda Flasher
+        bne DecFlasher
+        lda #P2_JOIN_FLASHRATE
+        sta Flasher
+        jmp SkipFlasher
+DecFlasher
+        dec Flasher
+SkipFlasher
 
 
 GameWaitLoop_bank1
@@ -4384,6 +4652,85 @@ PlayerGfx  .byte #%11111111
            .byte #%00000000
            .byte #%00000000
 
+PlayerSlapGfx  
+        .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+        .byte #%11111111
+          ; .byte #%11111111
+          ; .byte #%11111111
+          ; .byte #%11111111
+          ; .byte #%10000001
+          ; .byte #%10000001
+           .byte #%10000001
+          ; .byte #%10000001
+          ; .byte #%10000001
+          ; .byte #%10000001
+           .byte #%10000001
+          ; .byte #%10000001
+          ; .byte #%10000001
+          ; .byte #%10000001
+           .byte #%10000001
+          ; .byte #%10000001
+          ; .byte #%10000001
+          ; .byte #%11111111
+           .byte #%11111111
+          ; .byte #%11111111
+          ; .byte #%11111111
+          ; .byte #%11111111
+           .byte #%00011000
+          ; .byte #%00011000
+          ; .byte #%00011000
+          ; .byte #%00011000
+           .byte #%00011000
+          ; .byte #%00011000
+          ; .byte #%00011000
+          ; .byte #%00011000
+           .byte #%00011000
+          ; .byte #%00011000
+          ; .byte #%00011000
+          ; .byte #%00011000
+           .byte #%00011000
+          ; .byte #%00011000
+          ; .byte #%00011000
+          ; .byte #%00011000
+           .byte #%00011000
+          ; .byte #%00011000
+          ; .byte #%00011000
+          ; .byte #%00011000
+           .byte #%00011000
+          ; .byte #%00011000
+          ; .byte #%00011000
+          ; .byte #%00011000
+           .byte #%00011000
+          ; .byte #%00011000
+          ; .byte #%00011000
+          ; .byte #%00011000
+           .byte #%00011000
+          ; .byte #%00011000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+
 ON         .byte  #%11101110
            .byte  #%10101010
            .byte  #%10101010
@@ -4468,10 +4815,107 @@ E_         .byte  #%11100000
            .byte  #%10000000
            .byte  #%11100000
 
+        align 256
+_P         .byte  #%00001110
+           .byte  #%00001010
+           .byte  #%00001110
+           .byte  #%00001000
+           .byte  #%00001000
+
+RE_bank1   .byte  #%11101110
+           .byte  #%10101000
+           .byte  #%11101110
+           .byte  #%11001000
+           .byte  #%10101110
+
+IR         .byte  #%11101110
+           .byte  #%01001010
+           .byte  #%01001110
+           .byte  #%01001100
+           .byte  #%11101010
+
+SS         .byte  #%11101110
+           .byte  #%10001000
+           .byte  #%11101110
+           .byte  #%00100010
+           .byte  #%11101110
+
+_F         .byte  #%00001110
+           .byte  #%00001000
+           .byte  #%00001110
+           .byte  #%00001000
+           .byte  #%00001000
+
 W          .byte  #%10101010
            .byte  #%10101010
            .byte  #%11101110
            .byte  #%11101110
+           .byte  #%11101110
+
+Heart       .byte #%01100110
+            .byte #%11111111
+            .byte #%01111110
+            .byte #%00111100
+            .byte #%00011000
+
+Zero_bank1 .byte  #%11101110
+           .byte  #%10101010
+           .byte  #%10101010
+           .byte  #%10101010
+           .byte  #%11101110
+
+One_bank1        .byte  #%00100010
+           .byte  #%00100010
+           .byte  #%00100010
+           .byte  #%00100010
+           .byte  #%00100010
+
+Two_bank1        .byte  #%11101110
+           .byte  #%00100010
+           .byte  #%11101110
+           .byte  #%10001000
+           .byte  #%11101110
+
+Three_bank1      .byte  #%11101110
+           .byte  #%00100010
+           .byte  #%11101110
+           .byte  #%00100010
+           .byte  #%11101110
+
+Four_bank1       .byte  #%10101010
+           .byte  #%10101010
+           .byte  #%11101110
+           .byte  #%00100010
+           .byte  #%00100010
+
+Five_bank1       .byte  #%11101110
+           .byte  #%10001000
+           .byte  #%11101110
+           .byte  #%00100010
+           .byte  #%11101110
+
+Six_bank1        .byte  #%11101110
+           .byte  #%10001000
+           .byte  #%11101110
+           .byte  #%10101010
+           .byte  #%11101110
+
+Seven_bank1      .byte  #%11101110
+           .byte  #%00100010
+           .byte  #%00100010
+           .byte  #%00100010
+           .byte  #%00100010
+
+Eight_bank1      .byte  #%11101110
+           .byte  #%10101010
+           .byte  #%11101110
+           .byte  #%10101010
+           .byte  #%11101110
+
+Nine_bank1       .byte  #%11101110
+           .byte  #%10101010
+           .byte  #%11101110
+           .byte  #%00100010
            .byte  #%11101110
 
         echo "----"
