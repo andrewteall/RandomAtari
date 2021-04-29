@@ -3511,7 +3511,6 @@ ENDBank1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Bank1 Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;PATTERN                        = $80                   ; storage Location (1st byte in RAM)
 FLY_GAME_TITLE_BG_COLOR         = #57
 FLY_GAME_TITLE_COLOR            = #$02
 
@@ -3530,11 +3529,10 @@ BLXSTARTPOS        = #6
 BLYSTARTPOS        = #92
 BlHPOS             = #80
 
-
 ;;
 P0HEIGHT           = #27
-E0HEIGHT           = #8 
-E1HEIGHT           = #8
+E0HEIGHT           = #4
+E1HEIGHT           = #4
 E2HEIGHT           = #8
 
 PLAYER2_H_POS      = #100
@@ -3567,6 +3565,7 @@ Player0YPos             ds 1
 Player0YPosStr          ds 1
 DrawP0Sprite            ds 1
 P0SprIdx                ds 1
+Player0GfxPtr           ds 2
 
 
 Enemy0XPos              ds 1
@@ -3574,6 +3573,14 @@ Enemy0YPos              ds 1
 Enemy0YPosStr           ds 1
 DrawE0Sprite            ds 1
 E0SprIdx                ds 1
+Enemy0StartEdge         ds 1
+E0HorizontalByteIdx     ds 1
+E0VerticalByteIdx       ds 1
+E0HorizontalMovementIdx ds 1
+E0VerticalMovementIdx   ds 1
+E0HorizontalMovementPtr ds 2
+E0VerticalMovementPtr   ds 2
+Enemy0Alive             ds 1
 
 Enemy1XPos              ds 1
 Enemy1YPos              ds 1
@@ -4010,6 +4017,9 @@ GameStartOfFrame
         lda #0
         sta VBLANK
 
+        lda #0
+        sta COLUBK
+
 ; 3 VSYNC Lines
         lda #2
         sta VSYNC ; Turn on VSYNC
@@ -4066,30 +4076,28 @@ GameVerticalBlank
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Viewable Screen Start ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        jmp Filler
-        REPEAT 20
-        nop
-        REPEND
+        ; jmp Filler
+        ; REPEAT 20
+        ; nop
+        ; REPEND
 Filler
         ldy #0
         lda Flasher
-        cmp #P2_JOIN_FLASHRATE/2 +1
+        cmp #P2_JOIN_FLASHRATE/2 -10
         bpl GameViewableScreen
 
 FlashFire
         inx
-        cpx #8
+        cpx #9
         sta WSYNC
         bne FlashFire
         jmp Player2Buffer
-
-        
+  
 GameViewableScreen
         inx
         cpx #3
         sta WSYNC
         bne GameViewableScreen
-
 
         SLEEP SLEEPTIMER_PLAYER2
         inx                                             ; 2
@@ -4128,7 +4136,9 @@ DrawPlayer2JoinText
         nop                                             ; 2     76
         bne DrawPlayer2JoinText                         ; 2/3   2/3
 
-        lda #0
+        
+Player2Buffer
+        lda #DOUBLE_SIZE_PLAYER
         sta NUSIZ0
         sta NUSIZ1
         lda #0
@@ -4136,17 +4146,8 @@ DrawPlayer2JoinText
         sta GRP1
         sta GRP0
 
-        
-
-Player2Buffer
         inx
-        cpx #10
         sta WSYNC
-        bne Player2Buffer
-        lda #0
-        sta NUSIZ0
-        sta NUSIZ1
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;; Drawing Score Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4160,8 +4161,13 @@ Player2Buffer
 ; 48 cycles to draw each line of the scores 4-13
 ; 24 cycles to draw each remianing line 14-16
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ldy #0
-ScoreArea 
+        
+ScoreArea
+        txa
+        sbc #9
+        lsr
+        lsr
+        tay
         lda P0ScoreArr,y                                ; 4     Get the Score From our Player 0 Score Array
         sta PF1                                         ; 3     Store Score to PF1
         lda Zero_bank1,y                                ; 4     Get the Score From our Player 0 Score Array
@@ -4171,180 +4177,173 @@ ScoreArea
         nop                                             ; 2     Wait 2 cycles more to get past drawing player 0's score
 
         lda P1ScoreArr,y                                ; 4     Get the Score From our Player 1 Score Array
-        sta PF1                                         ; 3     Store Score to PF1  
+        sta PF1                                         ; 3     Store Score to PF1
         
-        iny
-        ; tya
-        ; lsr
-        ; tay
         inx                                             ; 2     Increment our line counter
-        cpx #15                                          ; 2     See if we're at line 16
+        cpx #30                                         ; 2     See if we're at line 30
         sta WSYNC                                       ; 3     Go to Next line
-        bne ScoreArea                                   ; 2/3   If at line 16 then move on else branch back
+        bne ScoreArea                                   ; 2/3   If at line 30 then move on else branch back
+
         lda #0                                          ; 2     We're on lines that don't have the score so clear the playfield(PF1)
         sta PF1
         sta PF2
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;; End Drawing Score Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+        lda Player0XPos
+        cmp #$78
+        bcs SkipWSYNC
+        sta WSYNC
+SkipWSYNC
+
         ldx #0
-        stx GRP0
-        stx GRP1
         lda Player0XPos
         jsr CalcXPos_bank1
+        sta HMP0
         sta WSYNC
         sta HMOVE
+
+        ; ldx #0
+        ; stx COLUBK
         SLEEP 24
         sta HMCLR
+        
+        ldx #1
+        stx VDELP0
+        stx VDELP1
+        
+        ldx #33
+        
+        ; lda #$0A
+        ; sta COLUBK
 
-        ldx #17
 ScoreAreaBuffer
         inx
-        cpx #32
+        cpx #40
         sta WSYNC
-        bne ScoreAreaBuffer                          ; 2/3
+        bne ScoreAreaBuffer
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Drawing Players and Enemy ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 GameBoard
-;;;;;;;;;;;;;;;; Drawing Players ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldy #1                                  ; 2
 
-        cpx Player0YPos
-        bne SkipSetDrawP0Flag
-        lda #1
-        sta DrawP0Sprite
+        cpx Player0YPos                         ; 3
+        bne SkipSetDrawP0Flag                   ; 2/3
+        sty DrawP0Sprite                        ; 3     (10)
 SkipSetDrawP0Flag
 
-        cpx Enemy0YPos
-        bne SkipSetDrawE0Flag
-        lda #1
-        sta DrawE0Sprite
+        cpx Enemy0YPos                          ; 3
+        bne SkipSetDrawE0Flag                   ; 2/3
+        sty DrawE0Sprite                        ; 3     (8)
 SkipSetDrawE0Flag
 
-        cpx Enemy1YPos
-        bne SkipSetDrawE1Flag
-        lda #1
-        sta DrawE1Sprite
+        cpx Enemy1YPos                          ; 3
+        bne SkipSetDrawE1Flag                   ; 2/3
+        sty DrawE1Sprite                        ; 3     (8)
 SkipSetDrawE1Flag
 
-;         cpx Enemy2YPos
-;         bne SkipSetDrawE2Flag
-;         lda #1
-;         sta DrawE2Sprite
-; SkipSetDrawE2Flag
-        lda Fire
-        beq NoSlap
-        
         lda DrawP0Sprite                        ; 3
         beq SkipP0DrawSlap                      ; 2/3
         ldy P0SprIdx                            ; 3
-        lda PlayerGfx,y                         ; 4
-        sta GRP0                                ; 3
-        inc P0SprIdx                            ; 5
+        lda (Player0GfxPtr),y                   ; 5
+        sta GRP0                                ; 3     
+        inc P0SprIdx                            ; 5     (21)
 SkipP0DrawSlap
-        jmp SkipDraw
-NoSlap
-        lda DrawP0Sprite                        ; 3
-        beq SkipP0Draw                          ; 2/3
-        ldy P0SprIdx                            ; 3
-        lda PlayerSlapGfx,y                         ; 4
-        sta GRP0                                ; 3
-        inc P0SprIdx                            ; 5
-SkipP0Draw
-SkipDraw        
 
-        lda DrawE0Sprite
-        beq SkipE0Draw
-        lda #2
-        sta ENABL
-        inc E0SprIdx
+        ldy #2                                  ; 2
+
+        lda DrawE0Sprite                        ; 3
+        beq SkipE0Draw                          ; 2/3
+        sty ENABL                               ; 3
+        inc E0SprIdx                            ; 5     (15)
 SkipE0Draw
-        
-        inx
-        ldy #0
-        sta WSYNC
-        sty GRP1
-;;;;;
-        lda DrawE1Sprite
-        beq SkipE1Draw
-        lda #2
-        sta ENAM0
-        inc E1SprIdx
+        inx                                     ; 2
+        sta WSYNC                               ; 3     (5)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+        lda DrawE1Sprite                        ; 3
+        beq SkipE1Draw                          ; 2/3
+        sty ENAM0                               ; 3
+        inc E1SprIdx                            ; 5     (13)
 SkipE1Draw
 
-;         lda DrawE2Sprite
-;         beq SkipE2Draw
-;         lda #2
-;         sta ENAM1
-;         inc E2SprIdx
-; SkipE2Draw
+        lda #0                                  ; 2
+        sta GRP1                                ; 3      (5)
 
         ldy P0SprIdx                            ; 3
         cpy #P0HEIGHT                           ; 2
         bne SkipP0ResetHeight                   ; 2/3
-        lda #0                                  ; 2
         sta P0SprIdx                            ; 3
-        sta DrawP0Sprite                        ; 3
+        sta DrawP0Sprite                        ; 3     (13)
 SkipP0ResetHeight
-
+        
         ldy E0SprIdx                            ; 3
         cpy #E0HEIGHT                           ; 2
         bne SkipE0ResetHeight                   ; 2/3
-        lda #0                                  ; 2
-        sta ENABL
+        sta ENABL                               ; 3
         sta E0SprIdx                            ; 3
-        sta DrawE0Sprite                        ; 3
+        sta DrawE0Sprite                        ; 3     (16)
 SkipE0ResetHeight
-
+        
         ldy E1SprIdx                            ; 3
         cpy #E1HEIGHT                           ; 2
         bne SkipE1ResetHeight                   ; 2/3
-        lda #0                                  ; 2
-        sta ENAM0
+        sta ENAM0                               ; 3
         sta E1SprIdx                            ; 3
-        sta DrawE1Sprite                        ; 3
+        sta DrawE1Sprite                        ; 3     (16)
 SkipE1ResetHeight
 
-;         ldy E2SprIdx                            ; 3
-;         cpy #E2HEIGHT                           ; 2
-;         bne SkipE2ResetHeight                   ; 2/3
-;         lda #0                                  ; 2
-;         sta ENAM1
-;         sta E2SprIdx                            ; 3
-;         sta DrawE2Sprite                        ; 3
-; SkipE2ResetHeight
+        inx                                     ; 2
+        cpx #192                                ; 2
+        sta WSYNC                               ; 3
+        bne GameBoard                           ; 2/3   (10)
+        ;beq SkipJumpGameBoard                   ; 2/3
+        ;jmp GameBoard
+;SkipJumpGameBoard
 
-;;;;;; 
-
-;;;;;;;;;;;;;;;;; End Drawing P0 Sprite ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-        inx                                             ; 2     67
-        cpx #192                                        ; 2     69
-        sta WSYNC                                       ; 3     72
-        beq SkipJumpGameBoard                           ; 2/3   75
-        jmp GameBoard
-SkipJumpGameBoard
-        ;bne GameBoard
-
+        
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End of Viewable Screen ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #%00000010                                  ; 2 end of screen - enter blanking
-        sta VBLANK                                      ; 3 
 
-        lda #0
-        sta COLUBK
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Setup Overscan  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #%00000010
+        sta VBLANK
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Setup Overscan  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Load Overscan Timer ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #30
         sta TIM64T
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Load Overscan Timer ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Check Debouce Counter ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda DebounceCtr
         beq GameSkipDecDebounceCtr_Bank1
         dec DebounceCtr
 GameSkipDecDebounceCtr_Bank1
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Check Debouce Counter ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Check Bank Switching ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda SWCHB
         and #%00000010
         ora DebounceCtr
@@ -4353,7 +4352,28 @@ GameSkipDecDebounceCtr_Bank1
         
         jmp SwitchToBank0
 GameSkipSwitchToBank0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Check Bank Switching ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Player 2 Join Flasher ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda Flasher
+        bne DecFlasher
+        lda #P2_JOIN_FLASHRATE
+        sta Flasher
+        jmp SkipFlasher
+DecFlasher
+        dec Flasher
+SkipFlasher
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Player 2 Join Flasher ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Player 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 PlayerControl
         ldy Player0YPos
 
@@ -4371,14 +4391,14 @@ SkipUp
         iny
 SkipDown
 
-        cpy #18
+        cpy #38
         bne ZeroVPos
-        ldy #20
+        ldy #40
 ZeroVPos
 
-        cpy #140
+        cpy #170
         bne MaxVPos
-        ldy #138
+        ldy #168
 MaxVPos
         sty Player0YPos
         sty Player0YPosStr
@@ -4416,16 +4436,166 @@ ZeroHPos
         sty HMP0
         dec Player0XPos
 MaxHPos
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Player 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+        lda Enemy0Alive
+        bne SkipGenerateE0
+        
+        lda INPT4
+        and #3
+        sta Enemy0StartEdge
+        
+        ; Generate Start Pos
+
+        ; Select Movement Pattern
+
+        ; Flag if position is reached so they can start normal movement
+
+
+        lda #1
+        sta Enemy0Alive
+SkipGenerateE0
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Enemy 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #<HorizontalMovement0
+        sta E0HorizontalMovementPtr
+        lda #>HorizontalMovement0
+        sta E0HorizontalMovementPtr+1
+
+        
+
+        lda Enemy0StartEdge
+        cmp #0
+        bne SkipLeftStartEdge
+
+        ldx E0HorizontalByteIdx
+        cpx #0
+        bne SkipResetHorizontalByteIdx
+        ldx #%10000000
+        stx E0HorizontalByteIdx
+        inc E0HorizontalMovementIdx        
+SkipResetHorizontalByteIdx
+        ldy E0HorizontalMovementIdx
+
+        lda (E0HorizontalMovementPtr),y
+        cmp #255
+        bne SkipResetHorizontalMovement
+        lda #0
+        sta E0HorizontalMovementIdx
+        ldy E0HorizontalMovementIdx
+        lda (E0HorizontalMovementPtr),y
+SkipResetHorizontalMovement
+        and E0HorizontalByteIdx
+        bne MoveE0Left
+        lda #$F0
+        sta HMBL
+        inc Enemy0XPos
+        jmp SkipE0LeftMove
+MoveE0Left
+        lda #$10
+        sta HMBL
+        dec Enemy0XPos
+SkipE0LeftMove
+
+        lda E0HorizontalByteIdx
+        lsr
+        sta E0HorizontalByteIdx
+
+SkipLeftStartEdge
 
         sta WSYNC
         sta HMOVE
-;;;;;;;;
+;;;;;
 
-Score
+        lda #<VerticalMovement0
+        sta E0VerticalMovementPtr
+        lda #>VerticalMovement0
+        sta E0VerticalMovementPtr+1
+
+        lda Enemy0StartEdge
+        cmp #1
+        bne SkipBottomStartEdge
+
+        ldx E0VerticalByteIdx
+        cpx #0
+        bne SkipResetVerticalByteIdx
+        ldx #%10000000
+        stx E0VerticalByteIdx
+        inc E0VerticalMovementIdx        
+SkipResetVerticalByteIdx
+        ldy E0VerticalMovementIdx
+
+        lda (E0VerticalMovementPtr),y
+        cmp #255
+        bne SkipResetVerticalMovement
+        lda #0
+        sta E0VerticalMovementIdx
+        ldy E0VerticalMovementIdx
+        lda (E0VerticalMovementPtr),y
+SkipResetVerticalMovement
+        and E0VerticalByteIdx
+        bne MoveE0Up
+        inc Enemy0YPos
+        inc Enemy0YPos
+        jmp SkipE0UpMove
+MoveE0Up
+        dec Enemy0YPos
+        dec Enemy0YPos
+SkipE0UpMove
+
+        lda E0VerticalByteIdx
+        lsr
+        sta E0VerticalByteIdx
+
+SkipBottomStartEdge
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Enemy 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Detect Hit ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+        lda INPT4
+        bmi NotFire 
+        lda #0
+        sta Fire
+        lda #<PlayerSlapGfx
+        sta Player0GfxPtr
+        lda #>PlayerSlapGfx
+        sta Player0GfxPtr+1
+        jmp SkipFire
+NotFire
+        lda #1
+        sta Fire
+        lda #<PlayerGfx
+        sta Player0GfxPtr
+        lda #>PlayerGfx
+        sta Player0GfxPtr+1
+SkipFire
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Detect Hit ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Scoring ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+P0Score
         lda P0Score1
         sta P0Score1idx   
         asl
         asl
+        asl
+        clc
+        adc P0Score1idx
+        clc
         adc P0Score1idx
         sta P0Score1idx
         
@@ -4439,6 +4609,10 @@ Score
         sta P0Score2idx   
         asl
         asl
+        asl
+        clc
+        adc P0Score2idx
+        clc
         adc P0Score2idx
         sta P0Score2idx
         
@@ -4447,11 +4621,15 @@ Score
 
         lda #>(Zero_bank1)
         sta P0Score2DigitPtr+1
-;;;;;;
+P1Score
         lda P1Score1
         sta P1Score1idx   
         asl
         asl
+        asl
+        clc
+        adc P1Score1idx
+        clc
         adc P1Score1idx
         sta P1Score1idx
         
@@ -4465,6 +4643,10 @@ Score
         sta P1Score2idx   
         asl
         asl
+        asl
+        clc
+        adc P1Score2idx
+        clc
         adc P1Score2idx
         sta P1Score2idx
         
@@ -4516,25 +4698,9 @@ CalcScore
         inx
         cpx #5
         bcc CalcScore                                   ; 2/3 
-;;;;;;;;;;;;;;;;;;;;;;;
-        lda INPT4
-        bmi NotFire 
-        lda #0
-        sta Fire
-        jmp SkipFire
-NotFire
-        lda #1
-        sta Fire
-SkipFire
-
-        lda Flasher
-        bne DecFlasher
-        lda #P2_JOIN_FLASHRATE
-        sta Flasher
-        jmp SkipFlasher
-DecFlasher
-        dec Flasher
-SkipFlasher
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Scoring ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 GameWaitLoop_bank1
@@ -4852,6 +5018,14 @@ W          .byte  #%10101010
            .byte  #%11101110
            .byte  #%11101110
 
+;HorizontalMovement0 
+;           .byte #%00000000, #%00000000, #%01010101, #%01010101, #%11111110, #%11111110,#%10101010, #%10101010, #255
+
+;VerticalMovement0 .byte #%10101010,#%10101010, #%11111110, #%11111110, #%10101010,#%10101010,#%00000000,#%00000000,#255
+HorizontalMovement0 .byte #%10101010,#%10101010, #255
+
+VerticalMovement0 .byte #%11111110,#255
+
 Heart       .byte #%01100110
             .byte #%11111111
             .byte #%01111110
@@ -4859,64 +5033,114 @@ Heart       .byte #%01100110
             .byte #%00011000
 
 Zero_bank1 .byte  #%11101110
+           ;.byte  #%11101110
            .byte  #%10101010
+           ;.byte  #%10101010
            .byte  #%10101010
+           ;.byte  #%10101010
            .byte  #%10101010
+           ;.byte  #%10101010
            .byte  #%11101110
+           ;.byte  #%11101110
 
 One_bank1        .byte  #%00100010
+           ;.byte  #%00100010
            .byte  #%00100010
+           ;.byte  #%00100010
            .byte  #%00100010
+           ;.byte  #%00100010
            .byte  #%00100010
+           ;.byte  #%00100010
            .byte  #%00100010
+           ;.byte  #%00100010
 
-Two_bank1        .byte  #%11101110
+Two_bank1  .byte  #%11101110
+           ;.byte  #%11101110
            .byte  #%00100010
+           ;.byte  #%00100010
            .byte  #%11101110
+           ;.byte  #%11101110
            .byte  #%10001000
+           ;.byte  #%10001000
            .byte  #%11101110
+           ;.byte  #%11101110
 
-Three_bank1      .byte  #%11101110
+Three_bank1 .byte  #%11101110
+           ;.byte  #%11101110
            .byte  #%00100010
+           ;.byte  #%00100010
            .byte  #%11101110
+           ;.byte  #%11101110
            .byte  #%00100010
+           ;.byte  #%00100010
            .byte  #%11101110
+           ;.byte  #%11101110
 
-Four_bank1       .byte  #%10101010
+Four_bank1 .byte  #%10101010
+           ;.byte  #%10101010
            .byte  #%10101010
+           ;.byte  #%10101010
            .byte  #%11101110
+           ;.byte  #%11101110
            .byte  #%00100010
+           ;.byte  #%00100010
            .byte  #%00100010
+           ;.byte  #%00100010
 
-Five_bank1       .byte  #%11101110
+Five_bank1 .byte  #%11101110
+           ;.byte  #%11101110
            .byte  #%10001000
+           ;.byte  #%10001000
            .byte  #%11101110
+           ;.byte  #%11101110
            .byte  #%00100010
+           ;.byte  #%00100010
            .byte  #%11101110
+           ;.byte  #%11101110
 
-Six_bank1        .byte  #%11101110
+Six_bank1  .byte  #%11101110
+           ;.byte  #%11101110
            .byte  #%10001000
+           ;.byte  #%10001000
            .byte  #%11101110
+           ;.byte  #%11101110
            .byte  #%10101010
+           ;.byte  #%10101010
            .byte  #%11101110
+           ;.byte  #%11101110
 
-Seven_bank1      .byte  #%11101110
+Seven_bank1 .byte  #%11101110
+           ;.byte  #%11101110
            .byte  #%00100010
+           ;.byte  #%00100010
            .byte  #%00100010
+           ;.byte  #%00100010
            .byte  #%00100010
+           ;.byte  #%00100010
            .byte  #%00100010
+           ;.byte  #%00100010
 
-Eight_bank1      .byte  #%11101110
+Eight_bank1 .byte  #%11101110
+           ;.byte  #%11101110
            .byte  #%10101010
+           ;.byte  #%10101010
            .byte  #%11101110
+           ;.byte  #%11101110
            .byte  #%10101010
+           ;.byte  #%10101010
            .byte  #%11101110
+           ;.byte  #%11101110
 
-Nine_bank1       .byte  #%11101110
+Nine_bank1 .byte  #%11101110
+           ;.byte  #%11101110
            .byte  #%10101010
+           ;.byte  #%10101010
            .byte  #%11101110
+           ;.byte  #%11101110
            .byte  #%00100010
+           ;.byte  #%00100010
            .byte  #%11101110
+           ;.byte  #%11101110
 
         echo "----"
         echo "Rom Total Bank1:"
