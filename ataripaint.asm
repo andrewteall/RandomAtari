@@ -4476,6 +4476,76 @@ MaxHPos
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Player 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Detect Hit ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+        lda DebounceCtr
+        bne SkipHitDetection
+        lda INPT4
+        bmi NotFire 
+        lda #0
+        sta Fire
+        lda #<PlayerSlapGfx
+        sta Player0GfxPtr
+        lda #>PlayerSlapGfx
+        sta Player0GfxPtr+1
+
+        lda Player0XPos
+        cmp Enemy0XPos
+        bcs SkipEnemy0Hit
+        clc
+        adc #16
+        cmp Enemy0XPos
+        bcc SkipEnemy0Hit
+
+        lda Player0YPos
+        cmp Enemy0YPos
+        bcs SkipEnemy0Hit
+        clc
+        adc #16
+        cmp Enemy0YPos
+        bcc SkipEnemy0Hit
+
+        
+
+        lda #0
+        sta Enemy0Alive
+        sta Enemy0XPos
+        sta Enemy0YPos
+
+        lda #150
+        sta Enemy0GenTimer
+
+        inc P0Score1
+        lda P0Score1
+        cmp #10
+        bne SkipEnemy0Hit
+        lda #0
+        sta P0Score1
+        inc P0Score2
+
+SkipEnemy0Hit
+        ; lda #10
+        ; sta DebounceCtr
+        jmp SkipFire
+
+SkipHitDetection
+
+NotFire
+        lda #1
+        sta Fire
+        lda #<PlayerGfx
+        sta Player0GfxPtr
+        lda #>PlayerGfx
+        sta Player0GfxPtr+1
+SkipFire
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Detect Hit ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Enemy 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4525,6 +4595,9 @@ RegenE0HSeed
         beq RegenE0HSeed
         jsr GetRandomNumber
         and #158
+        ; and #2
+        ; clc
+        ; adc #70
         sta Enemy0HWayPoint
 
 RegenE0VSeed
@@ -4534,6 +4607,9 @@ RegenE0VSeed
         and #148
         clc
         adc #32
+        ; and #2
+        ; clc
+        ; adc #72
         sta Enemy0VWayPoint
 SkipGenerateNewE0WayPoints
 
@@ -4573,9 +4649,9 @@ SkipSetE0VMoveLeft
         dec Enemy0YPos
 SkipSetE0VMoveRight
 
-        lda Flasher
-        and #1
-        bne SkipHMOVE        
+        ; lda Flasher
+        ; and #1
+        ; bne SkipHMOVE        
         sta WSYNC
         sta HMOVE
 SkipHMOVE
@@ -4600,65 +4676,7 @@ SkipEnemy0Movement
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Enemy 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Detect Hit ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda DebounceCtr
-        bne SkipHitDetection
-        lda INPT4
-        bmi NotFire 
-        lda #0
-        sta Fire
-        lda #<PlayerSlapGfx
-        sta Player0GfxPtr
-        lda #>PlayerSlapGfx
-        sta Player0GfxPtr+1
-
-        lda Player0XPos
-        cmp Enemy0XPos
-        bcs SkipEnemy0Hit
-        clc
-        adc #16
-        cmp Enemy0XPos
-        bcc SkipEnemy0Hit
-
-        lda Player0YPos
-        cmp Enemy0YPos
-        bcs SkipEnemy0Hit
-        clc
-        adc #16
-        cmp Enemy0YPos
-        bcc SkipEnemy0Hit
-
-        inc P0Score1
-        lda P0Score1
-        cmp #10
-        bne SkipEnemy0Hit
-        lda #0
-        sta P0Score1
-        inc P0Score2
-
-SkipEnemy0Hit
-        lda #10
-        sta DebounceCtr
-        jmp SkipFire
-
-SkipHitDetection
-
-NotFire
-        lda #1
-        sta Fire
-        lda #<PlayerGfx
-        sta Player0GfxPtr
-        lda #>PlayerGfx
-        sta Player0GfxPtr+1
-SkipFire
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Detect Hit ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Scoring ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
