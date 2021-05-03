@@ -4164,7 +4164,7 @@ Player2Buffer
         sta GRP0
         sta GRP1
         sta GRP0
-
+        sec
         inx
         sta WSYNC
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4486,6 +4486,10 @@ MaxHPos
         bmi NotFire 
         lda #0
         sta Fire
+
+        lda #10
+        sta DebounceCtr
+
         lda #<PlayerSlapGfx
         sta Player0GfxPtr
         lda #>PlayerSlapGfx
@@ -4507,11 +4511,9 @@ MaxHPos
         cmp Enemy0YPos
         bcc SkipEnemy0Hit
 
-        
-
         lda #0
         sta Enemy0Alive
-        sta Enemy0XPos
+        ; sta Enemy0XPos
         sta Enemy0YPos
 
         lda #150
@@ -4526,8 +4528,6 @@ MaxHPos
         inc P0Score2
 
 SkipEnemy0Hit
-        ; lda #10
-        ; sta DebounceCtr
         jmp SkipFire
 
 SkipHitDetection
@@ -4669,6 +4669,7 @@ SkipHMOVE
 ;RegenWayPoints
         lda #0 
         sta Enemy0HWayPoint
+        ;sta Enemy0VWayPoint
 SkipRegenWayPoints
 
 SkipEnemy0Movement        
@@ -4684,13 +4685,12 @@ SkipEnemy0Movement
 P0Score
         lda P0Score1
         sta P0Score1idx   
-        asl
+        
         asl
         asl
         clc
         adc P0Score1idx
-        clc
-        adc P0Score1idx
+        
         sta P0Score1idx
         
         lda #<(Zero_bank1)
@@ -4701,11 +4701,9 @@ P0Score
 
         lda P0Score2
         sta P0Score2idx   
+        
         asl
         asl
-        asl
-        clc
-        adc P0Score2idx
         clc
         adc P0Score2idx
         sta P0Score2idx
@@ -4720,9 +4718,6 @@ P1Score
         sta P1Score1idx   
         asl
         asl
-        asl
-        clc
-        adc P1Score1idx
         clc
         adc P1Score1idx
         sta P1Score1idx
@@ -4737,9 +4732,6 @@ P1Score
         sta P1Score2idx   
         asl
         asl
-        asl
-        clc
-        adc P1Score2idx
         clc
         adc P1Score2idx
         sta P1Score2idx
@@ -4757,13 +4749,15 @@ P1Score
 CalcScore
         ;P0
         txa
+        clc
         adc P0Score1idx                                 ; 3
         tay                                             ; 2
         lda (P0Score1DigitPtr),y                        ; 5
         and #%00001111                                  ; 2    
         sta P0ScoreTmp                                  ; 3     
 
-        txa   
+        txa
+        clc   
         adc P0Score2idx                                 ; 3
         tay                                             ; 2
         lda (P0Score2DigitPtr),y                        ; 5
@@ -4774,13 +4768,15 @@ CalcScore
 
         ;P1
         txa
+        clc
         adc P1Score1idx                                 ; 3
         tay                                             ; 2
         lda (P1Score1DigitPtr),y                        ; 5
         and #%00001111                                  ; 2    
         sta P1ScoreTmp                                  ; 3     
 
-        txa   
+        txa
+        clc   
         adc P1Score2idx                                 ; 3
         tay                                             ; 2
         lda (P1Score2DigitPtr),y                        ; 5
