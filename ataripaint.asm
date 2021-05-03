@@ -3556,6 +3556,10 @@ LetterBuffer2           ds 1
 LineTemp2               ds 1
 YTemp2                  ds 1
 Flasher                 ds 1
+UseVectorPaths          ds 1
+
+
+
 
 P0ScoreArr              ds 5
 P1ScoreArr              ds 5
@@ -3566,6 +3570,7 @@ Player0YPosStr          ds 1
 DrawP0Sprite            ds 1
 P0SprIdx                ds 1
 Player0GfxPtr           ds 2
+P0Height                ds 1
 
 
 Enemy0XPos              ds 1
@@ -3581,6 +3586,9 @@ E0VerticalMovementIdx   ds 1
 E0HorizontalMovementPtr ds 2
 E0VerticalMovementPtr   ds 2
 Enemy0Alive             ds 1
+Enemy0GenTimer          ds 1
+Enemy0HWayPoint         ds 1
+Enemy0VWayPoint         ds 1
 
 Enemy1XPos              ds 1
 Enemy1YPos              ds 1
@@ -4004,14 +4012,25 @@ GameScreen
         ldx #P0YSTARTPOS
         stx Player0YPos
 
-        ldx #E0YSTARTPOS
+        ; ldx #E0YSTARTPOS
+        ldx #0
         stx Enemy0YPos
 
-        ldx #E1YSTARTPOS
+        ; ldx #E1YSTARTPOS
+        ldx #0
         stx Enemy1YPos
+        
+        ldx #0
+        stx Enemy0Alive
 
         ldx #E2YSTARTPOS
         stx Enemy2YPos
+        
+        ldx #27
+        stx P0Height
+
+        ldx #100
+        stx Enemy0GenTimer
 
 GameStartOfFrame
         lda #0
@@ -4204,8 +4223,8 @@ SkipWSYNC
         sta WSYNC
         sta HMOVE
 
-        ; ldx #0
-        ; stx COLUBK
+        ldx #0
+        stx COLUBK
         SLEEP 24
         sta HMCLR
         
@@ -4215,15 +4234,13 @@ SkipWSYNC
         
         ldx #33
         
-        ; lda #$0A
-        ; sta COLUBK
-
 ScoreAreaBuffer
         inx
-        cpx #40
+        cpx #34
         sta WSYNC
         bne ScoreAreaBuffer
-
+        lda #$0A
+        sta COLUBK
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Drawing Players and Enemy ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4274,7 +4291,7 @@ SkipE1Draw
         sta GRP1                                ; 3      (5)
 
         ldy P0SprIdx                            ; 3
-        cpy #P0HEIGHT                           ; 2
+        cpy P0Height                            ; 2
         bne SkipP0ResetHeight                   ; 2/3
         sta P0SprIdx                            ; 3
         sta DrawP0Sprite                        ; 3     (13)
@@ -4340,7 +4357,6 @@ GameSkipDecDebounceCtr_Bank1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Check Debouce Counter ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Check Bank Switching ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4369,6 +4385,26 @@ DecFlasher
 SkipFlasher
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Player 2 Join Flasher ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Hide Player0 Sprite Overflow ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #135
+        cmp Player0YPos
+        bcs SkipPlayerHeight
+        lda #192
+        ;sec
+        sbc Player0YPos
+        lsr
+        sta P0Height
+        jmp SetPlayerHeight
+SkipPlayerHeight
+        lda #27
+        sta P0Height
+SetPlayerHeight
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Hide Player0 Sprite Overflow ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4440,128 +4476,136 @@ MaxHPos
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Player 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda Enemy0Alive
-        bne SkipGenerateE0
-        
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Enemy 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+                
+        lda Enemy0GenTimer
+        beq SkipEnemy0CountdownTimer
+        dec Enemy0GenTimer
+SkipEnemy0CountdownTimer
+
+        lda Enemy0GenTimer
+        cmp #1
+        bne SkipGenerateEnemy0
+DetermineEdge
         lda INPT4
         and #3
         sta Enemy0StartEdge
+        beq DetermineEdge               ; If edge is 0 try again
+
+        lda #1
+        sta Enemy0Alive
+        
         
         ; Generate Start Pos
 
         ; Select Movement Pattern
 
         ; Flag if position is reached so they can start normal movement
+SkipGenerateEnemy0
 
-
+        lda Enemy0GenTimer
+        bne SkipEnemy0Alive
         lda #1
         sta Enemy0Alive
-SkipGenerateE0
+SkipEnemy0Alive
 
+        lda Enemy0Alive
+        beq SkipEnemy0Movement
+Enemy0VectorPath
+        ;; Do vector path code here
+        lda Enemy0HWayPoint
+        bne SkipGenerateNewE0WayPoints
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Enemy 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #<HorizontalMovement0
-        sta E0HorizontalMovementPtr
-        lda #>HorizontalMovement0
-        sta E0HorizontalMovementPtr+1
+RegenE0HSeed
+        lda INPT4
+        beq RegenE0HSeed
+        jsr GetRandomNumber
+        and #158
+        sta Enemy0HWayPoint
 
-        
+RegenE0VSeed
+        lda INPT4
+        beq RegenE0VSeed
+        jsr GetRandomNumber
+        and #148
+        clc
+        adc #32
+        sta Enemy0VWayPoint
+SkipGenerateNewE0WayPoints
 
-        lda Enemy0StartEdge
-        cmp #0
-        bne SkipLeftStartEdge
-
-        ldx E0HorizontalByteIdx
-        cpx #0
-        bne SkipResetHorizontalByteIdx
-        ldx #%10000000
-        stx E0HorizontalByteIdx
-        inc E0HorizontalMovementIdx        
-SkipResetHorizontalByteIdx
-        ldy E0HorizontalMovementIdx
-
-        lda (E0HorizontalMovementPtr),y
-        cmp #255
-        bne SkipResetHorizontalMovement
-        lda #0
-        sta E0HorizontalMovementIdx
-        ldy E0HorizontalMovementIdx
-        lda (E0HorizontalMovementPtr),y
-SkipResetHorizontalMovement
-        and E0HorizontalByteIdx
-        bne MoveE0Left
+        lda Enemy0HWayPoint
+        sec
+        sbc Enemy0XPos
+        bne SkipSetE0HMoveFlat
+        lda #$0
+        sta HMBL
+        jmp SkipSetE0HMoveRight
+SkipSetE0HMoveFlat
+        bcc SkipSetE0HMoveLeft
         lda #$F0
         sta HMBL
         inc Enemy0XPos
-        jmp SkipE0LeftMove
-MoveE0Left
+        jmp SkipSetE0HMoveRight
+SkipSetE0HMoveLeft
+        bcs SkipSetE0HMoveRight
         lda #$10
         sta HMBL
         dec Enemy0XPos
-SkipE0LeftMove
+SkipSetE0HMoveRight
 
-        lda E0HorizontalByteIdx
-        lsr
-        sta E0HorizontalByteIdx
+        lda Enemy0VWayPoint
+        sec
+        sbc Enemy0YPos
+        bne SkipSetE0VMoveFlat
+        jmp SkipSetE0VMoveRight
+SkipSetE0VMoveFlat
+        bcc SkipSetE0VMoveLeft
+        inc Enemy0YPos
+        inc Enemy0YPos
+        jmp SkipSetE0VMoveRight
+SkipSetE0VMoveLeft
+        bcs SkipSetE0VMoveRight
+        dec Enemy0YPos
+        dec Enemy0YPos
+SkipSetE0VMoveRight
 
-SkipLeftStartEdge
-
+        lda Flasher
+        and #1
+        bne SkipHMOVE        
         sta WSYNC
         sta HMOVE
-;;;;;
+SkipHMOVE
 
-        lda #<VerticalMovement0
-        sta E0VerticalMovementPtr
-        lda #>VerticalMovement0
-        sta E0VerticalMovementPtr+1
+        lda Enemy0XPos
+        sec
+        sbc Enemy0HWayPoint
+        bne SkipRegenWayPoints
+        ;beq RegenWayPoints
 
-        lda Enemy0StartEdge
-        cmp #1
-        bne SkipBottomStartEdge
+        lda Enemy0YPos
+        sec
+        sbc Enemy0VWayPoint
+        bne SkipRegenWayPoints
+;RegenWayPoints
+        lda #0 
+        sta Enemy0HWayPoint
+SkipRegenWayPoints
 
-        ldx E0VerticalByteIdx
-        cpx #0
-        bne SkipResetVerticalByteIdx
-        ldx #%10000000
-        stx E0VerticalByteIdx
-        inc E0VerticalMovementIdx        
-SkipResetVerticalByteIdx
-        ldy E0VerticalMovementIdx
-
-        lda (E0VerticalMovementPtr),y
-        cmp #255
-        bne SkipResetVerticalMovement
-        lda #0
-        sta E0VerticalMovementIdx
-        ldy E0VerticalMovementIdx
-        lda (E0VerticalMovementPtr),y
-SkipResetVerticalMovement
-        and E0VerticalByteIdx
-        bne MoveE0Up
-        inc Enemy0YPos
-        inc Enemy0YPos
-        jmp SkipE0UpMove
-MoveE0Up
-        dec Enemy0YPos
-        dec Enemy0YPos
-SkipE0UpMove
-
-        lda E0VerticalByteIdx
-        lsr
-        sta E0VerticalByteIdx
-
-SkipBottomStartEdge
+SkipEnemy0Movement        
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Enemy 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Detect Hit ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+        lda DebounceCtr
+        bne SkipHitDetection
         lda INPT4
         bmi NotFire 
         lda #0
@@ -4570,7 +4614,38 @@ SkipBottomStartEdge
         sta Player0GfxPtr
         lda #>PlayerSlapGfx
         sta Player0GfxPtr+1
+
+        lda Player0XPos
+        cmp Enemy0XPos
+        bcs SkipEnemy0Hit
+        clc
+        adc #16
+        cmp Enemy0XPos
+        bcc SkipEnemy0Hit
+
+        lda Player0YPos
+        cmp Enemy0YPos
+        bcs SkipEnemy0Hit
+        clc
+        adc #16
+        cmp Enemy0YPos
+        bcc SkipEnemy0Hit
+
+        inc P0Score1
+        lda P0Score1
+        cmp #10
+        bne SkipEnemy0Hit
+        lda #0
+        sta P0Score1
+        inc P0Score2
+
+SkipEnemy0Hit
+        lda #10
+        sta DebounceCtr
         jmp SkipFire
+
+SkipHitDetection
+
 NotFire
         lda #1
         sta Fire
@@ -4579,6 +4654,7 @@ NotFire
         lda #>PlayerGfx
         sta Player0GfxPtr+1
 SkipFire
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Detect Hit ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4750,6 +4826,24 @@ CalcXPos_bank1:
 ;;;;;;;;;;; End Calculate Horizontal Sprite Position ;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
+;;;;;;;;;;; Calculate and Return a Random Number ;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Min 11 cycles
+; Max 12 cycles 
+; 
+; A - Seed For Random Number
+;
+; Returns:
+; A - Random Number
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+GetRandomNumber:
+        lsr                                             ; 2
+        bcc Skipeor                                     ; 2/3
+        eor #$B4                                        ; 2     ;$8E,95,96,A6,AF,B1,B2,B4,B8,C3,C6,D4,E1,E7,F3,FA
+Skipeor:
+        rts                                             ; 6   
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4768,17 +4862,17 @@ PlayerGfx  .byte #%11111111
            .byte #%11111111
           ; .byte #%11111111
            .byte #%10000001
-          ; .byte #%10000001
+          
            .byte #%10000001
-          ; .byte #%10000001
+          
            .byte #%10000001
-          ; .byte #%10000001
+          
            .byte #%10000001
-          ; .byte #%10000001
+          
            .byte #%10000001
-          ; .byte #%10000001
+          
            .byte #%10000001
-          ; .byte #%10000001
+          
            .byte #%10000001
           ; .byte #%11111111
            .byte #%11111111
@@ -4804,26 +4898,26 @@ PlayerGfx  .byte #%11111111
            .byte #%00011000
           ; .byte #%00011000
            .byte #%00011000
-          ; .byte #%00011000
+          
            .byte #%00011000
-          ; .byte #%00011000
-           .byte #%00011000
-          ; .byte #%00011000
-           .byte #%00011000
-          ; .byte #%00011000
-           .byte #%00011000
-          ; .byte #%00011000
-           .byte #%00011000
-          ; .byte #%00011000
+          
+        ;    .byte #%00011000
+          
+        ;    .byte #%00011000
+          
+        ;    .byte #%00011000
+          
+        ;    .byte #%00011000
+          
            .byte #%00000000
            .byte #%00000000
 
 PlayerSlapGfx  
-        .byte #%00000000
-           .byte #%00000000
-           .byte #%00000000
-           .byte #%00000000
-           .byte #%00000000
+        ; .byte #%00000000
+        ;    .byte #%00000000
+        ;    .byte #%00000000
+        ;    .byte #%00000000
+        ;    .byte #%00000000
            .byte #%00000000
            .byte #%00000000
            .byte #%00000000
