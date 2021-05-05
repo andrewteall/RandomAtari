@@ -3955,38 +3955,6 @@ Overscan2
 PlaySwatterGame
 
 GameScreen
-        ldx #0
-        lda #P0XSTARTPOS
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
-        SLEEP 24
-        sta HMCLR
-        
-        ldx #4
-        lda #E0XSTARTPOS
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
-        SLEEP 24
-        sta HMCLR
-
-        ldx #2
-        lda #E1XSTARTPOS
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
-        SLEEP 24
-        sta HMCLR
-
-        ldx #3
-        lda #E2XSTARTPOS
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
-        SLEEP 24
-        sta HMCLR
-
         lda #0
         sta GRP0
         sta GRP1
@@ -4043,6 +4011,38 @@ GameScreen
         ldx #100
         stx Enemy0GenTimer
         stx Enemy1GenTimer
+
+        ldx #0
+        lda Player0XPos
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
+        
+        ldx #2
+        lda Enemy0XPos
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
+
+        ldx #3
+        lda Enemy1XPos
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
+
+        ldx #4
+        lda #E2XSTARTPOS
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
 
 GameStartOfFrame
         lda #0
@@ -4672,18 +4672,18 @@ SkipGenerateNewE0WayPoints
         sbc Enemy0XPos
         bne SkipSetE0HMoveFlat
         lda #$0
-        sta HMBL
+        sta HMM0
         jmp SkipSetE0HMoveRight
 SkipSetE0HMoveFlat
         bcc SkipSetE0HMoveLeft
         lda #$F0
-        sta HMBL
+        sta HMM0
         inc Enemy0XPos
         jmp SkipSetE0HMoveRight
 SkipSetE0HMoveLeft
         bcs SkipSetE0HMoveRight
         lda #$10
-        sta HMBL
+        sta HMM0
         dec Enemy0XPos
 SkipSetE0HMoveRight
 
@@ -4803,19 +4803,18 @@ SkipGenerateNewE1WayPoints
         sbc Enemy1XPos
         bne SkipSetE1HMoveFlat
         lda #$0
-        sta HMBL
+        sta HMM1
         jmp SkipSetE1HMoveRight
 SkipSetE1HMoveFlat
         bcc SkipSetE1HMoveLeft
         lda #$F0
-
-        sta HMM0
+        sta HMM1
         inc Enemy1XPos
         jmp SkipSetE1HMoveRight
 SkipSetE1HMoveLeft
         bcs SkipSetE1HMoveRight
         lda #$10
-        sta HMM0
+        sta HMM1
         dec Enemy1XPos
 SkipSetE1HMoveRight
 
