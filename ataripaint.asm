@@ -4280,7 +4280,7 @@ SkipSetDrawE1Flag
         beq SkipP0Draw                          ; 2/3
         ldy P0SprIdx                            ; 3
         lda (Player0GfxPtr),y                   ; 5
-        sta GRP0                                ; 3     
+        sta GRP0                                ; 3
         inc P0SprIdx                            ; 5     (21)
 SkipP0Draw
 
@@ -4288,7 +4288,7 @@ SkipP0Draw
 
         lda DrawE0Sprite                        ; 3
         beq SkipE0Draw                          ; 2/3
-        sty ENABL                               ; 3
+        sty ENAM0                               ; 3
         inc E0SprIdx                            ; 5     (15)
 SkipE0Draw
 
@@ -4298,7 +4298,7 @@ SkipE0Draw
 
         lda DrawE1Sprite                        ; 3
         beq SkipE1Draw                          ; 2/3
-        sty ENAM0                               ; 3
+        sty ENAM1                               ; 3
         inc E1SprIdx                            ; 5     (13)
 SkipE1Draw
 
@@ -4315,7 +4315,7 @@ SkipP0ResetHeight
         ldy E0SprIdx                            ; 3
         cpy #E0HEIGHT                           ; 2
         bne SkipE0ResetHeight                   ; 2/3
-        sta ENABL                               ; 3
+        sta ENAM0                               ; 3
         sta E0SprIdx                            ; 3
         sta DrawE0Sprite                        ; 3     (16)
 SkipE0ResetHeight
@@ -4323,7 +4323,7 @@ SkipE0ResetHeight
         ldy E1SprIdx                            ; 3
         cpy #E1HEIGHT                           ; 2
         bne SkipE1ResetHeight                   ; 2/3
-        sta ENAM0                               ; 3
+        sta ENAM1                               ; 3
         sta E1SprIdx                            ; 3
         sta DrawE1Sprite                        ; 3     (16)
 SkipE1ResetHeight
