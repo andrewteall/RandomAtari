@@ -3595,6 +3595,17 @@ Enemy1YPos              ds 1
 Enemy1YPosStr           ds 1
 DrawE1Sprite            ds 1
 E1SprIdx                ds 1
+Enemy1StartEdge         ds 1
+E1HorizontalByteIdx     ds 1
+E1VerticalByteIdx       ds 1
+E1HorizontalMovementIdx ds 1
+E1VerticalMovementIdx   ds 1
+E1HorizontalMovementPtr ds 2
+E1VerticalMovementPtr   ds 2
+Enemy1Alive             ds 1
+Enemy1GenTimer          ds 1
+Enemy1HWayPoint         ds 1
+Enemy1VWayPoint         ds 1
 
 Enemy2XPos              ds 1
 Enemy2YPos              ds 1
@@ -4031,6 +4042,7 @@ GameScreen
 
         ldx #100
         stx Enemy0GenTimer
+        stx Enemy1GenTimer
 
 GameStartOfFrame
         lda #0
@@ -4203,8 +4215,8 @@ ScoreArea
         sta WSYNC                                       ; 3     Go to Next line
         bne ScoreArea                                   ; 2/3   If at line 30 then move on else branch back
 
-        lda #0                                          ; 2     We're on lines that don't have the score so clear the playfield(PF1)
-        sta PF1
+        lda #0                                          ; 2     We're on lines that don't have the score 
+        sta PF1                                         ; 3     so clear the playfield(PF1)
         sta PF2
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;; End Drawing Score Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
@@ -4238,9 +4250,11 @@ ScoreAreaBuffer
         inx
         cpx #34
         sta WSYNC
-        bne ScoreAreaBuffer
+        ;bne ScoreAreaBuffer
         lda #$0A
         sta COLUBK
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Drawing Players and Enemy ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4263,12 +4277,12 @@ SkipSetDrawE0Flag
 SkipSetDrawE1Flag
 
         lda DrawP0Sprite                        ; 3
-        beq SkipP0DrawSlap                      ; 2/3
+        beq SkipP0Draw                          ; 2/3
         ldy P0SprIdx                            ; 3
         lda (Player0GfxPtr),y                   ; 5
         sta GRP0                                ; 3     
         inc P0SprIdx                            ; 5     (21)
-SkipP0DrawSlap
+SkipP0Draw
 
         ldy #2                                  ; 2
 
@@ -4277,6 +4291,7 @@ SkipP0DrawSlap
         sty ENABL                               ; 3
         inc E0SprIdx                            ; 5     (15)
 SkipE0Draw
+
         inx                                     ; 2
         sta WSYNC                               ; 3     (5)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4487,7 +4502,7 @@ MaxHPos
         lda #0
         sta Fire
 
-        lda #10
+        lda #8
         sta DebounceCtr
 
         lda #<PlayerSlapGfx
@@ -4521,13 +4536,49 @@ MaxHPos
 
         inc P0Score1
         lda P0Score1
-        cmp #10
+        cmp #8
         bne SkipEnemy0Hit
         lda #0
         sta P0Score1
         inc P0Score2
 
 SkipEnemy0Hit
+
+        lda Player0XPos
+        cmp Enemy0XPos
+        bcs SkipEnemy1Hit
+        clc
+        adc #16
+        cmp Enemy1XPos
+        bcc SkipEnemy1Hit
+
+        lda Player0YPos
+        cmp Enemy1YPos
+        bcs SkipEnemy1Hit
+        clc
+        adc #16
+        cmp Enemy1YPos
+        bcc SkipEnemy1Hit
+
+        lda #0
+        sta Enemy1Alive
+        ; sta Enemy1XPos
+        sta Enemy1YPos
+
+        lda #150
+        sta Enemy1GenTimer
+
+        inc P0Score1
+        lda P0Score1
+        cmp #8
+        bne SkipEnemy1Hit
+        lda #1
+        sta P0Score1
+        inc P0Score2
+
+SkipEnemy1Hit
+
+
         jmp SkipFire
 
 SkipHitDetection
@@ -4535,6 +4586,9 @@ SkipHitDetection
 NotFire
         lda #1
         sta Fire
+        lda DebounceCtr
+        bne SkipFire
+
         lda #<PlayerGfx
         sta Player0GfxPtr
         lda #>PlayerGfx
@@ -4672,16 +4726,149 @@ SkipHMOVE
         ;sta Enemy0VWayPoint
 SkipRegenWayPoints
 
-SkipEnemy0Movement        
+SkipEnemy0Movement   
+        sta HMCLR
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Enemy 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Enemy 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Enemy 1 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+                
+        lda Enemy1GenTimer
+        beq SkipEnemy1CountdownTimer
+        dec Enemy1GenTimer
+SkipEnemy1CountdownTimer
+
+        lda Enemy1GenTimer
+        cmp #1
+        bne SkipGenerateEnemy1
+DetermineEdgeE1
+        lda INPT4
+        and #3
+        sta Enemy1StartEdge
+        beq DetermineEdgeE1               ; If edge is 0 try again
+
+        lda #1
+        sta Enemy1Alive
+        
+        
+        ; Generate Start Pos
+
+        ; Select Movement Pattern
+
+        ; Flag if position is reached so they can start normal movement
+SkipGenerateEnemy1
+
+        lda Enemy1GenTimer
+        bne SkipEnemy1Alive
+        lda #1
+        sta Enemy1Alive
+SkipEnemy1Alive
+
+        lda Enemy1Alive
+        beq SkipEnemy1Movement
+Enemy1VectorPath
+        ;; Do vector path code here
+        lda Enemy1HWayPoint
+        bne SkipGenerateNewE1WayPoints
+
+RegenE1HSeed
+        lda INPT4
+        beq RegenE1HSeed
+        jsr GetRandomNumber
+        and #158
+        ; and #2
+        ; clc
+        ; adc #70
+        sta Enemy1HWayPoint
+
+RegenE1VSeed
+        lda INPT4
+        beq RegenE1VSeed
+        jsr GetRandomNumber
+        and #148
+        clc
+        adc #32
+        ; and #2
+        ; clc
+        ; adc #72
+        sta Enemy1VWayPoint
+SkipGenerateNewE1WayPoints
+
+        lda Enemy1HWayPoint
+        sec
+        sbc Enemy1XPos
+        bne SkipSetE1HMoveFlat
+        lda #$0
+        sta HMBL
+        jmp SkipSetE1HMoveRight
+SkipSetE1HMoveFlat
+        bcc SkipSetE1HMoveLeft
+        lda #$F0
+
+        sta HMM0
+        inc Enemy1XPos
+        jmp SkipSetE1HMoveRight
+SkipSetE1HMoveLeft
+        bcs SkipSetE1HMoveRight
+        lda #$10
+        sta HMM0
+        dec Enemy1XPos
+SkipSetE1HMoveRight
+
+        lda Enemy1VWayPoint
+        sec
+        sbc Enemy1YPos
+        bne SkipSetE1VMoveFlat
+        jmp SkipSetE1VMoveRight
+SkipSetE1VMoveFlat
+        bcc SkipSetE1VMoveLeft
+        inc Enemy1YPos
+        inc Enemy1YPos
+        jmp SkipSetE1VMoveRight
+SkipSetE1VMoveLeft
+        bcs SkipSetE1VMoveRight
+        dec Enemy1YPos
+        dec Enemy1YPos
+SkipSetE1VMoveRight
+
+        ; lda Flasher
+        ; and #1
+        ; bne SkipHMOVEE1
+        sta WSYNC
+        sta HMOVE
+SkipHMOVEE1
+
+        lda Enemy1XPos
+        sec
+        sbc Enemy1HWayPoint
+        bne SkipRegenWayPointsE1
+        ;beq RegenWayPoints
+
+        lda Enemy1YPos
+        sec
+        sbc Enemy1VWayPoint
+        bne SkipRegenWayPointsE1
+;RegenWayPoints
+        lda #0 
+        sta Enemy1HWayPoint
+        ;sta Enemy0VWayPoint
+SkipRegenWayPointsE1
+
+SkipEnemy1Movement
+        sta HMCLR
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Enemy 1 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Scoring ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Scoring ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 P0Score
         lda P0Score1
         sta P0Score1idx   
