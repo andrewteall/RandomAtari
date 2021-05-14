@@ -3557,6 +3557,13 @@ LineTemp2               ds 1
 YTemp2                  ds 1
 Flasher                 ds 1
 UseVectorPaths          ds 1
+CountdownTimer          ds 1
+CountdownTimerCounter   ds 1
+CountdownTimerTmp1      ds 1
+CountdownTimerTmp2      ds 1
+CountdownTimerIdx       ds 1
+CountdownTimerGfx       ds 5
+CountdownTimerGfxPtr    ds 2
 
 Player0XPos             ds 1
 Player0YPos             ds 1
@@ -3999,6 +4006,12 @@ FlyGameScreen
         stx Enemy0GenTimer
         stx Enemy1GenTimer
 
+        ldx #99
+        stx CountdownTimer
+
+        lda #60
+        sta CountdownTimerCounter
+
         ldx #0
         lda Player0XPos
         jsr CalcXPos_bank1
@@ -4164,6 +4177,19 @@ Player2Buffer
         sta GRP1
         sta GRP0
         sec
+        
+        inx
+        sta WSYNC
+
+        SLEEP 45
+
+        sta RESP0
+        ; lda #255
+        ; sta GRP0
+        lda #0
+        sta VDELP0
+        sta NUSIZ0
+        sta NUSIZ1
         inx
         sta WSYNC
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4182,7 +4208,7 @@ Player2Buffer
         
 ScoreArea
         txa
-        sbc #9
+        sbc #10
         lsr
         lsr
         tay
@@ -4197,14 +4223,33 @@ ScoreArea
         lda P1ScoreArr,y                                ; 4     Get the Score From our Player 1 Score Array
         sta PF1                                         ; 3     Store Score to PF1
         
+        cpx #25
+        bmi SkipDisplayTimer
+        txa
+        sbc #25
+        tay
+        lda CountdownTimerGfx,y
+        sta GRP0
+
+SkipDisplayTimer
+
         inx                                             ; 2     Increment our line counter
-        cpx #30                                         ; 2     See if we're at line 30
+        cpx #31                                         ; 2     See if we're at line 30
         sta WSYNC                                       ; 3     Go to Next line
         bne ScoreArea                                   ; 2/3   If at line 30 then move on else branch back
 
         lda #0                                          ; 2     We're on lines that don't have the score 
         sta PF1                                         ; 3     so clear the playfield(PF1)
         sta PF2
+
+        sta GRP0
+        lda #DOUBLE_SIZE_PLAYER
+        sta NUSIZ0
+        sta NUSIZ1
+        lda #1
+        sta VDELP0
+        
+        sta WSYNC
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;; End Drawing Score Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4231,7 +4276,7 @@ SkipWSYNC
         stx VDELP0
         stx VDELP1
         
-        ldx #33
+        ldx #35
         
 ScoreAreaBuffer
         inx
@@ -4324,7 +4369,7 @@ SkipE1Reset
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Load Overscan Timer ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #30
+        lda #36
         sta TIM64T
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Load Overscan Timer ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4411,9 +4456,9 @@ SkipUp
         iny
 SkipDown
 
-        cpy #32
+        cpy #34
         bne ZeroVPos
-        ldy #34
+        ldy #36
 ZeroVPos
 
         cpy #170
@@ -4584,6 +4629,7 @@ SkipEnemy0CountdownTimer
         bne SkipGenerateEnemy0
 DetermineEdge
         lda INPT4
+        jsr GetRandomNumber
         and #3
         sta Enemy0StartEdge
 
@@ -4618,6 +4664,7 @@ SkipBottomE0StartEdge
 SkipLeftSideE0StartEdge
 E0StartEdgeSet
         lda INPT4
+        jsr GetRandomNumber
         and #159
         sta Enemy0XPos
 
@@ -4660,7 +4707,7 @@ RegenE0VSeed
         jsr GetRandomNumber
         and #148
         clc
-        adc #32
+        adc #34
         ; and #2
         ; clc
         ; adc #72
@@ -4751,6 +4798,7 @@ SkipEnemy1CountdownTimer
         bne SkipGenerateEnemy1
 DetermineEdgeE1
         lda INPT4
+        jsr GetRandomNumber
         and #3
         sta Enemy1StartEdge
 
@@ -4785,6 +4833,7 @@ SkipBottomE1StartEdge
 SkipLeftSideE1StartEdge
 E1StartEdgeSet
         lda INPT4
+        jsr GetRandomNumber
         and #159
         sta Enemy1XPos
 
@@ -4828,7 +4877,7 @@ RegenE1VSeed
         jsr GetRandomNumber
         and #148
         clc
-        adc #32
+        adc #34
         ; and #2
         ; clc
         ; adc #72
@@ -4904,8 +4953,6 @@ SkipEnemy1Movement
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Enemy 1 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Scoring ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5020,17 +5067,110 @@ CalcScore
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Scoring ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Time Countdown Timer  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda CountdownTimer
+        beq SkipTimer
+        lda CountdownTimerCounter
+        bne SkipCountdownTimer
+        dec CountdownTimer
+        lda CountdownTimer
+        and #$0F
+        cmp #$F
+        bne SkipResetTimerHex
+        lda CountdownTimer
+        sec
+        sbc #6
+        sta CountdownTimer
+SkipResetTimerHex
+
+        lda #60
+        sta CountdownTimerCounter
+SkipCountdownTimer
+        dec CountdownTimerCounter
+SkipTimer
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Time Countdown Timer  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Build Countdown Timer Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        jmp AlignBoundary
+        REPEAT 97
+
+        nop
+        REPEND
+AlignBoundary
+        lda #<(Zero_bank1)
+        sta CountdownTimerGfxPtr
+
+        lda #>(Zero_bank1)
+        sta CountdownTimerGfxPtr+1
+        
+        ldx #0
+CalcCountdownTimer
+        stx CountdownTimerIdx
+
+        lda CountdownTimer
+        and #$0F
+        sta CountdownTimerTmp1
+        asl
+        asl
+        clc
+        adc CountdownTimerTmp1
+        clc
+        adc CountdownTimerIdx
+        tay 
+        lda (CountdownTimerGfxPtr),y 
+        and #$0F
+        sta CountdownTimerTmp1
+        
+
+        lda CountdownTimer
+        and #$F0
+        lsr
+        lsr
+        lsr
+        lsr
+        sta CountdownTimerTmp2
+        asl
+        asl
+        clc
+        adc CountdownTimerTmp2
+        clc   
+        adc CountdownTimerIdx
+        tay 
+        lda (CountdownTimerGfxPtr),y 
+        and #$F0
+
+        ora CountdownTimerTmp1
+
+        sta CountdownTimerGfx,x
+        inx
+        cpx #5
+        bne CalcCountdownTimer 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Build Countdown Timer Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 GameWaitLoop_bank1
-        lda INTIM
-        bne GameWaitLoop_bank1
+        ;lda INTIM
+        lda TIMINT
+        and #%10000000
+        ;bne GameWaitLoop_bank1
+        beq GameWaitLoop_bank1
 ; overscan
         sta HMCLR
-        ldx #6
-GameOverscan
-        sta WSYNC
-        dex
-        bne GameOverscan
+;         ldx #1
+; GameOverscan
+;         sta WSYNC
+;         dex
+;         bne GameOverscan
         jmp FlyGameStartOfFrame
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5354,13 +5494,6 @@ W          .byte  #%10101010
            .byte  #%11101110
            .byte  #%11101110
 
-;HorizontalMovement0 
-;           .byte #%00000000, #%00000000, #%01010101, #%01010101, #%11111110, #%11111110,#%10101010, #%10101010, #255
-
-;VerticalMovement0 .byte #%10101010,#%10101010, #%11111110, #%11111110, #%10101010,#%10101010,#%00000000,#%00000000,#255
-HorizontalMovement0 .byte #%10101010,#%10101010, #255
-
-VerticalMovement0 .byte #%11111110,#255
 
 Heart       .byte #%01100110
             .byte #%11111111
