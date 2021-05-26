@@ -4450,6 +4450,23 @@ SkipFlasher
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Restart Fly Game ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda DebounceCtr
+        bne SkipRestartFlyGame
+        lda GameOverFlag
+        cmp #1
+        bne SkipRestartFlyGame
+        lda INPT4
+        bmi SkipRestartFlyGame
+        jmp RestartFlyGame
+SkipRestartFlyGame
+        
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Restart Fly Game ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Hide Player0 Sprite Overflow ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #P0HEIGHT
@@ -4702,8 +4719,8 @@ SkipGenerateEnemy0
         jsr CalcXPos_bank1
         sta WSYNC
         sta HMOVE
-        SLEEP 24
-        sta HMCLR
+        ; SLEEP 24
+        ; sta HMCLR
 
         lda Enemy0GenTimer
         bne SkipEnemy0Alive
@@ -4871,8 +4888,8 @@ SkipGenerateEnemy1
         jsr CalcXPos_bank1
         sta WSYNC
         sta HMOVE
-        SLEEP 24
-        sta HMCLR
+        ; SLEEP 24
+        ; sta HMCLR
         
         lda Enemy1GenTimer
         bne SkipEnemy1Alive
@@ -5211,7 +5228,11 @@ GameWaitLoop_bank1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Atari Paint Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-ATARI_PAINT             = #57
+ATARI_PAINT_TITLE_H_POS                     = #57
+ATARI_PAINT_TITLE_SLEEPTIMER                = TITLE_H_POS/#3 +#51
+ATARI_PAINT_TITLE_COLOR                     = #34
+
+ATARI_PAINT_BACKGROUND_COLOR                = #$0F
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5220,7 +5241,26 @@ ATARI_PAINT             = #57
 
         SEG.U AtariPaintVars
         ORG Overlay
-Test                    ds 2
+XLineTemp               ds 1
+YColTemp                ds 1
+LetterBuff              ds 1
+
+BrushXPos               ds 1
+BrushYPos               ds 1
+Temp1                   ds 1
+DebounceCtr             ds 1
+
+CanvasPtr               ds 2
+CanvasRowIdx            ds 1
+CanvasRowCntrIdx        ds 1
+CanvasByteMask          ds 1
+CanvasIdx               ds 1
+CanvasRow               ds 1
+CanvasByteIdx           ds 1
+
+Canvas                  ds 72
+
+
 
 
         echo "----"
@@ -5252,6 +5292,64 @@ ClearRam
 
         lda #30
         sta DebounceCtr
+
+
+        ldx #0                                  ; Set Player 0 Position
+        lda #ATARI_PAINT_TITLE_H_POS
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
+
+        ldx #1                                  ; Set Player 1 Position
+        lda #ATARI_PAINT_TITLE_H_POS+8
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
+
+        lda #ATARI_PAINT_TITLE_COLOR                        ; Set the player colors for the title
+        sta COLUP0
+        sta COLUP1
+
+        lda #1                                  ; Set Playfield to be reflected
+        sta CTRLPF       
+
+        lda #THREE_COPIES_CLOSE                 ; Set Player to be three copies close
+        sta NUSIZ0
+        sta NUSIZ1
+
+        lda #1                                  ; Enable Vertical delay for both players
+        sta VDELP0
+        sta VDELP1
+
+        lda #0
+        sta CTRLPF
+
+        lda #<Canvas
+        sta CanvasPtr
+        lda #>Canvas
+        sta CanvasPtr+1
+
+        lda #6
+        sta CanvasRowCntrIdx
+        
+
+;         ldy #0
+; LoadCanvasArray
+;         lda #255
+;         ; lda INPT4
+;         sta Canvas,y
+;         iny
+;         cpy #72
+;         bne LoadCanvasArray
+
+        lda #56
+        sta BrushXPos
+        sta BrushYPos
+
 AtariPaintFrame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Start VBLANK Processing ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5278,15 +5376,142 @@ AtariPaintVerticalBlank
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End VBLANK Processing ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldx #ATARI_PAINT_BACKGROUND_COLOR
+        stx COLUBK
+        ldx #0
+        IF ATARI_PAINT_TITLE_H_POS <= 47
+         sta WSYNC                                      ; 3     
+        ENDIF
+        ldy #0
 
-        
+        jmp AlignAtariPaintBoundary
+        REPEAT 37
+        nop
+        REPEND
+AlignAtariPaintBoundary
+
 AtariPaintViewableScreen
         sta WSYNC
         inx
-        cpx #192
+        cpx #3
         bne AtariPaintViewableScreen
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Title Text
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        SLEEP ATARI_PAINT_TITLE_SLEEPTIMER-6
+        
+        inx                                             ; 2
+AtariPainDrawTitle
+        stx XLineTemp                                   ; 3     6
+        sty YColTemp                                    ; 3     9
+        
+        ldx TSpace,y                                    ; 4     13
+        stx LetterBuff                                  ; 3     16
+        
+        ldx IN,y                                        ; 4     20
+
+        lda AT,y                                        ; 4     24
+        sta GRP0                                        ; 3     27      MU -> [GRP0]
+        
+        lda AR,y                                        ; 4     31
+        sta GRP1                                        ; 3     34      SI -> [GRP1], [GRP0] -> GRP0
+        
+        lda ISpace,y                                    ; 4     38
+        sta GRP0                                        ; 3     41      C  -> [GRP0]. [GRP1] -> GRP1
+        
+        lda PA,y                                        ; 4     45
+        ldy LetterBuff                                  ; 3     48
+        sta GRP1                                        ; 3     51      MA -> [GRP1], [GRP0] -> GRP0
+        stx GRP0                                        ; 3     54      KE -> [GRP0], [GRP1] -> GRP1
+        sty GRP1                                        ; 3     57      R  -> [GRP1], [GRP0] -> GRP0
+        stx GRP0                                        ; 3     60      ?? -> [GRP0], [GRP1] -> GRP1
+        
+        ldx XLineTemp                                   ; 3     63
+        ldy YColTemp                                    ; 3     66
+        iny                                             ; 2     68
+
+        inx                                             ; 2     70
+        cpx #10                                         ; 2     72
+        nop                                             ; 2     74
+        nop                                             ; 2     76
+        bne AtariPainDrawTitle                          ; 2/3   2/3
+        
+        txa
+        pha
+        ldx #2                                  ; Set Player Brush Position
+        lda BrushXPos
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
+        pla
+        tax
+        
+
+        lda #0
+        ;sta VDELP0
+        sta NUSIZ0
+        sta GRP1
+        sta GRP0
+
+
+        ldx #12
+        ldy #0
+AtariPaintTitleBuffer
+        inx                                             ; 2
+        cpx #36                                         ; 2
+        sta WSYNC                                       ; 3
+        bne AtariPaintTitleBuffer                       ; 2/3
+
+AtariPaintCanvas
+        lda Canvas,y                                    ; 4
+        sta PF1                                         ; 3
+        iny                                             ; 2
+        lda Canvas,y                                    ; 4
+        sta PF2                                         ; 3
+        iny                                             ; 2
+        lda Canvas,y                                    ; 4
+        sta PF0                                         ; 3
+        iny                                             ; 2     (27)
+
+        dec CanvasRowCntrIdx                            ; 5
+        bne SkipResetCanvasRowCntrIdx                   ; 2/3
+        lda #6                                          ; 2
+        sta CanvasRowCntrIdx                            ; 3
+        jmp SkipResetY                                  ; 3     (15)
+SkipResetCanvasRowCntrIdx
+        dey                                             ; 2
+        dey                                             ; 2
+        dey                                             ; 2     (14)
+SkipResetY
+        ; sta WSYNC
+
+        lda #0                                          ; 2
+        
+        sta PF1                                         ; 3
+        sta PF2                                         ; 3     (11)
+        sta PF0                                         ; 3
+
+        cpx BrushYPos                                   ; 3
+        bne SkipDrawBrush                               ; 2/3
+        lda #2                                          ; 2
+SkipDrawBrush
+        sta ENAM0                                       ; 3     (10)
+
+        ; inx
+        inx                                             ; 2
+        cpx #184                                        ; 2
+        sta WSYNC                                       ; 3
+        bne AtariPaintCanvas                            ; 2/3   (10)
+
+AtariPaintEndOfScreenBuffer
+        sta WSYNC
+        inx
+        cpx #192
+        bne AtariPaintEndOfScreenBuffer
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Setup Overscan  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5336,6 +5561,223 @@ SkipDecDebounceCtr_AtariPaint
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Check Debouce Counter ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Reset Canvas Indicies ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #0
+        sta CanvasRowIdx
+        lda #6
+        sta CanvasRowCntrIdx
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Reset Canvas Indicies ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Calculate Tile to Paint ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda DebounceCtr
+        beq SkipJumpPaintTile
+        jmp SkipPaintTile
+SkipJumpPaintTile
+        lda INPT4
+        bpl SkipReadInput
+        jmp SkipPaintTile
+SkipReadInput
+
+        ldx #0                  ; $38/56,$44/68
+        lda BrushYPos           ; 68
+        cmp #36
+        bmi SkipPaintTile
+
+
+        sec
+        sbc #36
+        sec
+DivideBy6
+        inx                     ; 1  2  3  4  5  6  7  8  9  10 11 12
+        sbc #6                  ; 62 56 50 44 38 32 26 20 14 8  2  -4
+        bcs DivideBy6           ;
+        dex                     ; 11
+        stx CanvasRow           ; 11
+        ; Multiply X by 3 to find canvas row
+        txa
+        asl
+        clc
+        adc CanvasRow
+        sta CanvasRow
+
+
+
+
+        lda BrushXPos           ; 50            ; Load the Brush X Position
+        
+        cmp #18                                 ; If it's less than 18 then
+        bmi SkipPaintTile                       ; Skip over the routine
+        cmp #98                                 ; If it's more than 98 then
+        bpl SkipPaintTile                       ; Skip over the routine
+
+        sec                                     ; Subtract 18 so that the "canvas" is
+        sbc #18                                 ; aligned to the left side of the screen
+
+        ldx #0                  ; Set X to 0 to count our divisions
+        sec
+DivideBy4
+        inx                     ; increment x by 1
+        sbc #4                  ; 
+        bcs DivideBy4           
+        dex
+
+        txa
+        sec
+Modulo8        
+        sbc #8
+        bcs Modulo8
+        clc
+        adc #8
+        sta CanvasByteIdx
+
+        lda BrushXPos
+        cmp #50
+        bpl SkipSetCanvasIdx0
+
+        ldy CanvasByteIdx
+        lda CanvasSelectTableR,y
+        sta CanvasByteMask
+
+        ldx #0
+        stx CanvasIdx
+        jmp CanvasIdxSet
+SkipSetCanvasIdx0
+        cmp #82
+        bpl SkipSetCanvasIdx1
+
+        ldy CanvasByteIdx
+        lda CanvasSelectTable,y
+        sta CanvasByteMask
+
+        ldx #1
+        stx CanvasIdx
+        jmp CanvasIdxSet
+SkipSetCanvasIdx1
+        ldy CanvasByteIdx
+        lda CanvasSelectTable,y
+        asl
+        asl
+        asl
+        asl
+        sta CanvasByteMask
+
+        ldx #2
+        stx CanvasIdx
+CanvasIdxSet
+
+
+        txa                     ; 
+        clc
+        adc CanvasRow           ; 
+        sta CanvasIdx           ;
+        
+
+        ldy CanvasIdx
+        lda Canvas,y
+        ora CanvasByteMask
+        sta Canvas,y
+
+
+        ; lda #10
+        ; sta DebounceCtr
+
+SkipPaintTile
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Calculate Tile to Paint ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Brush  Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+BrushControl
+; Player 0 Up/Down Control
+        ldy BrushYPos
+        
+        lda #P0_JOYSTICK_UP            
+        bit SWCHA
+        bne SkipMoveBrushUp
+        dey
+        dey
+SkipMoveBrushUp
+
+        lda #P0_JOYSTICK_DOWN
+        bit SWCHA
+        bne SkipMoveBrushDown
+        iny
+        iny
+SkipMoveBrushDown
+
+        cpy #34
+        bne SkipSetBrushMinVPos
+        ldy #36
+SkipSetBrushMinVPos
+
+        cpy #170
+        bne SkipSetBrushMaxVPos
+        ldy #168
+SkipSetBrushMaxVPos
+        sty BrushYPos
+
+; Player 0 Left/Right Control
+        lda #P0_JOYSTICK_LEFT          
+        and SWCHA
+        bne SkipMoveBrushLeft
+        dec BrushXPos
+SkipMoveBrushLeft
+
+        lda #P0_JOYSTICK_RIGHT
+        and SWCHA
+        bne SkipMoveBrushRight
+        inc BrushXPos
+SkipMoveBrushRight
+       
+        ldy #0
+        ldx BrushXPos
+        bne SkipSetBrushMinHPos
+        sty HMP0
+        inc BrushXPos
+SkipSetBrushMinHPos
+
+        cpx #161
+        bne SkipSetBrushMaxHPos
+        sty HMP0
+        dec BrushXPos
+SkipSetBrushMaxHPos
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Brush Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+        lda #1
+        sta VDELP0
+        sta VDELP1
+        lda #THREE_COPIES_CLOSE
+        sta NUSIZ0
+
+        ldx #0                                  ; Set Player 0 Position
+        lda #ATARI_PAINT_TITLE_H_POS
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
+
+        ldx #1                                  ; Set Player 1 Position
+        lda #ATARI_PAINT_TITLE_H_POS+8
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
 
         ldx #0
 AtariPaintWaitLoop_bank1
@@ -5434,8 +5876,6 @@ PlayerGfx  .byte #%01111110
            .byte #%00011000
            .byte #%00011000
            .byte #%00011000  
-           .byte #%00000000
-           .byte #%00000000
 
 PlayerSlapGfx  
            .byte #%00000000
@@ -5458,10 +5898,10 @@ PlayerSlapGfx
            .byte #%00011000
            .byte #%00000000
            .byte #%00000000
-           
+           .byte #%00000000
+           .byte #%00000000     ; (22)
 
-
-        align 256
+        
 ON         .byte  #%11101110
            .byte  #%10101010
            .byte  #%10101010
@@ -5582,7 +6022,6 @@ W          .byte  #%10101010
            .byte  #%11101110
            .byte  #%11101110
 
-
 Heart       .byte #%01100110
             .byte #%11111111
             .byte #%01111110
@@ -5590,114 +6029,126 @@ Heart       .byte #%01100110
             .byte #%00011000
 
 Zero_bank1 .byte  #%11101110
-           ;.byte  #%11101110
            .byte  #%10101010
-           ;.byte  #%10101010
            .byte  #%10101010
-           ;.byte  #%10101010
            .byte  #%10101010
-           ;.byte  #%10101010
            .byte  #%11101110
-           ;.byte  #%11101110
 
-One_bank1        .byte  #%00100010
-           ;.byte  #%00100010
+One_bank1  .byte  #%00100010
            .byte  #%00100010
-           ;.byte  #%00100010
            .byte  #%00100010
-           ;.byte  #%00100010
            .byte  #%00100010
-           ;.byte  #%00100010
            .byte  #%00100010
-           ;.byte  #%00100010
 
 Two_bank1  .byte  #%11101110
-           ;.byte  #%11101110
            .byte  #%00100010
-           ;.byte  #%00100010
            .byte  #%11101110
-           ;.byte  #%11101110
            .byte  #%10001000
-           ;.byte  #%10001000
            .byte  #%11101110
-           ;.byte  #%11101110
 
 Three_bank1 .byte  #%11101110
-           ;.byte  #%11101110
            .byte  #%00100010
-           ;.byte  #%00100010
            .byte  #%11101110
-           ;.byte  #%11101110
            .byte  #%00100010
-           ;.byte  #%00100010
            .byte  #%11101110
-           ;.byte  #%11101110
 
 Four_bank1 .byte  #%10101010
-           ;.byte  #%10101010
            .byte  #%10101010
-           ;.byte  #%10101010
            .byte  #%11101110
-           ;.byte  #%11101110
            .byte  #%00100010
-           ;.byte  #%00100010
            .byte  #%00100010
-           ;.byte  #%00100010
 
 Five_bank1 .byte  #%11101110
-           ;.byte  #%11101110
            .byte  #%10001000
-           ;.byte  #%10001000
            .byte  #%11101110
-           ;.byte  #%11101110
            .byte  #%00100010
-           ;.byte  #%00100010
            .byte  #%11101110
-           ;.byte  #%11101110
 
 Six_bank1  .byte  #%11101110
-           ;.byte  #%11101110
            .byte  #%10001000
-           ;.byte  #%10001000
            .byte  #%11101110
-           ;.byte  #%11101110
            .byte  #%10101010
-           ;.byte  #%10101010
            .byte  #%11101110
-           ;.byte  #%11101110
 
 Seven_bank1 .byte  #%11101110
-           ;.byte  #%11101110
            .byte  #%00100010
-           ;.byte  #%00100010
            .byte  #%00100010
-           ;.byte  #%00100010
            .byte  #%00100010
-           ;.byte  #%00100010
            .byte  #%00100010
-           ;.byte  #%00100010
 
 Eight_bank1 .byte  #%11101110
-           ;.byte  #%11101110
            .byte  #%10101010
-           ;.byte  #%10101010
            .byte  #%11101110
-           ;.byte  #%11101110
            .byte  #%10101010
-           ;.byte  #%10101010
            .byte  #%11101110
-           ;.byte  #%11101110
 
 Nine_bank1 .byte  #%11101110
-           ;.byte  #%11101110
            .byte  #%10101010
-           ;.byte  #%10101010
            .byte  #%11101110
-           ;.byte  #%11101110
            .byte  #%00100010
-           ;.byte  #%00100010
            .byte  #%11101110
-           ;.byte  #%11101110
+        
+AT         .byte  #%01001110
+           .byte  #%10100100
+           .byte  #%11100100
+           .byte  #%10100100
+           .byte  #%10100100
+           .byte  #0
+
+AR         .byte  #%01001110
+           .byte  #%10101010
+           .byte  #%11101110
+           .byte  #%10101100
+           .byte  #%10101010
+           .byte  #0
+
+ISpace     .byte  #%11100000
+           .byte  #%01000000
+           .byte  #%01000000
+           .byte  #%01000000
+           .byte  #%11100000
+           .byte  #0
+
+PA         .byte  #%11100100
+           .byte  #%10101010
+           .byte  #%11101110
+           .byte  #%10001010
+           .byte  #%10001010
+           .byte  #0
+
+IN         .byte  #%11101110
+           .byte  #%01001010
+           .byte  #%01001010
+           .byte  #%01001010
+           .byte  #%11101010
+           .byte  #0
+
+TSpace     .byte  #%11100000
+           .byte  #%01000000
+           .byte  #%01000000
+           .byte  #%01000000
+           .byte  #%01000000
+           .byte  #0
+
+CanvasSelectTable       .byte #%00000001
+                        .byte #%00000010
+                        .byte #%00000100
+                        .byte #%00001000
+                        .byte #%00010000
+                        .byte #%00100000
+                        .byte #%01000000
+                        .byte #%10000000
+
+CanvasSelectTableR      .byte #%10000000
+                        .byte #%01000000
+                        .byte #%00100000
+                        .byte #%00010000
+                        .byte #%00001000
+                        .byte #%00000100
+                        .byte #%00000010
+                        .byte #%00000001
+           
+           
 
         echo "----"
         echo "Rom Total Bank1:"
