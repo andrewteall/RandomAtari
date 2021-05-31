@@ -5234,6 +5234,20 @@ ATARI_PAINT_TITLE_COLOR                     = #34
 
 ATARI_PAINT_BACKGROUND_COLOR                = #$0F
 
+ATARI_PAINT_MOVE_BRUSH_DELAY                = #8
+
+BLACK                                       = #$00
+WHITE                                       = #$0F
+RED                                         = #$34
+BLUE                                        = #$74
+YELLOW                                      = #$1E
+GREEN                                       = #$B6
+ORANGE                                      = #$FA
+GRAY                                        = #$0A
+BROWN                                       = #$14
+SKY                                         = #$9C
+PURPLE                                      = #$64
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Atari Paint Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5247,8 +5261,10 @@ LetterBuff              ds 1
 
 BrushXPos               ds 1
 BrushYPos               ds 1
-Temp1                   ds 1
+BrushColor              ds 1
 DebounceCtr             ds 1
+BackgroundColor         ds 1
+DrawOrErase             ds 1
 
 CanvasPtr               ds 2
 CanvasRowIdx            ds 1
@@ -5258,7 +5274,11 @@ CanvasIdx               ds 1
 CanvasRow               ds 1
 CanvasByteIdx           ds 1
 
-Canvas                  ds 72
+Canvas
+CanvasOffset0           ds 1
+CanvasOffset1           ds 1
+CanvasOffset2           ds 1
+CanvasOffset3           ds 93
 
 
 
@@ -5310,6 +5330,14 @@ ClearRam
         SLEEP 24
         sta HMCLR
 
+        ldx #3                                  ; Set Missle 1 Position
+        lda #129
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
+        SLEEP 24
+        sta HMCLR
+
         lda #ATARI_PAINT_TITLE_COLOR                        ; Set the player colors for the title
         sta COLUP0
         sta COLUP1
@@ -5327,6 +5355,9 @@ ClearRam
 
         lda #0
         sta CTRLPF
+
+        lda #ATARI_PAINT_BACKGROUND_COLOR
+        sta BackgroundColor
 
         lda #<Canvas
         sta CanvasPtr
@@ -5346,8 +5377,10 @@ ClearRam
 ;         cpy #72
 ;         bne LoadCanvasArray
 
-        lda #56
+        lda #54
         sta BrushXPos
+        lda #57
+
         sta BrushYPos
 
 AtariPaintFrame
@@ -5438,74 +5471,174 @@ AtariPainDrawTitle
         nop                                             ; 2     76
         bne AtariPainDrawTitle                          ; 2/3   2/3
         
+        
         txa
         pha
+
+        lda BrushXPos
+        cmp #$8A
+        bcs SkipWSYNC2
+        sta WSYNC
+SkipWSYNC2
+
         ldx #2                                  ; Set Player Brush Position
         lda BrushXPos
         jsr CalcXPos_bank1
         sta WSYNC
         sta HMOVE
-        SLEEP 24
-        sta HMCLR
+        ldx #0
+        stx COLUBK
+
         pla
         tax
         
 
         lda #0
         ;sta VDELP0
-        sta NUSIZ0
+        
         sta GRP1
         sta GRP0
 
+        lda #255
+        sta PF0
+        sta PF1
+        sta PF2
+        
+        ldx BackgroundColor
+        stx COLUBK
 
-        ldx #12
-        ldy #0
+        lda #MISSLE_SIZE_TWO_CLOCKS
+        sta NUSIZ0
+
+        ldx #13
+        inx
+
+        sta WSYNC
+        SLEEP 3
 AtariPaintTitleBuffer
+
+
+        lda #GRAY
+        sta COLUPF                                      ; (5)
+        
+        cpx BrushYPos                                   ; 3
+        bne SkipDrawBrush2                              ; 2/3
+        lda #2                                          ; 2
+        jmp SkipB                                       ; 3
+SkipDrawBrush2
+        lda #0                                          ; 2
+        nop                                             ; 2
+SkipB
+        sta.w ENAM0                                     ; 3     (13)
+
+        lda #WHITE
+        sta COLUPF
+
+        lda #RED
+        sta COLUPF
+
+        lda #PURPLE
+        sta COLUPF
+
+        lda #BLUE
+        sta COLUPF
+
+        lda #SKY
+        sta COLUPF
+
+        lda #GREEN
+        sta COLUPF
+
+        lda #YELLOW
+        sta COLUPF
+
+        lda #ORANGE
+        sta COLUPF
+
+        lda #BROWN
+        sta COLUPF
+
+        lda #BLACK
+        sta COLUPF
+
         inx                                             ; 2
-        cpx #36                                         ; 2
-        sta WSYNC                                       ; 3
+        cpx #34                                         ; 2
         bne AtariPaintTitleBuffer                       ; 2/3
 
-AtariPaintCanvas
-        lda Canvas,y                                    ; 4
-        sta PF1                                         ; 3
-        iny                                             ; 2
-        lda Canvas,y                                    ; 4
-        sta PF2                                         ; 3
-        iny                                             ; 2
-        lda Canvas,y                                    ; 4
-        sta PF0                                         ; 3
-        iny                                             ; 2     (27)
+        ldy #0
+        inx 
 
-        dec CanvasRowCntrIdx                            ; 5
-        bne SkipResetCanvasRowCntrIdx                   ; 2/3
-        lda #6                                          ; 2
-        sta CanvasRowCntrIdx                            ; 3
-        jmp SkipResetY                                  ; 3     (15)
-SkipResetCanvasRowCntrIdx
-        dey                                             ; 2
-        dey                                             ; 2
-        dey                                             ; 2     (14)
-SkipResetY
-        ; sta WSYNC
-
-        lda #0                                          ; 2
+        lda BackgroundColor
+        sta COLUBK
+        sta WSYNC
+        lda #0
+        sta PF0
+        sta PF1
+        sta PF2
         
-        sta PF1                                         ; 3
-        sta PF2                                         ; 3     (11)
-        sta PF0                                         ; 3
 
+        lda BackgroundColor
+        sta COLUP1
+        lda #MISSLE_SIZE_FOUR_CLOCKS
+        sta NUSIZ1
+        lda #2
+        sta ENAM1
+        
+        lda BrushColor
+        sta COLUPF
+        lda #0
+        inx
+        sta WSYNC
+
+AtariPaintCanvas
         cpx BrushYPos                                   ; 3
         bne SkipDrawBrush                               ; 2/3
         lda #2                                          ; 2
 SkipDrawBrush
         sta ENAM0                                       ; 3     (10)
+        
+        lda CanvasOffset0,y                             ; 4
+        sta PF1                                         ; 3
+        lda CanvasOffset1,y                             ; 4
+        sta PF2                                         ; 3
+        lda CanvasOffset2,y                             ; 4
+        sta PF0                                         ; 3
+        lda CanvasOffset3,y                             ; 4
+        sta PF1                                         ; 3     (28)
+        
+        dec CanvasRowCntrIdx                            ; 5
+        bne SkipResetCanvasRowCntrIdx                   ; 2/3
+        
+        tya
+        clc                                             ; 2
+        adc #4                                          ; 2 
+        tay   
+        
+        lda #6                                          ; 2
+        sta CanvasRowCntrIdx                            ; 3
+        ; iny
+        ; iny
+        ; iny
+        ; iny                                             ; 2     (20)
+SkipResetCanvasRowCntrIdx
+
+        ; sta WSYNC
+
+        lda #0                                          ; 2
+        sta PF2                                         ; 3
+        sta PF0                                         ; 3     (8)
 
         ; inx
         inx                                             ; 2
-        cpx #184                                        ; 2
+        cpx #180                                        ; 2
         sta WSYNC                                       ; 3
         bne AtariPaintCanvas                            ; 2/3   (10)
+
+        lda #0                                          ; 2
+        sta PF2                                         ; 3
+        sta PF0                                         ; 3     (8)
+        sta PF1
+        ldy #0
 
 AtariPaintEndOfScreenBuffer
         sta WSYNC
@@ -5578,55 +5711,62 @@ SkipDecDebounceCtr_AtariPaint
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Calculate Tile to Paint ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda DebounceCtr
-        beq SkipJumpPaintTile
+;         lda DebounceCtr
+;         beq SkipJumpPaintTile
+;         jmp SkipPaintTile
+; SkipJumpPaintTile
+
+        lda DrawOrErase
+        beq SkipSet
         jmp SkipPaintTile
-SkipJumpPaintTile
+SkipSet
+
         lda INPT4
         bpl SkipReadInput
         jmp SkipPaintTile
 SkipReadInput
 
-        ldx #0                  ; $38/56,$44/68
-        lda BrushYPos           ; 68
+        ldx #0
+        lda BrushYPos
         cmp #36
-        bmi SkipPaintTile
-
+        bcs SkipSkipPaintTile
+        jmp SkipPaintTile
+SkipSkipPaintTile
 
         sec
         sbc #36
         sec
 DivideBy6
-        inx                     ; 1  2  3  4  5  6  7  8  9  10 11 12
-        sbc #6                  ; 62 56 50 44 38 32 26 20 14 8  2  -4
-        bcs DivideBy6           ;
-        dex                     ; 11
-        stx CanvasRow           ; 11
-        ; Multiply X by 3 to find canvas row
+        inx
+        sbc #6
+        bcs DivideBy6
+        dex
+        stx CanvasRow
+        ; Multiply X by 4 to find canvas row
         txa
         asl
-        clc
-        adc CanvasRow
+        asl
         sta CanvasRow
 
 
+        lda BrushXPos           ; Load the Brush X Position
+        cmp #18                 ; If it's less than 18 then
+        bpl SkipSkipSkipPaintTile 
+        jmp SkipPaintTile       ; Skip over the routine
+SkipSkipSkipPaintTile
+        cmp #130                 ; If it's more than 98 then
+        bmi SkipSkipSkipSkipPaintTile 
+        jmp SkipPaintTile       ; Skip over the routine
+SkipSkipSkipSkipPaintTile
 
-
-        lda BrushXPos           ; 50            ; Load the Brush X Position
-        
-        cmp #18                                 ; If it's less than 18 then
-        bmi SkipPaintTile                       ; Skip over the routine
-        cmp #98                                 ; If it's more than 98 then
-        bpl SkipPaintTile                       ; Skip over the routine
-
-        sec                                     ; Subtract 18 so that the "canvas" is
-        sbc #18                                 ; aligned to the left side of the screen
+        sec                     ; Subtract 18 so that the "canvas" is
+        sbc #18                 ; aligned to the left side of the screen
 
         ldx #0                  ; Set X to 0 to count our divisions
         sec
 DivideBy4
         inx                     ; increment x by 1
-        sbc #4                  ; 
+        sbc #4
         bcs DivideBy4           
         dex
 
@@ -5638,6 +5778,7 @@ Modulo8
         clc
         adc #8
         sta CanvasByteIdx
+
 
         lda BrushXPos
         cmp #50
@@ -5662,6 +5803,9 @@ SkipSetCanvasIdx0
         stx CanvasIdx
         jmp CanvasIdxSet
 SkipSetCanvasIdx1
+        cmp #98
+        bpl SkipSetCanvasIdx2
+
         ldy CanvasByteIdx
         lda CanvasSelectTable,y
         asl
@@ -5672,13 +5816,40 @@ SkipSetCanvasIdx1
 
         ldx #2
         stx CanvasIdx
+        jmp CanvasIdxSet
+SkipSetCanvasIdx2
+        ldy CanvasByteIdx
+        lda CanvasSelectTableR,y
+        and #%00001111
+        clc
+        rol
+        rol
+        rol
+        rol
+        
+        sta LetterBuff
+
+        ldy CanvasByteIdx
+        lda CanvasSelectTableR,y
+        and #%11110000
+        
+        ror
+        ror
+        ror
+        ror
+        
+        ora LetterBuff
+        sta CanvasByteMask
+
+        ldx #3
+        stx CanvasIdx
 CanvasIdxSet
 
 
-        txa                     ; 
+        txa
         clc
-        adc CanvasRow           ; 
-        sta CanvasIdx           ;
+        adc CanvasRow
+        sta CanvasIdx
         
 
         ldy CanvasIdx
@@ -5693,38 +5864,211 @@ CanvasIdxSet
 SkipPaintTile
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Calculate Tile to Paint ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Calculate Tile to Paint ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Calculate Tile to Erase ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;         lda DebounceCtr
+;         beq SkipJumpPaintTile
+;         jmp SkipPaintTile
+; SkipJumpPaintTile
+
+        lda DrawOrErase
+        bne SkipErase
+        jmp SkipEraseTile
+SkipErase
+
+        lda INPT4
+        bpl SkipReadInputErase
+        jmp SkipEraseTile
+SkipReadInputErase
+
+        ldx #0
+        lda BrushYPos
+        cmp #36
+        bcs SkipSkipEraseTile
+        jmp SkipEraseTile
+SkipSkipEraseTile
+
+        sec
+        sbc #36
+        sec
+DivideBy6Erase
+        inx
+        sbc #6
+        bcs DivideBy6Erase
+        dex
+        stx CanvasRow
+        ; Multiply X by 4 to find canvas row
+        txa
+        asl
+        asl
+        sta CanvasRow
+
+
+        lda BrushXPos           ; Load the Brush X Position
+        cmp #18                 ; If it's less than 18 then
+        bpl SkipSkipSkipEraseTile 
+        jmp SkipEraseTile       ; Skip over the routine
+SkipSkipSkipEraseTile
+        cmp #130                 ; If it's more than 98 then
+        bmi SkipSkipSkipSkipEraseTile 
+        jmp SkipEraseTile       ; Skip over the routine
+SkipSkipSkipSkipEraseTile
+
+        sec                     ; Subtract 18 so that the "canvas" is
+        sbc #18                 ; aligned to the left side of the screen
+
+        ldx #0                  ; Set X to 0 to count our divisions
+        sec
+DivideBy4Erase
+        inx                     ; increment x by 1
+        sbc #4
+        bcs DivideBy4Erase         
+        dex
+
+        txa
+        sec
+Modulo8Erase        
+        sbc #8
+        bcs Modulo8Erase
+        clc
+        adc #8
+        sta CanvasByteIdx
+
+
+        lda BrushXPos
+        cmp #50
+        bpl SkipEraseCanvasIdx0
+
+        ldy CanvasByteIdx
+        lda CanvasEraseTableR,y
+        sta CanvasByteMask
+
+        ldx #0
+        stx CanvasIdx
+        jmp CanvasIdxErase
+SkipEraseCanvasIdx0
+        cmp #82
+        bpl SkipEraseCanvasIdx1
+
+        ldy CanvasByteIdx
+        lda CanvasEraseTable,y
+        sta CanvasByteMask
+
+        ldx #1
+        stx CanvasIdx
+        jmp CanvasIdxErase
+SkipEraseCanvasIdx1
+        cmp #98
+        bpl SkipEraseCanvasIdx2
+
+        ldy CanvasByteIdx
+        lda CanvasEraseTable,y
+        asl
+        asl
+        asl
+        asl
+        sta CanvasByteMask
+
+        ldx #2
+        stx CanvasIdx
+        jmp CanvasIdxErase
+SkipEraseCanvasIdx2
+        ldy CanvasByteIdx
+        lda CanvasEraseTableR,y
+        and #%00001111
+        clc
+        rol
+        rol
+        rol
+        rol
+        
+        sta LetterBuff
+
+        ldy CanvasByteIdx
+        lda CanvasEraseTableR,y
+        and #%11110000
+        
+        ror
+        ror
+        ror
+        ror
+        
+        ora LetterBuff
+        sta CanvasByteMask
+
+        ldx #3
+        stx CanvasIdx
+CanvasIdxErase
+
+
+        txa
+        clc
+        adc CanvasRow
+        sta CanvasIdx
+        
+
+        ldy CanvasIdx
+        lda Canvas,y
+        and CanvasByteMask
+
+
+        sta Canvas,y
+
+
+        ; lda #10
+        ; sta DebounceCtr
+
+SkipEraseTile
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Calculate Tile to Erase ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Brush  Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 BrushControl
+
+        lda DebounceCtr
+        bne SkipMoveBrush
 ; Player 0 Up/Down Control
         ldy BrushYPos
         
         lda #P0_JOYSTICK_UP            
         bit SWCHA
         bne SkipMoveBrushUp
-        dey
-        dey
+        tya
+        sec
+        sbc #6
+        tay
+        lda #ATARI_PAINT_MOVE_BRUSH_DELAY
+        sta DebounceCtr
 SkipMoveBrushUp
 
         lda #P0_JOYSTICK_DOWN
         bit SWCHA
         bne SkipMoveBrushDown
-        iny
-        iny
+        tya
+        clc
+        adc #6
+        tay
+        lda #ATARI_PAINT_MOVE_BRUSH_DELAY
+        sta DebounceCtr
 SkipMoveBrushDown
 
-        cpy #34
+        cpy #9   ;34
         bne SkipSetBrushMinVPos
-        ldy #36
+        ldy #15   ;36
 SkipSetBrushMinVPos
 
-        cpy #170
+        cpy #183  ; 170
         bne SkipSetBrushMaxVPos
-        ldy #168
+        ldy #177        ; 168
 SkipSetBrushMaxVPos
         sty BrushYPos
 
@@ -5733,35 +6077,152 @@ SkipSetBrushMaxVPos
         and SWCHA
         bne SkipMoveBrushLeft
         dec BrushXPos
+        dec BrushXPos
+        dec BrushXPos
+        dec BrushXPos
+        lda #ATARI_PAINT_MOVE_BRUSH_DELAY
+        sta DebounceCtr
 SkipMoveBrushLeft
 
         lda #P0_JOYSTICK_RIGHT
         and SWCHA
         bne SkipMoveBrushRight
         inc BrushXPos
+        inc BrushXPos
+        inc BrushXPos
+        inc BrushXPos
+        lda #ATARI_PAINT_MOVE_BRUSH_DELAY
+        sta DebounceCtr
 SkipMoveBrushRight
        
         ldy #0
+
         ldx BrushXPos
+        cpx #254
         bne SkipSetBrushMinHPos
         sty HMP0
         inc BrushXPos
+        inc BrushXPos
+        inc BrushXPos
+        inc BrushXPos
 SkipSetBrushMinHPos
 
-        cpx #161
+        cpx #162
         bne SkipSetBrushMaxHPos
         sty HMP0
         dec BrushXPos
+        dec BrushXPos
+        dec BrushXPos
+        dec BrushXPos
 SkipSetBrushMaxHPos
+
+SkipMoveBrush
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Brush Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Set Playfield Color ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+        lda BrushYPos
+        cmp #34
+        bcs SkipSetBrushColor
+
+        lda INPT4
+        bmi SkipSetBrushColor
+
+        lda BrushXPos
+        cmp #14
+        bcs SkipSetColorGray
+        lda #GRAY
+        sta BrushColor
+        jmp SkipSetBrushColor
+
+SkipSetColorGray
+        cmp #29
+        bcs SkipSetColorWhite
+        lda #WHITE
+        sta BrushColor
+        jmp SkipSetBrushColor
+SkipSetColorWhite
+        cmp #44
+        bcs SkipSetColorRed
+        lda #RED
+        sta BrushColor
+        jmp SkipSetBrushColor
+SkipSetColorRed
+
+        cmp #59
+        bcs SkipSetColorPurple
+        lda #PURPLE
+        sta BrushColor
+        jmp SkipSetBrushColor
+SkipSetColorPurple
+        cmp #74
+        bcs SkipSetColorBlue
+        lda #BLUE
+        sta BrushColor
+        jmp SkipSetBrushColor
+SkipSetColorBlue
+        cmp #89
+        bcs SkipSetColorSky
+        lda #SKY
+        sta BrushColor
+        jmp SkipSetBrushColor
+SkipSetColorSky
+        cmp #104
+        bcs SkipSetColorGreen
+        lda #GREEN
+        sta BrushColor
+        jmp SkipSetBrushColor
+SkipSetColorGreen
+        cmp #119
+        bcs SkipSetColorYellow
+        lda #YELLOW
+        sta BrushColor
+        jmp SkipSetBrushColor
+SkipSetColorYellow
+        cmp #134
+        bcs SkipSetColorOrange
+        lda #ORANGE
+        sta BrushColor
+        jmp SkipSetBrushColor
+SkipSetColorOrange
+        cmp #149
+        bcs SkipSetColorBrown
+        lda #BROWN
+        sta BrushColor
+        jmp SkipSetBrushColor
+SkipSetColorBrown
+        cmp #164
+        bcs SkipSetColorBlack
+        lda #BLACK
+        sta BrushColor
+        jmp SkipSetBrushColor
+SkipSetColorBlack
+SkipSetBrushColor
+        
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Set Playfield Color ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+        lda #0
+        sta ENAM1
+        sta COLUPF
+
+        lda #ATARI_PAINT_TITLE_COLOR                        ; Set the player colors for the title
+        sta COLUP0
+        sta COLUP1
+
         lda #1
         sta VDELP0
         sta VDELP1
+
         lda #THREE_COPIES_CLOSE
         sta NUSIZ0
+        sta NUSIZ1
 
         ldx #0                                  ; Set Player 0 Position
         lda #ATARI_PAINT_TITLE_H_POS
@@ -6147,6 +6608,24 @@ CanvasSelectTableR      .byte #%10000000
                         .byte #%00000100
                         .byte #%00000010
                         .byte #%00000001
+
+CanvasEraseTable        .byte #%11111110
+                        .byte #%11111101
+                        .byte #%11111011
+                        .byte #%11110111
+                        .byte #%11101111
+                        .byte #%11011111
+                        .byte #%10111111
+                        .byte #%01111111
+
+CanvasEraseTableR       .byte #%01111111
+                        .byte #%10111111
+                        .byte #%11011111
+                        .byte #%11101111
+                        .byte #%11110111
+                        .byte #%11111011
+                        .byte #%11111101
+                        .byte #%11111110
            
            
 
