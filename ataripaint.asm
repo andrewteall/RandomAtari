@@ -3516,6 +3516,7 @@ FLY_GAME_TITLE_COLOR                    = #$02
 
 FLY_GAME_TITLE_VPOS                     = #56
 
+FLY_GAME_GAME_BACKGROUND_COLOR          = #$0A
 FLY_GAME_GAME_OVER_BACKGROUND_COLOR     = #$0A
 
 FLY_GAME_COUNTDOWN_TIMER_SECOND_DIVIDER = #60
@@ -3645,14 +3646,14 @@ Clear
         lda #30
         sta DebounceCtr
 
-        ldy #FLY_GAME_TITLE_COLOR                       ; 2
-        sty COLUPF                                      ; 3
+        ldy #FLY_GAME_TITLE_COLOR
+        sty COLUPF
 
-        ldy #FLY_GAME_TITLE_COLOR                       ; 2
-        sty COLUP0                                      ; 3
-        sty COLUP1                                      ; 3
+        ldy #FLY_GAME_TITLE_COLOR
+        sty COLUP0
+        sty COLUP1
 
-        ldy #0                                          ; 2
+        ldy #0
         sty VDELP0
         sty VDELP1
 
@@ -3933,9 +3934,9 @@ SkipSelectFlyGame1Player
         sta Game1SelectionGfx+1
 SkipSelectFlyGame2Player
         
-WaitLoop_bank1
+FlyGameTitleScreenWaitLoop
         lda INTIM
-        bne WaitLoop_bank1
+        bne FlyGameTitleScreenWaitLoop
 ; overscan
         ldx #6                                          
 FlyGameTitleScreenOverscan
@@ -3950,20 +3951,21 @@ FlyGameTitleScreenOverscan
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; TODO: FlyGame
-; TODO: Add Countdown Timer
+
 ; TODO: Add Game Over/Winning Screen
+; TODO: Add Support for Player 2
+; TODO: Make Swat Collision detection better
+; TODO: Debounce Swat so you can't just hold it down and win
+; TODO: Add Enemy Lifecycle
+
+; TODO: Condense Ram
 ; TODO: More Randomization in Enemy Gen
 ; TODO: Add Enemy2
-; TODO: Add Support for Player 2
 ; TODO: Set Player and Game Colors
-; TODO: Add Enemy Lifecycle
 ; TODO: Add Boss in single player mode
 ; TODO: Change Fly types/counts based on what level you are
-; TODO: Make Swat Collision detection better
 ; TODO: Player0 Movement change to be different speed than enemies
-; TODO: Condense Ram
-; TODO: Debounce Swat so you can't just hold it down and win
-; TODO: Add switch to next game
+
 ; TODO: Add Trackball Support
 
 PlayFlyGame
@@ -4022,37 +4024,37 @@ FlyGameScreen
         lda #FLY_GAME_COUNTDOWN_TIMER_SECOND_DIVIDER
         sta CountdownTimerInterval
 
-        ldx #0
-        lda Player0XPos
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
-        SLEEP 24
-        sta HMCLR
+        ; ldx #0
+        ; lda Player0XPos
+        ; jsr CalcXPos_bank1
+        ; sta WSYNC
+        ; sta HMOVE
+        ; SLEEP 24
+        ; sta HMCLR
         
-        ldx #2
-        lda Enemy0XPos
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
-        SLEEP 24
-        sta HMCLR
+        ; ldx #2
+        ; lda Enemy0XPos
+        ; jsr CalcXPos_bank1
+        ; sta WSYNC
+        ; sta HMOVE
+        ; SLEEP 24
+        ; sta HMCLR
 
-        ldx #3
-        lda Enemy1XPos
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
-        SLEEP 24
-        sta HMCLR
+        ; ldx #3
+        ; lda Enemy1XPos
+        ; jsr CalcXPos_bank1
+        ; sta WSYNC
+        ; sta HMOVE
+        ; SLEEP 24
+        ; sta HMCLR
 
-        ldx #4
-        lda #E2XSTARTPOS
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
-        SLEEP 24
-        sta HMCLR
+        ; ldx #4
+        ; lda #E2XSTARTPOS
+        ; jsr CalcXPos_bank1
+        ; sta WSYNC
+        ; sta HMOVE
+        ; SLEEP 24
+        ; sta HMCLR
 
 FlyGameStartOfFrame
         lda #0
@@ -4080,21 +4082,21 @@ FlyGameStartOfFrame
         jsr CalcXPos_bank1
         sta WSYNC
         sta HMOVE
-        SLEEP 24
-        sta HMCLR
+        ; SLEEP 24
+        ; sta HMCLR
 
         ldx #1
         lda #PLAYER2_H_POS+8
         jsr CalcXPos_bank1
         sta WSYNC
         sta HMOVE
-        SLEEP 24
-        sta HMCLR
+        ; SLEEP 24
+        ; sta HMCLR
+
         lda #THREE_COPIES_CLOSE
         sta NUSIZ0
         sta NUSIZ1
-
-
+        
         ldx #33                                         ; 2
 FlyGameVerticalBlank
         sta WSYNC                                       ; 3
@@ -4109,7 +4111,7 @@ FlyGameVerticalBlank
 SkipFlyGameGameoverScreen
 
         
-        lda #$0A
+        lda #FLY_GAME_GAME_BACKGROUND_COLOR
         sta COLUBK
 
         ldy #1                                          ; 2
@@ -5236,6 +5238,8 @@ ATARI_PAINT_BACKGROUND_COLOR                = #$0F
 ATARI_PAINT_FOREGROUND_SELECTED_COLOR       = #$88
 ATARI_PAINT_BACKGROUND_SELECTED_COLOR       = #$42
 
+ATARI_PAINT_BRUSH_START_XPOS                = #78
+ATARI_PAINT_BRUSH_START_YPOS                = #99
 ATARI_PAINT_MOVE_BRUSH_DELAY                = #8
 ATARI_PAINT_BRUSH_HORIZONTAL_OVERFLOW       = #$8A
 
@@ -5294,7 +5298,6 @@ CanvasOffset3           ds 93
         
 
 ; TODO: Atari Paint
-; TODO: Optimize Space
 AtariPaint
         ldx #0
         txa
@@ -5305,64 +5308,20 @@ ClearRam
         bne ClearRam
         cld      
 
-        ; lda #0
-        ; sta NUSIZ0
-        ; sta NUSIZ1
-        ; sta VDELP0
-        ; sta VDELP1
-        ; sta GRP0
-        ; sta GRP1
-        ; sta COLUBK
-
         lda #30
         sta DebounceCtr
-
-        ldx #0                                  ; Set Player 0 Position
-        lda #ATARI_PAINT_TITLE_H_POS
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
-        SLEEP 24
-        sta HMCLR
-
-        ldx #1                                  ; Set Player 1 Position
-        lda #ATARI_PAINT_TITLE_H_POS+8
-        jsr CalcXPos_bank1
-        ; sta WSYNC
-        ; sta HMOVE
-        ; SLEEP 24
-        ; sta HMCLR
-
-        ldx #3                                  ; Set Missle 1 Position
-        lda #129
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
-        SLEEP 24
-        sta HMCLR
-
-        lda #ATARI_PAINT_TITLE_COLOR            ; Set the player colors for the title
-        sta COLUP0
-        sta COLUP1
-        
-        lda #1                                  ; Enable Vertical delay for both players
-        sta VDELP0
-        sta VDELP1
-
-        lda #ATARI_PAINT_BACKGROUND_COLOR
-        sta BackgroundColor
 
         lda #<Canvas
         sta CanvasPtr
         lda #>Canvas
         sta CanvasPtr+1
 
-        lda #6
-        sta CanvasRowCntrIdx
-        
-        lda #78
+        lda #ATARI_PAINT_BACKGROUND_COLOR
+        sta BackgroundColor
+
+        lda #ATARI_PAINT_BRUSH_START_XPOS
         sta BrushXPos
-        lda #99
+        lda #ATARI_PAINT_BRUSH_START_YPOS
         sta BrushYPos
 
 AtariPaintFrame
@@ -5391,20 +5350,16 @@ AtariPaintVerticalBlank
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End VBLANK Processing ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        
+        IF ATARI_PAINT_TITLE_H_POS <= 47
+         sta WSYNC
+        ENDIF
+        
         ldx #ATARI_PAINT_BACKGROUND_COLOR
         stx COLUBK
+
         ldx #0
-        IF ATARI_PAINT_TITLE_H_POS <= 47
-         sta WSYNC                                      ; 3     
-        ENDIF
         ldy #0
-
-        jmp AlignAtariPaintBoundary
-        REPEAT 37
-        nop
-        REPEND
-AlignAtariPaintBoundary
-
 AtariPaintViewableScreen
         sta WSYNC
         inx
@@ -5412,9 +5367,9 @@ AtariPaintViewableScreen
         bne AtariPaintViewableScreen
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Title Text
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         SLEEP ATARI_PAINT_TITLE_SLEEPTIMER-6
         
         inx                                             ; 2
@@ -5451,44 +5406,45 @@ AtariPaintDrawTitle
         cpx #10                                         ; 2     72
         nop                                             ; 2     74
         nop                                             ; 2     76
-        bne AtariPaintDrawTitle                          ; 2/3   2/3
+        bne AtariPaintDrawTitle                         ; 2/3   2/3
         
-;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; End Title Text
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        
         lda #MISSLE_SIZE_TWO_CLOCKS | #TWO_COPIES_MEDIUM
         sta NUSIZ0
         sta NUSIZ1
+
         ldy #0
-
-        lda #ATARI_PAINT_FOREGROUND_SELECTED_COLOR
-        sta COLUP0
-        lda #ATARI_PAINT_BACKGROUND_SELECTED_COLOR
-        sta COLUP1
-
-Loop1
+AtariPaintTitleBottomBuffer
         inx
         cpx #15
         sta WSYNC
-        bne Loop1
+        bne AtariPaintTitleBottomBuffer
 
-TestLoop
-        SLEEP 4 ; 13
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Control Row
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+AtariPaintControlRow
+        SLEEP 4
 
         lda ControlColor
         sta COLUP0
         sta COLUP1
 
 
-        lda F_,y                                        ; 4     
-        sta GRP0                                        ; 3     
+        lda F_,y
+        sta GRP0
         
-        lda B_,y                                        ; 4     
-        sta GRP1                                        ; 3     
+        lda B_,y
+        sta GRP1
 
-        lda E_,y                                        ; 4     
-        sta GRP0                                        ; 3 
+        lda E_,y
+        sta GRP0
         
-        lda C_,y                                        ; 4     
-        sta GRP1                                        ; 3 
+        lda C_,y
+        sta GRP1
 
         sta GRP0
         
@@ -5497,18 +5453,20 @@ TestLoop
         inx
         sta WSYNC
         cpx #20
+        bne AtariPaintControlRow
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; End Control Row
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-        bne TestLoop
         ; lda #2
         ; sta ENABL
         lda #0
-        ldy BrushYPos                                   ; 3
+        ldy BrushYPos
         cpy #21
-        bne SkipDrawBrush4                               ; 2/3
-        lda #2                                          ; 2
-SkipDrawBrush4
-        sta ENAM0                                       ; 3     (10)
+        bne ControlSkipDrawBrush
+        lda #2
+ControlSkipDrawBrush
+        sta ENAM0
         
         lda #ATARI_PAINT_TITLE_COLOR
         sta COLUP0
@@ -5524,14 +5482,15 @@ SkipDrawBrush4
         lda #%00010000
         sta CTRLPF
         
-;;;;;;;;;;;;;;;
-        txa
-        pha
+        
         lda #0
         sta PF0
         sta PF1
         sta PF2
+        sta GRP1
+        sta GRP0
         sta ENAM0 
+
         lda #MISSLE_SIZE_TWO_CLOCKS
         sta NUSIZ0
         sta NUSIZ1
@@ -5540,28 +5499,20 @@ SkipDrawBrush4
 
         lda BrushXPos
         cmp #ATARI_PAINT_BRUSH_HORIZONTAL_OVERFLOW
-        bcs SkipWSYNC2
+        bcs SkipAdjustWSYNC
         sta WSYNC
-SkipWSYNC2
+SkipAdjustWSYNC
 
+        txa
+        pha
         ldx #2                                  ; Set Player Brush Position
         lda BrushXPos
         jsr CalcXPos_bank1
         sta WSYNC
         sta HMOVE
-        ldx #0
-        stx COLUBK
-        lda #BLACK
-        sta COLUPF
         pla
         tax
         
-
-        lda #0
-        ;sta VDELP0        
-        sta GRP1
-        sta GRP0
-
         lda #255
         sta PF0
         sta PF1
@@ -5575,22 +5526,25 @@ SkipWSYNC2
 
         sta WSYNC
         SLEEP 3
-AtariPaintTitleBuffer
 
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Palette
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+AtariPaintPalette
         lda #GRAY
-        sta COLUPF                                      ; (5)
+        sta COLUPF
         
-        cpx BrushYPos                                   ; 3
-        bne SkipDrawBrush2                              ; 2/3
-        lda #2                                          ; 2
-        jmp SkipB                                       ; 3
-SkipDrawBrush2
-        lda #0                                          ; 2
-        nop                                             ; 2
-SkipB
-        ;sta.w ENAM0                                     ; 3     (13)
-        sta ENAM0                                     ; 3     (13)
+        cpx BrushYPos
+        bne PaletteSkipDrawBrush
+        lda #2
+        jmp PaletteDrawBrush
+PaletteSkipDrawBrush
+        lda #0
+        nop
+PaletteDrawBrush
+
+        ; sta.w ENAM0
+        sta ENAM0
 
         lda #WHITE
         sta COLUPF
@@ -5622,9 +5576,12 @@ SkipB
         lda #BLACK
         sta COLUPF
 
-        inx                                             ; 2
-        cpx #34                                         ; 2
-        bne AtariPaintTitleBuffer                       ; 2/3
+        inx
+        cpx #34
+        bne AtariPaintPalette                           ; (76)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; End Palette
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         ldy #0
         inx 
@@ -5638,7 +5595,6 @@ SkipB
         sta PF1
         sta PF2
         
-
         lda BackgroundColor
         sta COLUP1
         lda #MISSLE_SIZE_FOUR_CLOCKS
@@ -5647,13 +5603,15 @@ SkipB
         sta ENAM1
         
         lda BrushColor
-        ;sta COLUP0
         sta COLUPF
         
         lda #0
         inx
         sta WSYNC
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Canvas
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 AtariPaintCanvas
         cpx BrushYPos                                   ; 3
         bne SkipDrawBrush                               ; 2/3
@@ -5697,12 +5655,14 @@ SkipResetCanvasRowCntrIdx
         cpx #180                                        ; 2
         sta WSYNC                                       ; 3
         bne AtariPaintCanvas                            ; 2/3   (10)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; End Canvas
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda #0                                          ; 2
-        sta PF2                                         ; 3
-        sta PF0                                         ; 3     (8)
+        lda #0
+        sta PF2
+        sta PF0
         sta PF1
-        ldy #0
 
 AtariPaintEndOfScreenBuffer
         sta WSYNC
@@ -5805,14 +5765,14 @@ SkipMoveBrushUp
         sta DebounceCtr
 SkipMoveBrushDown
 
-        cpy #15   ;34
+        cpy #15
         bne SkipSetBrushMinVPos
-        ldy #21   ;36
+        ldy #21
 SkipSetBrushMinVPos
 
-        cpy #183  ; 170
+        cpy #183
         bne SkipSetBrushMaxVPos
-        ldy #177        ; 168
+        ldy #177
 SkipSetBrushMaxVPos
         sty BrushYPos
 
@@ -5885,22 +5845,17 @@ SkipMoveBrush
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Calculate Tile to Paint ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;         lda DebounceCtr
-;         beq SkipJumpPaintTile
-;         jmp SkipPaintTile
-; SkipJumpPaintTile
-
         lda INPT4
-        bpl SkipReadInput
+        bpl PaintTileButtonPressed
         jmp SkipPaintTile
-SkipReadInput
+PaintTileButtonPressed
 
         ldx #0
         lda BrushYPos
         cmp #36
-        bcs SkipSkipPaintTile
+        bcs PaintTileYPosCorrect
         jmp SkipPaintTile
-SkipSkipPaintTile
+PaintTileYPosCorrect
 
         sec
         sbc #36
@@ -5910,7 +5865,6 @@ DivideBy6
         sbc #6
         bcs DivideBy6
         dex
-        stx CanvasRow
         ; Multiply X by 4 to find canvas row
         txa
         asl
@@ -5920,13 +5874,13 @@ DivideBy6
 
         lda BrushXPos           ; Load the Brush X Position
         cmp #18                 ; If it's less than 18 then
-        bpl SkipSkipSkipPaintTile 
+        bpl PaintTileMinXPosCorrect 
         jmp SkipPaintTile       ; Skip over the routine
-SkipSkipSkipPaintTile
+PaintTileMinXPosCorrect
         cmp #130                 ; If it's more than 98 then
-        bmi SkipSkipSkipSkipPaintTile 
+        bmi PaintTileMaxXPosCorrect 
         jmp SkipPaintTile       ; Skip over the routine
-SkipSkipSkipSkipPaintTile
+PaintTileMaxXPosCorrect
 
         sec                     ; Subtract 18 so that the "canvas" is
         sbc #18                 ; aligned to the left side of the screen
@@ -5948,15 +5902,18 @@ Modulo8
         adc #8
         sta CanvasByteIdx
 
-        lda DrawOrErase
-        bne SkipPaintTileFormula
-
         lda BrushXPos
         cmp #50
         bpl SkipSetCanvasIdx0
 
         ldy CanvasByteIdx
+        
         lda CanvasSelectTableR,y
+        ldx DrawOrErase
+        beq LoadTableErasePF10
+        eor #255
+LoadTableErasePF10
+
         sta CanvasByteMask
 
         ldx #0
@@ -5968,6 +5925,11 @@ SkipSetCanvasIdx0
 
         ldy CanvasByteIdx
         lda CanvasSelectTable,y
+        ldx DrawOrErase
+        beq LoadTableErasePF20
+        eor #255
+
+LoadTableErasePF20
         sta CanvasByteMask
 
         ldx #1
@@ -5979,6 +5941,10 @@ SkipSetCanvasIdx1
 
         ldy CanvasByteIdx
         lda CanvasSelectTable,y
+        ldx DrawOrErase
+        beq LoadTableErasePF00
+        eor #255
+LoadTableErasePF00
         asl
         asl
         asl
@@ -5991,6 +5957,10 @@ SkipSetCanvasIdx1
 SkipSetCanvasIdx2
         ldy CanvasByteIdx
         lda CanvasSelectTableR,y
+        ldx DrawOrErase
+        beq LoadTableErasePF11
+        eor #255
+LoadTableErasePF11
         and #%00001111
         clc
         rol
@@ -6001,7 +5971,13 @@ SkipSetCanvasIdx2
         sta LetterBuff
 
         ldy CanvasByteIdx
+
         lda CanvasSelectTableR,y
+        ldx DrawOrErase
+        beq LoadTableErasePF12
+        eor #255
+LoadTableErasePF12
+
         and #%11110000
         
         ror
@@ -6015,125 +5991,28 @@ SkipSetCanvasIdx2
         ldx #3
         stx CanvasIdx
 CanvasIdxSet
-
-
         txa
         clc
         adc CanvasRow
         sta CanvasIdx
         
-
         ldy CanvasIdx
         lda Canvas,y
+        
+        ldx DrawOrErase
+        beq LoadCanvasByteMask
+        and CanvasByteMask
+        jmp LoadEraseCanvasByteMask
+LoadCanvasByteMask
         ora CanvasByteMask
+LoadEraseCanvasByteMask
+
         sta Canvas,y
         jmp SkipPaintTile
-SkipPaintTileFormula
-
-        lda BrushXPos
-        cmp #50
-        bpl SkipEraseCanvasIdx0
-
-        ldy CanvasByteIdx
-        lda CanvasEraseTableR,y
-        sta CanvasByteMask
-
-        ldx #0
-        stx CanvasIdx
-        jmp CanvasIdxErase
-SkipEraseCanvasIdx0
-        cmp #82
-        bpl SkipEraseCanvasIdx1
-
-        ldy CanvasByteIdx
-        lda CanvasEraseTable,y
-        sta CanvasByteMask
-
-        ldx #1
-        stx CanvasIdx
-        jmp CanvasIdxErase
-SkipEraseCanvasIdx1
-        cmp #98
-        bpl SkipEraseCanvasIdx2
-
-        ldy CanvasByteIdx
-        lda CanvasEraseTable,y
-        asl
-        asl
-        asl
-        asl
-        sta CanvasByteMask
-
-        ldx #2
-        stx CanvasIdx
-        jmp CanvasIdxErase
-SkipEraseCanvasIdx2
-        ldy CanvasByteIdx
-        lda CanvasEraseTableR,y
-        and #%00001111
-        clc
-        rol
-        rol
-        rol
-        rol
-        
-        sta LetterBuff
-
-        ldy CanvasByteIdx
-        lda CanvasEraseTableR,y
-        and #%11110000
-        
-        ror
-        ror
-        ror
-        ror
-        
-        ora LetterBuff
-        sta CanvasByteMask
-
-        ldx #3
-        stx CanvasIdx
-CanvasIdxErase
-
-
-        txa
-        clc
-        adc CanvasRow
-        sta CanvasIdx
-        
-
-        ldy CanvasIdx
-        lda Canvas,y
-        and CanvasByteMask
-
-
-        sta Canvas,y
-
-        ; lda #10
-        ; sta DebounceCtr
 
 SkipPaintTile
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Calculate Tile to Paint ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Clear Canvas ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda ClearCanvasFlag
-        beq SkipClearCanvas
-        ldy #0
-ClearCanvasArray
-        lda #0
-        sta Canvas,y
-        iny
-        cpy #96
-        bne ClearCanvasArray
-        sta ClearCanvasFlag
-SkipClearCanvas
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Clear Canvas ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -6165,15 +6044,16 @@ SkipSetFGColor
         bcs SkipSetBGColor
         cmp #66
         bcc SkipSetBGColor
+
         lda #1
         sta FGBGFlag
-        
         jmp SkipSetCanvasControl
 SkipSetBGColor
         cmp #94
         bcs SkipSetErase
         cmp #90
         bcc SkipSetErase
+
         lda #1
         sta DrawOrErase
         
@@ -6184,6 +6064,7 @@ SkipSetErase
         bcs SkipSetClear
         cmp #98
         bcc SkipSetClear
+
         lda #1
         sta ClearCanvasFlag
 SkipSetClear
@@ -6193,7 +6074,25 @@ SkipSetCanvasControl
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Set Playfield Color ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Clear Canvas ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda ClearCanvasFlag
+        beq SkipClearCanvas
+        ldy #0
+ClearCanvasArray
+        lda #0
+        sta Canvas,y
+        iny
+        cpy #96
+        bne ClearCanvasArray
+        sta ClearCanvasFlag
+SkipClearCanvas
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Clear Canvas ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Set Brush or Background Color ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         lda BrushYPos
@@ -6207,71 +6106,60 @@ SkipSetCanvasControl
         bmi SkipSetBrushColor
 
         lda BrushXPos
+        
         cmp #13
         bcs SkipSetColorGray
         lda #GRAY
         jmp SetBrushColor
-
 SkipSetColorGray
         cmp #28
         bcs SkipSetColorWhite
         lda #WHITE
-        
         jmp SetBrushColor
 SkipSetColorWhite
-        cmp #42
+        cmp #43
         bcs SkipSetColorRed
         lda #RED
-        
         jmp SetBrushColor
 SkipSetColorRed
-
-        cmp #58
+        cmp #59
         bcs SkipSetColorPurple
         lda #PURPLE
-        
         jmp SetBrushColor
 SkipSetColorPurple
         cmp #73
         bcs SkipSetColorBlue
         lda #BLUE
-        
         jmp SetBrushColor
 SkipSetColorBlue
         cmp #87
         bcs SkipSetColorSky
         lda #SKY
-        
         jmp SetBrushColor
 SkipSetColorSky
-        cmp #102
+        cmp #103
         bcs SkipSetColorGreen
         lda #GREEN
-        
         jmp SetBrushColor
 SkipSetColorGreen
-        cmp #118
+        cmp #119
         bcs SkipSetColorYellow
         lda #YELLOW
-        
         jmp SetBrushColor
 SkipSetColorYellow
-        cmp #133
+        cmp #134
         bcs SkipSetColorOrange
         lda #ORANGE
-        
         jmp SetBrushColor
 SkipSetColorOrange
         cmp #148
         bcs SkipSetColorBrown
         lda #BROWN
-        
         jmp SetBrushColor
 SkipSetColorBrown
         cmp #163
         bcs SkipSetColorBlack
         lda #BLACK
-        
         jmp SetBrushColor
 SkipSetColorBlack
 SetBrushColor
@@ -6284,11 +6172,8 @@ SetBackGroundColor
 SkipSetBrushColor
         
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Set Playfield Color ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Set Brush or Background Color ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-
 
         lda #0
         sta ENAM1
@@ -6309,24 +6194,23 @@ SkipSetBrushColor
         sta NUSIZ0
         sta NUSIZ1
 
-        lda #%00010100
-        sta CTRLPF
-
         ldx #0                                  ; Set Player 0 Position
         lda #ATARI_PAINT_TITLE_H_POS
         jsr CalcXPos_bank1
         sta WSYNC
         sta HMOVE
-        SLEEP 24
-        sta HMCLR
 
         ldx #1                                  ; Set Player 1 Position
         lda #ATARI_PAINT_TITLE_H_POS+8
         jsr CalcXPos_bank1
         sta WSYNC
         sta HMOVE
-        SLEEP 24
-        sta HMCLR
+
+        ldx #3                                  ; Set Missle 1 Position
+        lda #129
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
 
         ; ldx #4                                  ; Set Player 1 Position
         ; lda BrushXPos
@@ -6374,7 +6258,6 @@ CalcXPos_bank1:
         sta RESP0,x                                     ; 3
         sta HMP0,x                                      ; 3
         
-        
         rts                                             ; 6
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;; End Calculate Horizontal Sprite Position ;;;;;;;;;;;;;;;;;;
@@ -6411,7 +6294,7 @@ Skipeor:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Rom Data ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        align 256
+        ;align 256
 PlayerGfx  .byte #%01111110
            .byte #%11111111
            .byte #%10000001
@@ -6459,7 +6342,6 @@ PlayerSlapGfx
            .byte #%00000000
            .byte #%00000000     ; (22)
 
-        
 ON         .byte  #%11101110
            .byte  #%10101010
            .byte  #%10101010
@@ -6526,6 +6408,9 @@ N          .byte  #%11101110
            .byte  #%10101010
            .byte  #%10101010
 
+        nop
+        nop
+        
 T          .byte  #%11101110
            .byte  #%01000100
            .byte  #%01000100
@@ -6718,25 +6603,6 @@ CanvasSelectTableR      .byte #%10000000
                         .byte #%00000010
                         .byte #%00000001
 
-CanvasEraseTable        .byte #%11111110
-                        .byte #%11111101
-                        .byte #%11111011
-                        .byte #%11110111
-                        .byte #%11101111
-                        .byte #%11011111
-                        .byte #%10111111
-                        .byte #%01111111
-
-CanvasEraseTableR       .byte #%01111111
-                        .byte #%10111111
-                        .byte #%11011111
-                        .byte #%11101111
-                        .byte #%11110111
-                        .byte #%11111011
-                        .byte #%11111101
-                        .byte #%11111110
-           
-           
 
         echo "----"
         echo "Rom Total Bank1:"
