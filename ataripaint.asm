@@ -4055,11 +4055,9 @@ SkipP1JoinGame
         bmi SkipRestartFlyGame
         jmp RestartFlyGame
 SkipRestartFlyGame
-        
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Restart Fly Game ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Scoring ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4200,11 +4198,9 @@ SkipResetTimerHex
 SkipCountdownTimer
         dec CountdownTimerInterval
 SkipTimer
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Time Countdown Timer  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Determine Winner  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4291,7 +4287,7 @@ CalcCountdownTimer
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Build Countdown Timer Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+        
         lda #0
         sta GRP0
         sta GRP1
@@ -4332,13 +4328,13 @@ SkipFlyGameGameoverScreen
         lda #FLY_GAME_GAME_BACKGROUND_COLOR
         sta COLUBK
 
-        ldy #1                                          ; 2
+        ldy #1
         sty VDELP0
         sty VDELP1
 
         ldx #0
         IF PLAYER2_H_POS <= 47
-         sta WSYNC                                      ; 3     
+         sta WSYNC
         ENDIF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4568,7 +4564,7 @@ SkipDrawE0
         sty ENAM1                               ; 3     (8)
 SkipDrawE1
 
-        ldy #1                                  ; 2
+        ; ldy #1                                  ; 2
         cpx Player0YPos                         ; 3
         bne SkipSetDrawP0Flag                   ; 2/3
         sty DrawP0Sprite                        ; 3     (10)
@@ -4594,7 +4590,7 @@ SkipP0ResetHeight
         inc P0SprIdx                            ; 5     (21)
 SkipP0Draw
         
-        sta WSYNC                               ; 3     (3)     (75)
+        ; sta WSYNC                               ; 3     (3)     (75)+3 from branch
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #0                                  ; 2
         sta GRP1                                ; 3     (5)
@@ -4610,7 +4606,7 @@ SkipP1Draw
         lda #0                                  ; 2
         cpx Enemy0YPosEnd                       ; 3
         bne SkipE0Reset                         ; 2/3
-        sta ENAM0                               ; 3     (8)
+        sta ENAM0                               ; 3     (10)
 SkipE0Reset
 
         cpx Enemy1YPosEnd                       ; 3
@@ -4629,7 +4625,7 @@ SkipP1ResetHeight
         inx                                     ; 2
         cpx #192                                ; 2
         sta WSYNC                               ; 3
-        bne FlyGameBoard                        ; 2/3   (12)    (67)
+        bne FlyGameBoard                        ; 2/3   (12)    (68)
         jmp EndofViewableScreen                 ; 3
         
         ; TODO: Game Over
@@ -4651,13 +4647,13 @@ DrawGameOverScreen
         jsr CalcXPos_bank1
         sta WSYNC
         sta HMOVE
-        ; SLEEP 24
 
         ldx #1                                  ; Set Player 1 Position
         lda #ATARI_PAINT_TITLE_H_POS+8
         jsr CalcXPos_bank1
         sta WSYNC
         sta HMOVE
+
         ldx #44
 DrawGameOverScreenTop
         inx
@@ -4847,8 +4843,7 @@ DrawGameOverScreenText22Player
         sta GRP0
         sta GRP1
         sta GRP0
-
-
+        
 DrawGameOverScreenBottom
         inx                                     ; 2
         cpx #192                                ; 2
@@ -4917,67 +4912,65 @@ GameSkipSwitchToAtariPaint
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Check Bank Switching ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Player 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;         lda GameOverFlag
-;         bne SkipP0Move
+        lda GameOverFlag
+        bne SkipP0Move
         
-; Player0Control
-; ; Player 0 Up/Down Control
-;         ldy Player0YPos
+Player0Control
+; Player 0 Up/Down Control
+        ldy Player0YPos
         
-;         lda #P0_JOYSTICK_UP            
-;         bit SWCHA
-;         bne SkipMoveP0Up
-;         dey
-;         dey
-; SkipMoveP0Up
+        lda #P0_JOYSTICK_UP            
+        bit SWCHA
+        bne SkipMoveP0Up
+        dey
+        dey
+SkipMoveP0Up
 
-;         lda #P0_JOYSTICK_DOWN
-;         bit SWCHA
-;         bne SkipMoveP0Down
-;         iny
-;         iny
-; SkipMoveP0Down
+        lda #P0_JOYSTICK_DOWN
+        bit SWCHA
+        bne SkipMoveP0Down
+        iny
+        iny
+SkipMoveP0Down
 
-;         cpy #38
-;         bne SkipSetP0MinVPos
-;         ldy #40
-; SkipSetP0MinVPos
+        cpy #38
+        bne SkipSetP0MinVPos
+        ldy #40
+SkipSetP0MinVPos
 
-;         cpy #170
-;         bne SkipSetP0MaxVPos
-;         ldy #168
-; SkipSetP0MaxVPos
-;         sty Player0YPos
+        cpy #170
+        bne SkipSetP0MaxVPos
+        ldy #168
+SkipSetP0MaxVPos
+        sty Player0YPos
 
-; ; Player 0 Left/Right Control
-;         lda #P0_JOYSTICK_LEFT         
-;         and SWCHA
-;         bne SkipMoveP0Left
-;         dec Player0XPos
-; SkipMoveP0Left
+; Player 0 Left/Right Control
+        lda #P0_JOYSTICK_LEFT         
+        and SWCHA
+        bne SkipMoveP0Left
+        dec Player0XPos
+SkipMoveP0Left
 
-;         lda #P0_JOYSTICK_RIGHT
-;         and SWCHA
-;         bne SkipMoveP0Right
-;         inc Player0XPos
-; SkipMoveP0Right
+        lda #P0_JOYSTICK_RIGHT
+        and SWCHA
+        bne SkipMoveP0Right
+        inc Player0XPos
+SkipMoveP0Right
        
-;         ldy #0
-;         ldx Player0XPos
-;         bne SkipSetP0MinHPos
-;         inc Player0XPos
-; SkipSetP0MinHPos
+        ldy #0
+        ldx Player0XPos
+        bne SkipSetP0MinHPos
+        inc Player0XPos
+SkipSetP0MinHPos
 
-;         cpx #160-#16
-;         bne SkipSetP0MaxHPos
-;         dec Player0XPos
-; SkipSetP0MaxHPos
-; SkipP0Move
+        cpx #160-#16
+        bne SkipSetP0MaxHPos
+        dec Player0XPos
+SkipSetP0MaxHPos
+SkipP0Move
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Player 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
