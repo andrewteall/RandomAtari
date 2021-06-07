@@ -3556,8 +3556,8 @@ GameSelectFlag          ds 1
 SkipGameFlag            ds 1
 DebounceCtr             ds 1                    ; Gotta Keep this in spot 7 to match Bank0
 P1FireDebounceCtr       ds 1
-P0Fire                  ds 1
-P1Fire                  ds 1
+BlockP0Fire             ds 1
+BlockP1Fire             ds 1
 LetterBuffer2           ds 1
 LineTemp2               ds 1
 YTemp2                  ds 1
@@ -3614,6 +3614,7 @@ Enemy2YPosStr           ds 1
 DrawE2Sprite            ds 1
 E2SprIdx                ds 1
 
+P0Score                 ds 1
 P0Score1                ds 1
 P0Score2                ds 1
 P0Score1idx             ds 1
@@ -3623,6 +3624,7 @@ P0Score2idx             ds 1
 P0Score2DigitPtr        ds 2
 P0ScoreArr              ds 5
 
+P1Score                 ds 1
 P1Score1                ds 1
 P1Score2                ds 1
 P1Score1idx             ds 1
@@ -3939,14 +3941,16 @@ FlyGameTitleScreenOverscanWaitLoop
 ; TODO: FlyGame
 
 ; TODO: Make Swat Collision detection better
-; TODO: Debounce Swat so you can't just hold it down and win
+; TODO: Enemy position seems off
+; TODO: Align scanlines when player 2 joins
+; TODO: Prohibit Movement when game over
 ; TODO: Add Enemy Lifecycle
 ; TODO: Add Music
+; TODO: Set Player and Game Colors
+; TODO: Difficulty level chnages fly speed
 
 ; TODO: Condense Ram
 ; TODO: More Randomization in Enemy Gen
-; TODO: Add Enemy2
-; TODO: Set Player and Game Colors
 ; TODO: Add Boss in single player mode
 ; TODO: Change Fly types/counts based on what level you are
 ; TODO: Player0 Movement change to be different speed than enemies
@@ -3959,10 +3963,6 @@ FlyGameScreen
 
         ldx #P0YSTARTPOS
         stx Player0YPos
-
-        ; lda #0
-        ; sta Player1XPos
-        ; sta Player1YPos
 
         lda GameSelectFlag
         beq OnePlayerGame
@@ -4011,7 +4011,7 @@ FlyGameStartOfFrame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Scoring ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-P0Score
+P0ScoreCalc
         lda P0Score1
         sta P0Score1idx   
         
@@ -4042,7 +4042,7 @@ P0Score
 
         lda #>(Zero_bank1)
         sta P0Score2DigitPtr+1
-P1Score
+P1ScoreCalc
         lda P1Score1
         sta P1Score1idx   
         asl
@@ -5076,11 +5076,21 @@ SkipHideP1Overflow
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         lda DebounceCtr
-        bne SkipP0HitDetection
+        ;bne SkipP0HitDetection
+        beq P0Fire2
+        jmp P0SkipFire
+P0Fire2
+
+        lda BlockP0Fire
+        beq P0Fire3
+        jmp SkipP0HitDetection
+P0Fire3
+
         lda INPT4
         bmi P0NotFire 
-        lda #0
-        sta P0Fire
+        
+        lda #1
+        sta BlockP0Fire
 
         lda #8
         sta DebounceCtr
@@ -5115,7 +5125,7 @@ SkipHideP1Overflow
 
         inc P0Score1
         lda P0Score1
-        cmp #8
+        cmp #10
         bne SkipP0Enemy0Hit
         lda #0
         sta P0Score1
@@ -5147,11 +5157,12 @@ SkipP0Enemy0Hit
         lda #150
         sta Enemy1GenTimer
 
+        inc P0Score
         inc P0Score1
         lda P0Score1
-        cmp #8
+        cmp #10
         bne SkipP0Enemy1Hit
-        lda #1
+        lda #0
         sta P0Score1
         inc P0Score2
 
@@ -5162,8 +5173,11 @@ SkipP0Enemy1Hit
 SkipP0HitDetection
 
 P0NotFire
-        ; lda #1
-        ; sta P0Fire
+        lda INPT4
+        bpl P0NotFire2
+        lda #0
+        sta BlockP0Fire
+P0NotFire2
         lda DebounceCtr
         bne P0SkipFire
 
@@ -5181,15 +5195,25 @@ P0SkipFire
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Player 1 Detect Hit ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda GameSelectFlag
-        beq SkipP1HitDetection
+        ; lda GameSelectFlag
+        ; beq SkipP1HitDetection
 
         lda P1FireDebounceCtr
-        bne SkipP1HitDetection
+        ;bne SkipP0HitDetection
+        beq P1Fire2
+        jmp P1SkipFire
+P1Fire2
+
+        lda BlockP1Fire
+        beq P1Fire3
+        jmp SkipP1HitDetection
+P1Fire3
+
         lda INPT5
         bmi P1NotFire 
-        lda #0
-        sta P1Fire
+        
+        lda #1
+        sta BlockP1Fire
 
         lda #8
         sta P1FireDebounceCtr
@@ -5223,9 +5247,10 @@ P0SkipFire
         lda #150
         sta Enemy0GenTimer
 
+        inc P1Score
         inc P1Score1
         lda P1Score1
-        cmp #8
+        cmp #10
         bne SkipP1Enemy0Hit
         lda #0
         sta P1Score1
@@ -5259,9 +5284,9 @@ SkipP1Enemy0Hit
 
         inc P1Score1
         lda P1Score1
-        cmp #8
+        cmp #10
         bne SkipP1Enemy1Hit
-        lda #1
+        lda #0
         sta P1Score1
         inc P1Score2
 
@@ -5272,8 +5297,11 @@ SkipP1Enemy1Hit
 SkipP1HitDetection
 
 P1NotFire
-        lda #1
-        sta P1Fire
+        lda INPT5
+        bpl P1NotFire2
+        lda #0
+        sta BlockP1Fire
+P1NotFire2
         lda P1FireDebounceCtr
         bne P1SkipFire
 
