@@ -3940,7 +3940,6 @@ FlyGameTitleScreenOverscanWaitLoop
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; TODO: FlyGame
 
-; TODO: Make Swat Collision detection better
 ; TODO: Enemy position seems off
 ; TODO: Align scanlines when player 2 joins
 ; TODO: Prohibit Movement when game over
@@ -5104,15 +5103,17 @@ P0Fire3
         cmp Enemy0XPos
         bcs SkipP0Enemy0Hit
         clc
-        adc #16
+        adc #17
         cmp Enemy0XPos
         bcc SkipP0Enemy0Hit
 
         lda Player0YPos
+        sec
+        sbc #E0HEIGHT*2-1
         cmp Enemy0YPos
         bcs SkipP0Enemy0Hit
         clc
-        adc #16
+        adc #28
         cmp Enemy0YPos
         bcc SkipP0Enemy0Hit
 
@@ -5137,15 +5138,17 @@ SkipP0Enemy0Hit
         cmp Enemy1XPos
         bcs SkipP0Enemy1Hit
         clc
-        adc #16
+        adc #17
         cmp Enemy1XPos
         bcc SkipP0Enemy1Hit
 
         lda Player0YPos
+        sec
+        sbc #E1HEIGHT*2-1
         cmp Enemy1YPos
         bcs SkipP0Enemy1Hit
         clc
-        adc #16
+        adc #28
         cmp Enemy1YPos
         bcc SkipP0Enemy1Hit
 
@@ -5227,15 +5230,17 @@ P1Fire3
         cmp Enemy0XPos
         bcs SkipP1Enemy0Hit
         clc
-        adc #16
+        adc #17
         cmp Enemy1XPos
         bcc SkipP1Enemy0Hit
 
         lda Player1YPos
+        sec
+        sbc #E0HEIGHT*2-1
         cmp Enemy0YPos
         bcs SkipP1Enemy0Hit
         clc
-        adc #16
+        adc #28
         cmp Enemy0YPos
         bcc SkipP1Enemy0Hit
 
@@ -5262,15 +5267,17 @@ SkipP1Enemy0Hit
         cmp Enemy1XPos
         bcs SkipP1Enemy1Hit
         clc
-        adc #16
+        adc #17
         cmp Enemy1XPos
         bcc SkipP1Enemy1Hit
 
         lda Player1YPos
+        sec
+        sbc #E1HEIGHT*2-1
         cmp Enemy1YPos
         bcs SkipP1Enemy1Hit
         clc
-        adc #16
+        adc #28
         cmp Enemy1YPos
         bcc SkipP1Enemy1Hit
 
