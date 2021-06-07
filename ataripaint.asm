@@ -3523,9 +3523,9 @@ FLY_GAME_TITLE_HPOS                     = #59
 
 FLY_GAME_GAME_BACKGROUND_COLOR          = #$0A
 FLY_GAME_GAME_OVER_BACKGROUND_COLOR     = #$0A
-
+FLY_GAME_GAME_OVER_RESTART_DELAY        = #60
 FLY_GAME_COUNTDOWN_TIMER_SECOND_DIVIDER = #60
-FLY_GAME_TIMER_DURATION                 = #153  ;#9  
+FLY_GAME_TIMER_DURATION                 = #9  ;#153
 
 P0XSTARTPOS        = #15
 P0YSTARTPOS        = #78
@@ -3941,7 +3941,6 @@ FlyGameTitleScreenOverscanWaitLoop
 ; TODO: FlyGame
 
 ; TODO: Enemy position seems off
-; TODO: Let time pass before allowing a restart
 ; TODO: Add Music
 ; TODO: Set Player and Game Colors
 ; TODO: Difficulty level chnages fly speed and control
@@ -4268,6 +4267,12 @@ FlyGameVerticalBlank
 
         lda CountdownTimer
         bne SkipFlyGameGameoverScreen
+
+        lda GameOverFlag
+        bne SkipSetGameOverRestartDelay
+        ldy #FLY_GAME_GAME_OVER_RESTART_DELAY
+        sty BlockP0Fire
+SkipSetGameOverRestartDelay
         lda #1
         sta GameOverFlag
 SkipFlyGameGameoverScreen
@@ -4891,9 +4896,16 @@ SkipFlasher
         lda GameOverFlag
         cmp #1
         bne SkipRestartFlyGame
+        
+        lda BlockP0Fire
+        bne DecrementP0BlockFire
+
         lda INPT4
         bmi SkipRestartFlyGame
         jmp RestartFlyGame
+DecrementP0BlockFire
+        
+        dec BlockP0Fire
 SkipRestartFlyGame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Restart Fly Game ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
