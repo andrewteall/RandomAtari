@@ -3941,7 +3941,6 @@ FlyGameTitleScreenOverscanWaitLoop
 ; TODO: FlyGame
 
 ; TODO: Enemy position seems off
-; TODO: Align scanlines when player 2 joins
 ; TODO: Prohibit Movement when game over
 ; TODO: Add Enemy Lifecycle
 ; TODO: Add Music
@@ -4440,6 +4439,7 @@ SkipDisplayTimer
         sta PF2                                         ; 3
         
         sta WSYNC                                       ; 3
+        sta WSYNC
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Drawing Score Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4447,23 +4447,32 @@ SkipDisplayTimer
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Adjust WSYNC for Player 1 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldx #0
+        stx COLUBK
         lda Player0XPos
         cmp #$87
         bcs SkipWSYNC
         sta WSYNC
 SkipWSYNC
+        
+
+        lda Player1XPos
+        cmp #$87
+        bcs SkipWSYNC2
+        sta WSYNC
+SkipWSYNC2
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Adjust WSYNC for Player 1 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+        
+        
         ldx #0
         lda Player0XPos
         jsr CalcXPos_bank1
         sta WSYNC
         sta HMOVE
 
-        ldx #0
-        stx COLUBK
+        
 
         ldx #1
         lda Player1XPos
@@ -4471,10 +4480,12 @@ SkipWSYNC
         sta WSYNC
         sta HMOVE
         
+        
+
         ldx #1
         stx VDELP0
         
-        ldx #37
+        ldx #39
         
 ScoreAreaBuffer
         inx
@@ -4931,9 +4942,9 @@ SkipMoveP0Up
         iny
 SkipMoveP0Down
 
-        cpy #38
+        cpy #40
         bne SkipSetP0MinVPos
-        ldy #40
+        ldy #42
 SkipSetP0MinVPos
 
         cpy #168
@@ -4992,9 +5003,9 @@ SkipMoveP1Up
         iny
 SkipMoveP1Down
 
-        cpy #38
+        cpy #40
         bne SkipSetP1MinVPos
-        ldy #40
+        ldy #42
 SkipSetP1MinVPos
 
         cpy #168
