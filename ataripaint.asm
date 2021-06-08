@@ -2,10 +2,6 @@
         include includes/vcs.h
         include includes/macro.h
 
-; TODO: Add Labels under controls to display usage
-
-; TODO: Finalize Colors and Decor and Name
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Global Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -129,7 +125,7 @@ Track0Builder           ds #TRACKSIZE+1         ; Array Memory Allocation to sto
 Track1Builder           ds #TRACKSIZE+1         ; Array Memory Allocation to store the bytes(notes) saved to Track 1
                                                 ; Plus 1 extra byte to have a control byte at the end of each Track
 
-        echo "Ram Total Atari Music(Bank0):"
+        echo "Ram Total Atari Music 0):"
         echo "----",([* - $80]d) ,"/", (* - $80) ,"bytes of RAM Used for Atari Music in Bank 0"
         echo "----",([$100 - *]d) ,"/", ($100 - *) , "bytes of RAM left for Atari Music in Bank 0"
 
@@ -217,6 +213,9 @@ Clear
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Console Initialization ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+; TODO: Atari Music
+; TODO: Add Labels under controls to display usage
+; TODO: Finalize Colors and Decor and Name
 
 StartOfFrame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -3769,7 +3768,7 @@ FlyGameTitleLine2
 
         lda GA,y
         sta PF1
-        lda ME,y
+        lda MER,y
         sta PF2
 
         SLEEP 16
@@ -3948,9 +3947,6 @@ FlyGameTitleScreenOverscanWaitLoop
 ; TODO: Condense Ram
 ; TODO: Add Enemy Lifecycle
 ; TODO: More Randomization in Enemy Gen
-; TODO: Add Boss in single player mode
-; TODO: Change Fly types/counts based on what level you are
-; TODO: Player0 Movement change to be different speed than enemies
 
 
 PlayFlyGame
@@ -4157,9 +4153,9 @@ SkipTimer
 LoadWinner
         
         lda P0Score
-        cmp P1Score
-        bcs Player0Wins
-       
+        sec
+        sbc P1Score
+        bpl Player0Wins
         lda Two_bank1,y
         and #$0F
         sta Winner,y
@@ -4169,7 +4165,7 @@ Player0Wins
         and #$0F
         sta Winner,y
 Player1Wins
-        
+
         iny
         cpy #5
         bne LoadWinner
@@ -4383,10 +4379,10 @@ Player2Buffer
         lda #22
         sta TIM1T
 
-AtariPaintTitleWaitLoop5
+PositionCountdownTimer
         lda TIMINT
         and #%10000000
-        beq AtariPaintTitleWaitLoop5
+        beq PositionCountdownTimer
         
         SLEEP 3
 
@@ -4449,17 +4445,17 @@ SkipDisplayTimer
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Drawing Score Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+        ldx #0
+        stx COLUBK
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Adjust WSYNC for Player 1 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ldx #0
-        stx COLUBK
         lda Player0XPos
         cmp #$87
         bcs SkipWSYNC
         sta WSYNC
 SkipWSYNC
-        
 
         lda Player1XPos
         cmp #$87
@@ -4470,14 +4466,11 @@ SkipWSYNC2
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Adjust WSYNC for Player 1 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         
-        
         ldx #0
         lda Player0XPos
         jsr CalcXPos_bank1
         sta WSYNC
         sta HMOVE
-
-        
 
         ldx #1
         lda Player1XPos
@@ -4485,8 +4478,6 @@ SkipWSYNC2
         sta WSYNC
         sta HMOVE
         
-        
-
         ldx #1
         stx VDELP0
         
@@ -4494,7 +4485,7 @@ SkipWSYNC2
         
 ScoreAreaBuffer
         inx
-        lda #$0A
+        lda #FLY_GAME_GAME_BACKGROUND_COLOR
         sta WSYNC
         ldy GameOverFlag
         bne DrawGameOverScreen
@@ -4628,15 +4619,14 @@ DrawGameOverScreenTop
         ldy #0
         inx
         sta WSYNC
-        ; SLEEP ATARI_PAINT_TITLE_SLEEPTIMER+2
 
         lda #55
         sta TIM1T
 
-AtariPaintTitleWaitLoop4
+OnePlayerGameOverTextDelay
         lda TIMINT
         and #%10000000
-        beq AtariPaintTitleWaitLoop4
+        beq OnePlayerGameOverTextDelay
         SLEEP 5  
 
 
@@ -4672,9 +4662,9 @@ DrawGameOverScreenText1Player
         inx                                             ; 2     70
 
         cpx #63                                         ; 2     72
-        ; nop                                             ; 2     74
-        ; nop                                             ; 2     76
-        SLEEP 3
+        nop                                             ; 2     74
+        nop                                             ; 2     76
+        ; SLEEP 3
         bne DrawGameOverScreenText1Player
 
         lda #0
@@ -4688,17 +4678,20 @@ TwoPlayerGameOver
         ldy #0
         inx
         sta WSYNC
-        ;SLEEP ATARI_PAINT_TITLE_SLEEPTIMER+2
 
         lda #55
         sta TIM1T
 
-AtariPaintTitleWaitLoop3
+        lda P0Score
+        cmp P1Score
+        beq DrawGameOverScreenText2PlayerTieGame
+
+TwoPlayerGameOverTextDelay
         lda TIMINT
         and #%10000000
-        beq AtariPaintTitleWaitLoop3
+        beq TwoPlayerGameOverTextDelay
         SLEEP 5  
-        
+
         ;inx
 DrawGameOverScreenText2Player
         stx LineTemp2                                   ; 3     6
@@ -4740,6 +4733,57 @@ DrawGameOverScreenText2Player
         sta GRP0
         sta GRP1
         sta GRP0
+        jmp DrawGameOverScreenMiddle
+
+DrawGameOverScreenText2PlayerTieGame
+
+TwoPlayerGameOverTieGameTextDelay
+        lda TIMINT
+        and #%10000000
+        beq TwoPlayerGameOverTieGameTextDelay
+        SLEEP 5 
+
+DrawGameOverScreenTieGameText2Player
+        stx LineTemp2                                   ; 3     6
+        sty YTemp2                                      ; 3     9
+        
+        ldx Space,y                                        ; 4     13
+        stx LetterBuffer2                               ; 3     16
+        
+        ldx ME,y                                        ; 4     20
+
+        lda _T,y                                        ; 4     24
+        sta GRP0                                        ; 3     27       -> [GRP0]
+        
+        lda IE,y                                        ; 4     31
+        sta GRP1                                        ; 3     34       -> [GRP1], [GRP0] -> GRP0
+        
+        lda Space,y                                        ; 4     38
+        sta GRP0                                        ; 3     41       -> [GRP0]. [GRP1] -> GRP1
+        
+        lda GA,y                                        ; 4     45
+        ldy LetterBuffer2                               ; 3     48
+        sta GRP1                                        ; 3     51       -> [GRP1], [GRP0] -> GRP0
+        stx GRP0                                        ; 3     54       -> [GRP0], [GRP1] -> GRP1
+        sty GRP1                                        ; 3     57       -> [GRP1], [GRP0] -> GRP0
+        stx GRP0                                        ; 3     60       ?? -> [GRP0], [GRP1] -> GRP1
+        
+        ldx LineTemp2                                   ; 3     63
+        ldy YTemp2                                      ; 3     66
+        iny                                             ; 2     68
+
+        inx                                             ; 2     70
+
+        cpx #63                                         ; 2     72
+        nop                                             ; 2     74
+        nop                                             ; 2     76
+        bne DrawGameOverScreenTieGameText2Player
+
+        lda #0
+        sta GRP0
+        sta GRP1
+        sta GRP0
+
 
 DrawGameOverScreenMiddle
         
@@ -4757,15 +4801,15 @@ DrawGameOverScreenMiddle
         lda #55
         sta TIM1T
 
-AtariPaintTitleWaitLoop2
+GameOverTextDelay
         lda TIMINT
         and #%10000000
-        beq AtariPaintTitleWaitLoop2
+        beq GameOverTextDelay
         SLEEP 4
 
 
         ;inx
-DrawGameOverScreenText22Player
+DrawGameOverScreenBottomText
         stx LineTemp2                                   ; 3     6
         sty YTemp2                                      ; 3     9
         
@@ -4798,7 +4842,7 @@ DrawGameOverScreenText22Player
         cpx #106                                        ; 2     72
         nop                                             ; 2     74
         nop                                             ; 2     76
-        bne DrawGameOverScreenText22Player
+        bne DrawGameOverScreenBottomText
 
         lda #0
         sta GRP0
@@ -5120,8 +5164,9 @@ P0Fire2
 P0Fire3
 
         lda INPT4
-        bmi P0NotFire 
-        
+        bpl P0Fire
+        jmp P0NotFire 
+P0Fire
         lda #1
         sta BlockP0Fire
 
@@ -5158,6 +5203,7 @@ P0Fire3
         lda #150
         sta Enemy0GenTimer
 
+        inc P0Score
         inc P0Score1
         lda P0Score1
         cmp #10
@@ -5247,8 +5293,9 @@ P1Fire2
 P1Fire3
 
         lda INPT5
-        bmi P1NotFire 
-        
+        bpl P1Fire
+        jmp P1NotFire 
+P1Fire 
         lda #1
         sta BlockP1Fire
 
@@ -5323,6 +5370,7 @@ SkipP1Enemy0Hit
         lda #150
         sta Enemy1GenTimer
 
+        inc P1Score
         inc P1Score1
         lda P1Score1
         cmp #10
@@ -5727,6 +5775,7 @@ ATARI_PAINT_TITLE_COLOR                     = #$02
 ATARI_PAINT_BACKGROUND_COLOR                = #$0F
 ATARI_PAINT_FOREGROUND_SELECTED_COLOR       = #$88
 ATARI_PAINT_BACKGROUND_SELECTED_COLOR       = #$42
+ATARI_PAINT_CANVAS_OVERFLOW_MASK_POS        = #129
 
 ATARI_PAINT_BRUSH_START_XPOS                = #78
 ATARI_PAINT_BRUSH_START_YPOS                = #99
@@ -5752,28 +5801,28 @@ PURPLE                                      = #$64
 
         SEG.U AtariPaintVars
         ORG Overlay
-XLineTemp               ds 1
-YColTemp                ds 1
-LetterTemp              ds 1
+TempXPos                        ds 1
+TempYPos                        ds 1
+TempLetterBuffer                ds 1
 
-BrushXPos               ds 1
-BrushYPos               ds 1
+BrushXPos                       ds 1
+BrushYPos                       ds 1
 
-CanvasRowLineCtr        ds 1
-DebounceCtr             ds 1
+CanvasRowLineCtr                ds 1
+DebounceCtr                     ds 1
 
-BrushColor              ds 1
-BackgroundColor         ds 1
-ControlColor            ds 1
+BrushColor                      ds 1
+BackgroundColor                 ds 1
+ControlColor                    ds 1
 
-DrawOrErase             ds 1
-ClearCanvasFlag         ds 1
-FGBGFlag                ds 1
+DrawOrEraseFlag                 ds 1
+ClearCanvasFlag                 ds 1
+ForegroundBackgroundFlag        ds 1
 
-CanvasByteIdx           ds 1
-CanvasByteMask          ds 1
-CanvasRow               ds 1
-CanvasIdx               ds 1
+CanvasByteIdx                   ds 1
+CanvasByteMask                  ds 1
+CanvasRow                       ds 1
+CanvasIdx                       ds 1
 
 Canvas                  ds 96
 
@@ -5784,6 +5833,7 @@ Canvas                  ds 96
         SEG
         
 ; TODO: Atari Paint
+; TODO: Add two rows of canvas drawing
 AtariPaint
         ldx #0
         txa
@@ -5804,6 +5854,24 @@ ClearRam
         sta BrushXPos
         lda #ATARI_PAINT_BRUSH_START_YPOS
         sta BrushYPos
+
+        ldx #0                                  ; Set Player 0 Position
+        lda #ATARI_PAINT_TITLE_H_POS
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
+
+        ldx #1                                  ; Set Player 1 Position
+        lda #ATARI_PAINT_TITLE_H_POS+8
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
+
+        ldx #3                                  ; Set Missle 1 Position
+        lda #ATARI_PAINT_CANVAS_OVERFLOW_MASK_POS
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
 
 AtariPaintFrame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5851,7 +5919,6 @@ AtariPaintViewableScreen
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Title Text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ; SLEEP ATARI_PAINT_TITLE_SLEEPTIMER-6
         lda #48
         sta TIM1T
 
@@ -5859,15 +5926,16 @@ AtariPaintTitleWaitLoop
         lda TIMINT
         and #%10000000
         beq AtariPaintTitleWaitLoop
-        SLEEP 5
+        
+        SLEEP 6
         
         inx                                             ; 2
 AtariPaintDrawTitle
-        stx XLineTemp                                   ; 3     6
-        sty YColTemp                                    ; 3     9
+        stx TempXPos                                    ; 3     6
+        sty TempYPos                                    ; 3     9
         
-        ldx T_,y                                    ; 4     13
-        stx LetterTemp                                  ; 3     16
+        ldx T_,y                                        ; 4     13
+        stx TempLetterBuffer                                  ; 3     16
         
         ldx IN,y                                        ; 4     20
 
@@ -5877,18 +5945,18 @@ AtariPaintDrawTitle
         lda AR,y                                        ; 4     31
         sta GRP1                                        ; 3     34      SI -> [GRP1], [GRP0] -> GRP0
         
-        lda I_,y                                    ; 4     38
+        lda I_,y                                        ; 4     38
         sta GRP0                                        ; 3     41      C  -> [GRP0]. [GRP1] -> GRP1
         
         lda PA,y                                        ; 4     45
-        ldy LetterTemp                                  ; 3     48
+        ldy TempLetterBuffer                                  ; 3     48
         sta GRP1                                        ; 3     51      MA -> [GRP1], [GRP0] -> GRP0
         stx GRP0                                        ; 3     54      KE -> [GRP0], [GRP1] -> GRP1
         sty GRP1                                        ; 3     57      R  -> [GRP1], [GRP0] -> GRP0
         stx GRP0                                        ; 3     60      ?? -> [GRP0], [GRP1] -> GRP1
         
-        ldx XLineTemp                                   ; 3     63
-        ldy YColTemp                                    ; 3     66
+        ldx TempXPos                                    ; 3     63
+        ldy TempYPos                                    ; 3     66
         iny                                             ; 2     68
 
         inx                                             ; 2     70
@@ -5993,7 +6061,7 @@ SkipAdjustWSYNC
 
         txa
         pha
-        ldx #2                                  ; Set Player Brush Position
+        ldx #2                                  ; Set Player Missle 0 Position
         lda BrushXPos
         jsr CalcXPos_bank1
         sta WSYNC
@@ -6390,7 +6458,7 @@ Modulo8
         ldy CanvasByteIdx
         
         lda CanvasSelectTableR,y
-        ldx DrawOrErase
+        ldx DrawOrEraseFlag
         beq LoadTableErasePF10
         eor #255
 LoadTableErasePF10
@@ -6406,7 +6474,7 @@ SkipSetCanvasIdx0
 
         ldy CanvasByteIdx
         lda CanvasSelectTable,y
-        ldx DrawOrErase
+        ldx DrawOrEraseFlag
         beq LoadTableErasePF20
         eor #255
 
@@ -6422,7 +6490,7 @@ SkipSetCanvasIdx1
 
         ldy CanvasByteIdx
         lda CanvasSelectTable,y
-        ldx DrawOrErase
+        ldx DrawOrEraseFlag
         beq LoadTableErasePF00
         eor #255
 LoadTableErasePF00
@@ -6438,7 +6506,7 @@ LoadTableErasePF00
 SkipSetCanvasIdx2
         ldy CanvasByteIdx
         lda CanvasSelectTableR,y
-        ldx DrawOrErase
+        ldx DrawOrEraseFlag
         beq LoadTableErasePF11
         eor #255
 LoadTableErasePF11
@@ -6449,12 +6517,12 @@ LoadTableErasePF11
         rol
         rol
         
-        sta LetterTemp
+        sta TempLetterBuffer
 
         ldy CanvasByteIdx
 
         lda CanvasSelectTableR,y
-        ldx DrawOrErase
+        ldx DrawOrEraseFlag
         beq LoadTableErasePF12
         eor #255
 LoadTableErasePF12
@@ -6466,7 +6534,7 @@ LoadTableErasePF12
         ror
         ror
         
-        ora LetterTemp
+        ora TempLetterBuffer
         sta CanvasByteMask
 
         ldx #3
@@ -6480,7 +6548,7 @@ CanvasIdxSet
         ldy CanvasIdx
         lda Canvas,y
         
-        ldx DrawOrErase
+        ldx DrawOrEraseFlag
         beq LoadCanvasByteMask
         and CanvasByteMask
         jmp LoadEraseCanvasByteMask
@@ -6516,8 +6584,8 @@ SkipPaintTile
         bcc SkipSetFGColor
 
         lda #0
-        sta DrawOrErase
-        sta FGBGFlag
+        sta DrawOrEraseFlag
+        sta ForegroundBackgroundFlag
         jmp SkipSetCanvasControl
 
 SkipSetFGColor
@@ -6527,7 +6595,7 @@ SkipSetFGColor
         bcc SkipSetBGColor
 
         lda #1
-        sta FGBGFlag
+        sta ForegroundBackgroundFlag
         jmp SkipSetCanvasControl
 SkipSetBGColor
         cmp #94
@@ -6536,7 +6604,7 @@ SkipSetBGColor
         bcc SkipSetErase
 
         lda #1
-        sta DrawOrErase
+        sta DrawOrEraseFlag
         
         jmp SkipSetCanvasControl
 SkipSetErase
@@ -6593,58 +6661,58 @@ SkipClearCanvas
         lda #GRAY
         jmp SetBrushColor
 SkipSetColorGray
-        cmp #28
+        cmp #26
         bcs SkipSetColorWhite
         lda #WHITE
         jmp SetBrushColor
 SkipSetColorWhite
-        cmp #43
+        cmp #41
         bcs SkipSetColorRed
         lda #RED
         jmp SetBrushColor
 SkipSetColorRed
-        cmp #59
+        cmp #57
         bcs SkipSetColorPurple
         lda #PURPLE
         jmp SetBrushColor
 SkipSetColorPurple
-        cmp #73
+        cmp #71
         bcs SkipSetColorBlue
         lda #BLUE
         jmp SetBrushColor
 SkipSetColorBlue
-        cmp #87
+        cmp #85
         bcs SkipSetColorSky
         lda #SKY
         jmp SetBrushColor
 SkipSetColorSky
-        cmp #103
+        cmp #101
         bcs SkipSetColorGreen
         lda #GREEN
         jmp SetBrushColor
 SkipSetColorGreen
-        cmp #119
+        cmp #117
         bcs SkipSetColorYellow
         lda #YELLOW
         jmp SetBrushColor
 SkipSetColorYellow
-        cmp #134
+        cmp #132
         bcs SkipSetColorOrange
         lda #ORANGE
         jmp SetBrushColor
 SkipSetColorOrange
-        cmp #148
+        cmp #146
         bcs SkipSetColorBrown
         lda #BROWN
         jmp SetBrushColor
 SkipSetColorBrown
-        cmp #163
+        cmp #161
         bcs SkipSetColorBlack
         lda #BLACK
         jmp SetBrushColor
 SkipSetColorBlack
 SetBrushColor
-        ldy FGBGFlag
+        ldy ForegroundBackgroundFlag
         bne SetBackGroundColor
         sta BrushColor
         jmp SkipSetBrushColor
@@ -6660,7 +6728,7 @@ SkipSetBrushColor
         sta ENAM1
         sta COLUPF
 
-        lda #ATARI_PAINT_TITLE_COLOR                        ; Set the player colors for the title
+        lda #ATARI_PAINT_TITLE_COLOR            ; Set the player colors for the title
         sta COLUP0
         sta COLUP1
 
@@ -6675,25 +6743,7 @@ SkipSetBrushColor
         sta NUSIZ0
         sta NUSIZ1
 
-        ldx #0                                  ; Set Player 0 Position
-        lda #ATARI_PAINT_TITLE_H_POS
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
-
-        ldx #1                                  ; Set Player 1 Position
-        lda #ATARI_PAINT_TITLE_H_POS+8
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
-
-        ldx #3                                  ; Set Missle 1 Position
-        lda #129
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
-
-        ; ldx #4                                  ; Set Player 1 Position
+        ; ldx #4                                  ; Set Player Ball Position
         ; lda BrushXPos
         ; jsr CalcXPos_bank1
         ; sta WSYNC
@@ -6702,10 +6752,9 @@ SkipSetBrushColor
         ; sta HMCLR
 
         ldx #0
-AtariPaintWaitLoop_bank1
+AtariPaintOverscanWaitLoop
         lda TIMINT
-        and #%10000000
-        beq AtariPaintWaitLoop_bank1
+        beq AtariPaintOverscanWaitLoop
 
         jmp AtariPaintFrame
 
@@ -6864,7 +6913,7 @@ GA         .byte  #%11101110
            .byte  #%10101010
            .byte  #%11101010
 
-ME         .byte  #%01110101
+MER         .byte  #%01110101
            .byte  #%00010111
            .byte  #%01110101
            .byte  #%00010101
@@ -7121,6 +7170,31 @@ CanvasSelectTableR      .byte #%10000000
                         .byte #%00000100
                         .byte #%00000010
                         .byte #%00000001
+
+NO         .byte  #%11101110
+           .byte  #%10101010
+           .byte  #%10101010
+           .byte  #%10101010
+           .byte  #%10101110
+           .byte  #0
+
+_T         .byte  #%00001110
+           .byte  #%00000100
+           .byte  #%00000100
+           .byte  #%00000100
+           .byte  #%00000100
+
+IE         .byte  #%11101110
+           .byte  #%01001000
+           .byte  #%01001110
+           .byte  #%01001000
+           .byte  #%11101110
+
+ME         .byte  #%10101110
+           .byte  #%11101000
+           .byte  #%10101110
+           .byte  #%10101000
+           .byte  #%10101110
 
 
         echo "----"
