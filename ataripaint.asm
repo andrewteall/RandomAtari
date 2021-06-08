@@ -3526,22 +3526,16 @@ FLY_GAME_GAME_OVER_RESTART_DELAY        = #60
 FLY_GAME_COUNTDOWN_TIMER_SECOND_DIVIDER = #60
 FLY_GAME_TIMER_DURATION                 = #9  ;#153
 
-P0XSTARTPOS        = #15
-P0YSTARTPOS        = #78
-P1XSTARTPOS        = #125
-P1YSTARTPOS        = #78
+P0XSTARTPOS                             = #15
+P0YSTARTPOS                             = #78
+P1XSTARTPOS                             = #125
+P1YSTARTPOS                             = #78
 
-;;
-P0HEIGHT           = #24
-P1HEIGHT           = #24
-E0HEIGHT           = #4
-E1HEIGHT           = #4
-E2HEIGHT           = #4
+PLAYERHEIGHT                            = #24
+ENEMYHEIGHT                             = #4
 
-PLAYER2JOIN_H_POS      = #100
-SLEEPTIMER_PLAYER2_JOIN_TEXT = PLAYER2JOIN_H_POS/3 +51
-
-P2_JOIN_FLASHRATE  = #52
+PLAYER2JOIN_H_POS                       = #100
+P2_JOIN_FLASHRATE                       = #52
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5100,7 +5094,7 @@ SkipP1Move
         ldy #0
 HidePlayerSpriteOverflow
         
-        lda #P0HEIGHT
+        lda #PLAYERHEIGHT
         sta P0Height,Y
         
         lda #135
@@ -5173,7 +5167,7 @@ CheckEnemyHitP0
 
         lda Player0YPos,x
         sec
-        sbc #E0HEIGHT*2-1
+        sbc #ENEMYHEIGHT*2-1
         cmp Enemy0YPos,y
         bcs SkipP0Enemy0Hit
         clc
@@ -5242,7 +5236,7 @@ SkipPlayerDetectHit
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Enemy 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Enemys Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         ldx #0
@@ -5280,13 +5274,13 @@ SkipTopE0StartEdge
 SkipRightSideE0StartEdge
         cmp #2
         bne SkipBottomE0StartEdge
-        lda #192-#E0HEIGHT-4
+        lda #192-#ENEMYHEIGHT-4
         sta Enemy0YPos,x
         jmp E0StartEdgeSet
 SkipBottomE0StartEdge
         cmp #3
         bne SkipLeftSideE0StartEdge
-        lda #192-#E0HEIGHT-4
+        lda #192-#ENEMYHEIGHT-4
         sta Enemy0YPos,x
         
 SkipLeftSideE0StartEdge
@@ -5409,11 +5403,11 @@ SkipHMOVE
 SkipRegenWayPoints
 
 SkipEnemy0Movement   
-        ; sta HMCLR
+        sta HMCLR
 
         lda Enemy0YPos,x
         clc
-        adc #E0HEIGHT*2
+        adc #ENEMYHEIGHT*2
         sta Enemy0YPosEnd,x
 
         inx
@@ -5422,7 +5416,7 @@ SkipEnemy0Movement
         jmp EnemyMovement
 SkipEnemyMovement
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Enemy 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Enemys Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 SkipPlayerControls
