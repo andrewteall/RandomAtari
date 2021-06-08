@@ -3538,8 +3538,8 @@ E0HEIGHT           = #4
 E1HEIGHT           = #4
 E2HEIGHT           = #4
 
-PLAYER2_H_POS      = #100
-SLEEPTIMER_PLAYER2_JOIN_TEXT = PLAYER2_H_POS/3 +51
+PLAYER2JOIN_H_POS      = #100
+SLEEPTIMER_PLAYER2_JOIN_TEXT = PLAYER2JOIN_H_POS/3 +51
 
 P2_JOIN_FLASHRATE  = #52
 
@@ -3590,28 +3590,28 @@ Player1GfxPtr           ds 2
 P1Height                ds 1
 
 Enemy0XPos              ds 1
-Enemy0YPos              ds 1
-Enemy0YPosEnd           ds 1
-Enemy0StartEdge         ds 1
-Enemy0Alive             ds 1
-Enemy0GenTimer          ds 1
-Enemy0HWayPoint         ds 1
-Enemy0VWayPoint         ds 1
-
 Enemy1XPos              ds 1
-Enemy1YPos              ds 1
-Enemy1YPosEnd           ds 1
-Enemy1StartEdge         ds 1
-Enemy1Alive             ds 1
-Enemy1GenTimer          ds 1
-Enemy1HWayPoint         ds 1
-Enemy1VWayPoint         ds 1
 
-Enemy2XPos              ds 1
-Enemy2YPos              ds 1
-Enemy2YPosStr           ds 1
-DrawE2Sprite            ds 1
-E2SprIdx                ds 1
+Enemy0YPos              ds 1
+Enemy1YPos              ds 1
+
+Enemy0YPosEnd           ds 1
+Enemy1YPosEnd           ds 1
+
+Enemy0StartEdge         ds 1
+Enemy1StartEdge         ds 1
+
+Enemy0Alive             ds 1
+Enemy1Alive             ds 1
+
+Enemy0GenTimer          ds 1
+Enemy1GenTimer          ds 1
+
+Enemy0HWayPoint         ds 1
+Enemy1HWayPoint         ds 1
+
+Enemy0VWayPoint         ds 1
+Enemy1VWayPoint         ds 1
 
 P0Score                 ds 1
 P0Score1                ds 1
@@ -3723,13 +3723,10 @@ FlyGameTitleScreenStart
         lda #FLY_GAME_TITLE_BG_COLOR
         sta COLUBK
         ldy #0
-FlyGameTitleScreenTopBuffer
-        inx
-        cpx #FLY_GAME_TITLE_VPOS
-        sta WSYNC
-        bne FlyGameTitleScreenTopBuffer
 
 FlyGameTitleLine1
+        cpx #FLY_GAME_TITLE_VPOS
+        bmi SkipFlyGameTitleLine1
         txa
         sbc #FLY_GAME_TITLE_VPOS
         lsr
@@ -3740,26 +3737,21 @@ FlyGameTitleLine1
         sta PF1
         lda Y_,y
         sta PF2
-
-        SLEEP 16
+        
+        SLEEP 3
 
         lda #0
         sta PF1
         sta PF2
-
+SkipFlyGameTitleLine1
         inx
-        cpx #FLY_GAME_TITLE_VPOS+21
+        cpx #FLY_GAME_TITLE_VPOS+20
         sta WSYNC
         bmi FlyGameTitleLine1
-
-FlyGameTitleMiddleBuffer
-        inx
-        ldy #0
-        cpx #FLY_GAME_TITLE_VPOS+27
-        sta WSYNC
-        bne FlyGameTitleMiddleBuffer
-
+        
 FlyGameTitleLine2
+        cpx #FLY_GAME_TITLE_VPOS+26
+        bmi SkipFlyGameTitleLine2
         txa
         sbc #FLY_GAME_TITLE_VPOS+26
         lsr
@@ -3771,14 +3763,14 @@ FlyGameTitleLine2
         lda MER,y
         sta PF2
 
-        SLEEP 16
+        SLEEP 8
 
         lda #0
         sta PF1
         sta PF2
-
+SkipFlyGameTitleLine2
         inx
-        cpx #FLY_GAME_TITLE_VPOS+47
+        cpx #FLY_GAME_TITLE_VPOS+46
         sta WSYNC
         bmi FlyGameTitleLine2
 
@@ -3786,16 +3778,9 @@ FlyGameTitleLine2
 ;;;;;;;;;;;;;;; End Draw Playfield ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-FlyGameTitleBottomBuffer
-        inx
-        cpx #135
-        sta WSYNC
-        bne FlyGameTitleBottomBuffer
-        
-;;;;;;;;;;;;;;;;;;;;;; Game Select ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 FlyGameNumPlayersSelectLine1 
+        cpx #135
+        bmi SkipFlyGameNumPlayersSelectLine1
         txa                                             ; 2
         sec                                             ; 2
         sbc #135                                        ; 2
@@ -3805,25 +3790,19 @@ FlyGameNumPlayersSelectLine1
         lda ON,y                                        ; 4
         sta GRP1                                        ; 3
 
-        SLEEP 12                                        ; 12
+        SLEEP 8                                        ; 12
 
         lda E_,y                                        ; 4
         sta GRP0                                        ; 3
-
+SkipFlyGameNumPlayersSelectLine1
         inx
         cpx #141
         sta WSYNC
         bne FlyGameNumPlayersSelectLine1
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-FlyGameNumPlayersSelectMiddleBuffer
-        inx
-        cpx #145
-        sta WSYNC
-        bne FlyGameNumPlayersSelectMiddleBuffer
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 FlyGameNumPlayersSelectLine2 
+        cpx #145
+        bmi SkipFlyGameNumPlayersSelectLine2
         txa                                             ; 2
         sec
         sbc #145                                        ; 2
@@ -3833,11 +3812,11 @@ FlyGameNumPlayersSelectLine2
         lda TW,y                                        ; 4
         sta GRP1                                        ; 3
 
-        SLEEP 12                                        ; 12
+        SLEEP 8                                        ; 12
 
         lda O_,y                                        ; 4
         sta GRP0                                        ; 3
-
+SkipFlyGameNumPlayersSelectLine2
         inx
         cpx #151
         sta WSYNC
@@ -3890,7 +3869,6 @@ SkipDecDebounceCtr_Bank1
         sta SkipGameFlag
 DontStartGame
 
-TextBuilder
         ; if up pressed Game1SelectionGfx
         ldy SWCHA
         cpy #%11101111
@@ -3908,7 +3886,8 @@ TextBuilder
         lda #>Space
         sta Game2SelectionGfx+1
 SkipSelectFlyGame1Player
-
+        
+        ; if down pressed Game2SelectionGfx
         ldy SWCHA
         cpy #%11011111
         bne SkipSelectFlyGame2Player
@@ -3999,8 +3978,6 @@ FlyGameStartOfFrame
         lda #43
         sta TIM64T
 
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Scoring ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4068,7 +4045,7 @@ P1ScoreCalc
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldx #0
-CalcScore
+CalcScoreGraphics
         ;P0
         txa
         clc
@@ -4109,7 +4086,7 @@ CalcScore
 
         inx
         cpx #5
-        bcc CalcScore                                   ; 2/3 
+        bcc CalcScoreGraphics                           ; 2/3 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Scoring ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4236,13 +4213,13 @@ CalcCountdownTimer
         sta GRP0
         
         ldx #0
-        lda #PLAYER2_H_POS
+        lda #PLAYER2JOIN_H_POS
         jsr CalcXPos_bank1
         sta WSYNC
         sta HMOVE
 
         ldx #1
-        lda #PLAYER2_H_POS+8
+        lda #PLAYER2JOIN_H_POS+8
         jsr CalcXPos_bank1
         sta WSYNC
         sta HMOVE
@@ -4281,7 +4258,7 @@ SkipFlyGameGameoverScreen
         sty VDELP1
 
         ldx #0
-        IF PLAYER2_H_POS <= 47
+        IF PLAYER2JOIN_H_POS <= 47
          sta WSYNC
         ENDIF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4295,7 +4272,7 @@ SkipFlyGameGameoverScreen
         ldy #0
         lda Flasher
         cmp #P2_JOIN_FLASHRATE/2-10
-        bcc GameViewableScreen
+        bcs GameViewableScreen
 
 FlashFire
         inx
@@ -4315,10 +4292,10 @@ GameViewableScreen
         lda #65
         sta TIM1T
 
-AtariPaintPlayer2JoinTextTimerDelay
+FlyGamePlayer2JoinTextTimerDelay
         lda TIMINT
         and #%10000000
-        beq AtariPaintPlayer2JoinTextTimerDelay
+        beq FlyGamePlayer2JoinTextTimerDelay
         SLEEP 5  
 
         inx                                             ; 2
@@ -4502,10 +4479,7 @@ ScoreAreaBuffer
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Drawing Players and Enemy ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-FlyGameBoard
-        ; ldy #2                                  ; 2
-        ; lda #0                                  ; 2     (4)
-        
+FlyGameBoard        
         cpx Enemy0YPos                          ; 3
         bne SkipDrawE0                          ; 2/3
         sty ENAM0                               ; 3     (8)
@@ -4516,7 +4490,6 @@ SkipDrawE0
         sty ENAM1                               ; 3     (8)
 SkipDrawE1
 
-        ; ldy #1                                  ; 2
         cpx Player0YPos                         ; 3
         bne SkipSetDrawP0Flag                   ; 2/3
         sty DrawP0Sprite                        ; 3     (10)
@@ -4542,7 +4515,7 @@ SkipP0ResetHeight
         inc P0SprIdx                            ; 5     (21)
 SkipP0Draw
 
-        sta WSYNC                               ; 3     (3)     (75)+3 from branch
+        sta WSYNC                               ; 3     (3)     (71)+3 from branch
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #0                                  ; 2
         sta GRP1                                ; 3     (5)
@@ -4572,12 +4545,13 @@ SkipE1Reset
         sta P1SprIdx                            ; 3
         sta DrawP1Sprite                        ; 3     (13)
 SkipP1ResetHeight
-        ldy #2
+        ldy #2                                  ; 2
         inx                                     ; 2
         inx                                     ; 2
         cpx #192                                ; 2
         sta WSYNC                               ; 3
-        bne FlyGameBoard                        ; 2/3   (12)    (68)
+        bne FlyGameBoard                        ; 2/3   (14)    (71)
+        
         jmp EndofViewableScreen                 ; 3
         
         ; TODO: Game Over
@@ -4741,7 +4715,7 @@ TwoPlayerGameOverTieGameTextDelay
         lda TIMINT
         and #%10000000
         beq TwoPlayerGameOverTieGameTextDelay
-        SLEEP 5 
+        SLEEP 4 
 
 DrawGameOverScreenTieGameText2Player
         stx LineTemp2                                   ; 3     6
@@ -4786,17 +4760,14 @@ DrawGameOverScreenTieGameText2Player
 
 
 DrawGameOverScreenMiddle
-        
-        inx                                     ; 2
-        cpx #100                                ; 2
+        inx
+        cpx #100
         sta WSYNC
         bne DrawGameOverScreenMiddle
 
         ldy #0
         inx
         sta WSYNC
-        
-        ;SLEEP ATARI_PAINT_TITLE_SLEEPTIMER+2
         
         lda #55
         sta TIM1T
@@ -5152,8 +5123,9 @@ SkipHideP1Overflow
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Player 0 Detect Hit ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+        ldy #0
+
         lda DebounceCtr
-        ;bne SkipP0HitDetection
         beq P0Fire2
         jmp P0SkipFire
 P0Fire2
@@ -5178,30 +5150,31 @@ P0Fire
         lda #>PlayerSlapGfx
         sta Player0GfxPtr+1
 
+CheckEnemyHitP0
         lda Player0XPos
-        cmp Enemy0XPos
+        cmp Enemy0XPos,y
         bcs SkipP0Enemy0Hit
         clc
         adc #17
-        cmp Enemy0XPos
+        cmp Enemy0XPos,y
         bcc SkipP0Enemy0Hit
 
         lda Player0YPos
         sec
         sbc #E0HEIGHT*2-1
-        cmp Enemy0YPos
+        cmp Enemy0YPos,y
         bcs SkipP0Enemy0Hit
         clc
         adc #28
-        cmp Enemy0YPos
+        cmp Enemy0YPos,y
         bcc SkipP0Enemy0Hit
 
         lda #0
-        sta Enemy0Alive
-        sta Enemy0YPos
+        sta Enemy0Alive,y
+        sta Enemy0YPos,y
 
         lda #150
-        sta Enemy0GenTimer
+        sta Enemy0GenTimer,y
 
         inc P0Score
         inc P0Score1
@@ -5214,42 +5187,46 @@ P0Fire
 
 SkipP0Enemy0Hit
 
-        lda Player0XPos
-        cmp Enemy1XPos
-        bcs SkipP0Enemy1Hit
-        clc
-        adc #17
-        cmp Enemy1XPos
-        bcc SkipP0Enemy1Hit
+        iny 
+        cpy #2
+        bne CheckEnemyHitP0
 
-        lda Player0YPos
-        sec
-        sbc #E1HEIGHT*2-1
-        cmp Enemy1YPos
-        bcs SkipP0Enemy1Hit
-        clc
-        adc #28
-        cmp Enemy1YPos
-        bcc SkipP0Enemy1Hit
+;         lda Player0XPos
+;         cmp Enemy1XPos
+;         bcs SkipP0Enemy1Hit
+;         clc
+;         adc #17
+;         cmp Enemy1XPos
+;         bcc SkipP0Enemy1Hit
 
-        lda #0
-        sta Enemy1Alive
-        ; sta Enemy1XPos
-        sta Enemy1YPos
+;         lda Player0YPos
+;         sec
+;         sbc #E1HEIGHT*2-1
+;         cmp Enemy1YPos
+;         bcs SkipP0Enemy1Hit
+;         clc
+;         adc #28
+;         cmp Enemy1YPos
+;         bcc SkipP0Enemy1Hit
 
-        lda #150
-        sta Enemy1GenTimer
+;         lda #0
+;         sta Enemy1Alive
+;         ; sta Enemy1XPos
+;         sta Enemy1YPos
 
-        inc P0Score
-        inc P0Score1
-        lda P0Score1
-        cmp #10
-        bne SkipP0Enemy1Hit
-        lda #0
-        sta P0Score1
-        inc P0Score2
+;         lda #150
+;         sta Enemy1GenTimer
 
-SkipP0Enemy1Hit
+;         inc P0Score
+;         inc P0Score1
+;         lda P0Score1
+;         cmp #10
+;         bne SkipP0Enemy1Hit
+;         lda #0
+;         sta P0Score1
+;         inc P0Score2
+
+; SkipP0Enemy1Hit
 
         jmp P0SkipFire
 
@@ -5278,11 +5255,10 @@ P0SkipFire
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Player 1 Detect Hit ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ; lda GameSelectFlag
-        ; beq SkipP1HitDetection
-
+        
+        ldy #0
         lda P1FireDebounceCtr
-        ;bne SkipP0HitDetection
+        
         beq P1Fire2
         jmp P1SkipFire
 P1Fire2
@@ -5307,31 +5283,31 @@ P1Fire
         lda #>PlayerSlapGfx
         sta Player1GfxPtr+1
 
+CheckEnemyHitP1
         lda Player1XPos
-        cmp Enemy0XPos
+        cmp Enemy0XPos,y
         bcs SkipP1Enemy0Hit
         clc
         adc #17
-        cmp Enemy1XPos
+        cmp Enemy1XPos,y
         bcc SkipP1Enemy0Hit
 
         lda Player1YPos
         sec
         sbc #E0HEIGHT*2-1
-        cmp Enemy0YPos
+        cmp Enemy0YPos,y
         bcs SkipP1Enemy0Hit
         clc
         adc #28
-        cmp Enemy0YPos
+        cmp Enemy0YPos,y
         bcc SkipP1Enemy0Hit
 
         lda #0
-        sta Enemy0Alive
-        ; sta Enemy0XPos
-        sta Enemy0YPos
+        sta Enemy0Alive,y
+        sta Enemy0YPos,y
 
         lda #150
-        sta Enemy0GenTimer
+        sta Enemy0GenTimer,y
 
         inc P1Score
         inc P1Score1
@@ -5343,41 +5319,44 @@ P1Fire
         inc P1Score2
 
 SkipP1Enemy0Hit
+        iny 
+        cpy #2
+        bne CheckEnemyHitP1
 
-        lda Player1XPos
-        cmp Enemy1XPos
-        bcs SkipP1Enemy1Hit
-        clc
-        adc #17
-        cmp Enemy1XPos
-        bcc SkipP1Enemy1Hit
+        ; lda Player1XPos
+        ; cmp Enemy1XPos
+        ; bcs SkipP1Enemy1Hit
+        ; clc
+        ; adc #17
+        ; cmp Enemy1XPos
+        ; bcc SkipP1Enemy1Hit
 
-        lda Player1YPos
-        sec
-        sbc #E1HEIGHT*2-1
-        cmp Enemy1YPos
-        bcs SkipP1Enemy1Hit
-        clc
-        adc #28
-        cmp Enemy1YPos
-        bcc SkipP1Enemy1Hit
+        ; lda Player1YPos
+        ; sec
+        ; sbc #E1HEIGHT*2-1
+        ; cmp Enemy1YPos
+        ; bcs SkipP1Enemy1Hit
+        ; clc
+        ; adc #28
+        ; cmp Enemy1YPos
+        ; bcc SkipP1Enemy1Hit
 
-        lda #0
-        sta Enemy1Alive
-        ; sta Enemy1XPos
-        sta Enemy1YPos
+        ; lda #0
+        ; sta Enemy1Alive
+        ; ; sta Enemy1XPos
+        ; sta Enemy1YPos
 
-        lda #150
-        sta Enemy1GenTimer
+        ; lda #150
+        ; sta Enemy1GenTimer
 
-        inc P1Score
-        inc P1Score1
-        lda P1Score1
-        cmp #10
-        bne SkipP1Enemy1Hit
-        lda #0
-        sta P1Score1
-        inc P1Score2
+        ; inc P1Score
+        ; inc P1Score1
+        ; lda P1Score1
+        ; cmp #10
+        ; bne SkipP1Enemy1Hit
+        ; lda #0
+        ; sta P1Score1
+        ; inc P1Score2
 
 SkipP1Enemy1Hit
 
@@ -5410,74 +5389,86 @@ P1SkipFire
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Enemy 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda Enemy0GenTimer
+        ldx #0
+EnemyMovement
+        lda Enemy0GenTimer,x
         beq SkipEnemy0CountdownTimer
-        dec Enemy0GenTimer
+        dec Enemy0GenTimer,x
 SkipEnemy0CountdownTimer
 
-        lda Enemy0GenTimer
+        lda Enemy0GenTimer,x
         cmp #1
         bne SkipGenerateEnemy0
 DetermineEdge
         lda INPT4
         jsr GetRandomNumber
         and #3
-        sta Enemy0StartEdge
+        sta Enemy0StartEdge,x
 
         lda #1
-        sta Enemy0Alive
+        sta Enemy0Alive,x
 
         ; Generate Start Pos
-        lda Enemy0StartEdge
-        cmp #0
+        lda Enemy0StartEdge,x
+        ; cmp #0
         bne SkipTopE0StartEdge
         lda #0
-        sta Enemy0YPos
+        sta Enemy0YPos,x
         jmp E0StartEdgeSet
 SkipTopE0StartEdge
         cmp #1
         bne SkipRightSideE0StartEdge
         lda #0
-        sta Enemy0YPos
+        sta Enemy0YPos,x
         jmp E0StartEdgeSet
 SkipRightSideE0StartEdge
         cmp #2
         bne SkipBottomE0StartEdge
         lda #192-#E0HEIGHT-4
-        sta Enemy0YPos
+        sta Enemy0YPos,x
         jmp E0StartEdgeSet
 SkipBottomE0StartEdge
         cmp #3
         bne SkipLeftSideE0StartEdge
         lda #192-#E0HEIGHT-4
-        sta Enemy0YPos
+        sta Enemy0YPos,x
         
 SkipLeftSideE0StartEdge
 E0StartEdgeSet
         lda INPT4
         jsr GetRandomNumber
         and #159
-        sta Enemy0XPos
+        sta Enemy0XPos,x
 
 SkipGenerateEnemy0
 
+        lda Enemy0XPos,x
+        stx LineTemp
+
+        cpx #0
+        bne ExecuteEnemy1Pos
         ldx #2
-        lda Enemy0XPos
+        jmp ExecuteEnemy0Pos
+ExecuteEnemy1Pos
+        ldx #3
+ExecuteEnemy0Pos
         jsr CalcXPos_bank1
         sta WSYNC
         sta HMOVE
         
-        lda Enemy0GenTimer
+        ldx LineTemp
+
+        lda Enemy0GenTimer,x
         bne SkipEnemy0Alive
         lda #1
-        sta Enemy0Alive
+        sta Enemy0Alive,x
 SkipEnemy0Alive
 
-        lda Enemy0Alive
+        lda Enemy0Alive,x
         beq SkipEnemy0Movement
 Enemy0VectorPath
         ;; Do vector path code here
-        lda Enemy0HWayPoint
+        lda Enemy0HWayPoint,x
         bne SkipGenerateNewE0WayPoints
 
 RegenE0HSeed
@@ -5488,10 +5479,10 @@ RegenE0HSeed
         ; and #2
         ; clc
         ; adc #70
-        sta Enemy0HWayPoint
+        sta Enemy0HWayPoint,x
 
 RegenE0VSeed
-        lda INPT4
+        lda INPT4,x
         beq RegenE0VSeed
         jsr GetRandomNumber
         and #148
@@ -5500,43 +5491,43 @@ RegenE0VSeed
         ; and #2
         ; clc
         ; adc #72
-        sta Enemy0VWayPoint
+        sta Enemy0VWayPoint,x
 SkipGenerateNewE0WayPoints
 
-        lda Enemy0HWayPoint
+        lda Enemy0HWayPoint,x
         sec
-        sbc Enemy0XPos
+        sbc Enemy0XPos,x
         bne SkipSetE0HMoveFlat
         lda #$0
-        sta HMM0
+        sta HMM0,x
         jmp SkipSetE0HMoveRight
 SkipSetE0HMoveFlat
         bcc SkipSetE0HMoveLeft
         lda #$F0
-        sta HMM0
-        inc Enemy0XPos
+        sta HMM0,x
+        inc Enemy0XPos,x
         jmp SkipSetE0HMoveRight
 SkipSetE0HMoveLeft
         bcs SkipSetE0HMoveRight
         lda #$10
-        sta HMM0
-        dec Enemy0XPos
+        sta HMM0,x
+        dec Enemy0XPos,x
 SkipSetE0HMoveRight
 
-        lda Enemy0VWayPoint
+        lda Enemy0VWayPoint,x
         sec
-        sbc Enemy0YPos
+        sbc Enemy0YPos,x
         bne SkipSetE0VMoveFlat
         jmp SkipSetE0VMoveRight
 SkipSetE0VMoveFlat
         bcc SkipSetE0VMoveLeft
-        inc Enemy0YPos
-        inc Enemy0YPos
+        inc Enemy0YPos,x
+        inc Enemy0YPos,x
         jmp SkipSetE0VMoveRight
 SkipSetE0VMoveLeft
         bcs SkipSetE0VMoveRight
-        dec Enemy0YPos
-        dec Enemy0YPos
+        dec Enemy0YPos,x
+        dec Enemy0YPos,x
 SkipSetE0VMoveRight
 
         ; lda Flasher
@@ -5546,29 +5537,34 @@ SkipSetE0VMoveRight
         sta HMOVE
 SkipHMOVE
 
-        lda Enemy0XPos
+        lda Enemy0XPos,x
         sec
-        sbc Enemy0HWayPoint
+        sbc Enemy0HWayPoint,x
         bne SkipRegenWayPoints
         ;beq RegenWayPoints
 
-        lda Enemy0YPos
+        lda Enemy0YPos,x
         sec
-        sbc Enemy0VWayPoint
+        sbc Enemy0VWayPoint,x
         bne SkipRegenWayPoints
 ;RegenWayPoints
         lda #0 
-        sta Enemy0HWayPoint
-        ;sta Enemy0VWayPoint
+        sta Enemy0HWayPoint,x
 SkipRegenWayPoints
 
 SkipEnemy0Movement   
-        sta HMCLR
+        ; sta HMCLR
 
-        lda Enemy0YPos
+        lda Enemy0YPos,x
         clc
         adc #E0HEIGHT*2
-        sta Enemy0YPosEnd
+        sta Enemy0YPosEnd,x
+
+        inx
+        cpx #2
+        beq SkipEnemyMovement
+        jmp EnemyMovement
+SkipEnemyMovement
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Enemy 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5577,182 +5573,172 @@ SkipEnemy0Movement
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Enemy 1 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         
-        lda Enemy1GenTimer
-        beq SkipEnemy1CountdownTimer
-        dec Enemy1GenTimer
-SkipEnemy1CountdownTimer
+;         lda Enemy1GenTimer
+;         beq SkipEnemy1CountdownTimer
+;         dec Enemy1GenTimer
+; SkipEnemy1CountdownTimer
 
-        lda Enemy1GenTimer
-        cmp #1
-        bne SkipGenerateEnemy1
-DetermineEdgeE1
-        lda INPT4
-        jsr GetRandomNumber
-        and #3
-        sta Enemy1StartEdge
+;         lda Enemy1GenTimer
+;         cmp #1
+;         bne SkipGenerateEnemy1
+; DetermineEdgeE1
+;         lda INPT4
+;         jsr GetRandomNumber
+;         and #3
+;         sta Enemy1StartEdge
 
-        lda #1
-        sta Enemy1Alive
+;         lda #1
+;         sta Enemy1Alive
         
-        ; Generate Start Pos
-        lda Enemy1StartEdge
-        cmp #0
-        bne SkipTopE1StartEdge
-        lda #0
-        sta Enemy1YPos
-        jmp E1StartEdgeSet
-SkipTopE1StartEdge
-        cmp #1
-        bne SkipRightSideE1StartEdge
-        lda #0
-        sta Enemy1YPos
-        jmp E1StartEdgeSet
-SkipRightSideE1StartEdge
-        cmp #2
-        bne SkipBottomE1StartEdge
-        lda #192-#E1HEIGHT-4
-        sta Enemy1YPos
-        jmp E1StartEdgeSet
-SkipBottomE1StartEdge
-        cmp #3
-        bne SkipLeftSideE1StartEdge
-        lda #192-#E1HEIGHT-4
-        sta Enemy1YPos
+;         ; Generate Start Pos
+;         lda Enemy1StartEdge
+;         ; cmp #0
+;         bne SkipTopE1StartEdge
+;         lda #0
+;         sta Enemy1YPos
+;         jmp E1StartEdgeSet
+; SkipTopE1StartEdge
+;         cmp #1
+;         bne SkipRightSideE1StartEdge
+;         lda #0
+;         sta Enemy1YPos
+;         jmp E1StartEdgeSet
+; SkipRightSideE1StartEdge
+;         cmp #2
+;         bne SkipBottomE1StartEdge
+;         lda #192-#E1HEIGHT-4
+;         sta Enemy1YPos
+;         jmp E1StartEdgeSet
+; SkipBottomE1StartEdge
+;         cmp #3
+;         bne SkipLeftSideE1StartEdge
+;         lda #192-#E1HEIGHT-4
+;         sta Enemy1YPos
         
-SkipLeftSideE1StartEdge
-E1StartEdgeSet
-        lda INPT4
-        jsr GetRandomNumber
-        and #159
-        sta Enemy1XPos
+; SkipLeftSideE1StartEdge
+; E1StartEdgeSet
+;         lda INPT4
+;         jsr GetRandomNumber
+;         and #159
+;         sta Enemy1XPos
 
-SkipGenerateEnemy1
+; SkipGenerateEnemy1
 
-        ldx #3
-        lda Enemy1XPos
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
+;         ldx #3
+;         lda Enemy1XPos
+;         jsr CalcXPos_bank1
+;         sta WSYNC
+;         sta HMOVE
         
-        lda Enemy1GenTimer
-        bne SkipEnemy1Alive
-        lda #1
-        sta Enemy1Alive
-SkipEnemy1Alive
+;         lda Enemy1GenTimer
+;         bne SkipEnemy1Alive
+;         lda #1
+;         sta Enemy1Alive
+; SkipEnemy1Alive
 
-        lda Enemy1Alive
-        beq SkipEnemy1Movement
-Enemy1VectorPath
-        ;; Do vector path code here
-        lda Enemy1HWayPoint
-        bne SkipGenerateNewE1WayPoints
+;         lda Enemy1Alive
+;         beq SkipEnemy1Movement
+; Enemy1VectorPath
+;         ;; Do vector path code here
+;         lda Enemy1HWayPoint
+;         bne SkipGenerateNewE1WayPoints
 
-RegenE1HSeed
-        lda INPT4
-        beq RegenE1HSeed
-        jsr GetRandomNumber
-        and #158
-        ; and #2
-        ; clc
-        ; adc #70
-        sta Enemy1HWayPoint
+; RegenE1HSeed
+;         lda INPT4
+;         beq RegenE1HSeed
+;         jsr GetRandomNumber
+;         and #158
+;         ; and #2
+;         ; clc
+;         ; adc #70
+;         sta Enemy1HWayPoint
 
-RegenE1VSeed
-        lda INPT4
-        beq RegenE1VSeed
-        jsr GetRandomNumber
-        and #148
-        clc
-        adc #38
-        ; and #2
-        ; clc
-        ; adc #72
-        sta Enemy1VWayPoint
-SkipGenerateNewE1WayPoints
+; RegenE1VSeed
+;         lda INPT4
+;         beq RegenE1VSeed
+;         jsr GetRandomNumber
+;         and #148
+;         clc
+;         adc #38
+;         ; and #2
+;         ; clc
+;         ; adc #72
+;         sta Enemy1VWayPoint
+; SkipGenerateNewE1WayPoints
 
-        lda Enemy1HWayPoint
-        sec
-        sbc Enemy1XPos
-        bne SkipSetE1HMoveFlat
-        lda #$0
-        sta HMM1
-        jmp SkipSetE1HMoveRight
-SkipSetE1HMoveFlat
-        bcc SkipSetE1HMoveLeft
-        lda #$F0
-        sta HMM1
-        inc Enemy1XPos
-        jmp SkipSetE1HMoveRight
-SkipSetE1HMoveLeft
-        bcs SkipSetE1HMoveRight
-        lda #$10
-        sta HMM1
-        dec Enemy1XPos
-SkipSetE1HMoveRight
+;         lda Enemy1HWayPoint
+;         sec
+;         sbc Enemy1XPos
+;         bne SkipSetE1HMoveFlat
+;         lda #$0
+;         sta HMM1
+;         jmp SkipSetE1HMoveRight
+; SkipSetE1HMoveFlat
+;         bcc SkipSetE1HMoveLeft
+;         lda #$F0
+;         sta HMM1
+;         inc Enemy1XPos
+;         jmp SkipSetE1HMoveRight
+; SkipSetE1HMoveLeft
+;         bcs SkipSetE1HMoveRight
+;         lda #$10
+;         sta HMM1
+;         dec Enemy1XPos
+; SkipSetE1HMoveRight
 
-        lda Enemy1VWayPoint
-        sec
-        sbc Enemy1YPos
-        bne SkipSetE1VMoveFlat
-        jmp SkipSetE1VMoveRight
-SkipSetE1VMoveFlat
-        bcc SkipSetE1VMoveLeft
-        inc Enemy1YPos
-        inc Enemy1YPos
-        jmp SkipSetE1VMoveRight
-SkipSetE1VMoveLeft
-        bcs SkipSetE1VMoveRight
-        dec Enemy1YPos
-        dec Enemy1YPos
-SkipSetE1VMoveRight
+;         lda Enemy1VWayPoint
+;         sec
+;         sbc Enemy1YPos
+;         bne SkipSetE1VMoveFlat
+;         jmp SkipSetE1VMoveRight
+; SkipSetE1VMoveFlat
+;         bcc SkipSetE1VMoveLeft
+;         inc Enemy1YPos
+;         inc Enemy1YPos
+;         jmp SkipSetE1VMoveRight
+; SkipSetE1VMoveLeft
+;         bcs SkipSetE1VMoveRight
+;         dec Enemy1YPos
+;         dec Enemy1YPos
+; SkipSetE1VMoveRight
 
-        ; lda Flasher
-        ; and #1
-        ; bne SkipHMOVEE1
-        sta WSYNC
-        sta HMOVE
-SkipHMOVEE1
+;         ; lda Flasher
+;         ; and #1
+;         ; bne SkipHMOVEE1
+;         sta WSYNC
+;         sta HMOVE
+; SkipHMOVEE1
 
-        lda Enemy1XPos
-        sec
-        sbc Enemy1HWayPoint
-        bne SkipRegenWayPointsE1
-        ;beq RegenWayPoints
+;         lda Enemy1XPos
+;         sec
+;         sbc Enemy1HWayPoint
+;         bne SkipRegenWayPointsE1
+;         ;beq RegenWayPoints
 
-        lda Enemy1YPos
-        sec
-        sbc Enemy1VWayPoint
-        bne SkipRegenWayPointsE1
-;RegenWayPoints
-        lda #0 
-        sta Enemy1HWayPoint
-        ;sta Enemy0VWayPoint
-SkipRegenWayPointsE1
+;         lda Enemy1YPos
+;         sec
+;         sbc Enemy1VWayPoint
+;         bne SkipRegenWayPointsE1
+; ;RegenWayPoints
+;         lda #0 
+;         sta Enemy1HWayPoint
+; SkipRegenWayPointsE1
 
-SkipEnemy1Movement
+; SkipEnemy1Movement
 
-        lda Enemy1YPos
-        clc
-        adc #E1HEIGHT*2
-        sta Enemy1YPosEnd
+;         lda Enemy1YPos
+;         clc
+;         adc #E1HEIGHT*2
+;         sta Enemy1YPosEnd
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Enemy 1 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 SkipPlayerControls
 
-GameWaitLoop_bank1
-        ;lda INTIM
+FlyGameOverscanWaitLoop
         lda TIMINT
-        ; and #%10000000
-        ;bne GameWaitLoop_bank1
-        beq GameWaitLoop_bank1
-; overscan
-        ; sta HMCLR
-;         ldx #1
-; GameOverscan
-;         sta WSYNC
-;         dex
-;         bne GameOverscan
+        beq FlyGameOverscanWaitLoop
+
         jmp FlyGameStartOfFrame
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -6913,7 +6899,7 @@ GA         .byte  #%11101110
            .byte  #%10101010
            .byte  #%11101010
 
-MER         .byte  #%01110101
+MER        .byte  #%01110101
            .byte  #%00010111
            .byte  #%01110101
            .byte  #%00010101
@@ -7113,21 +7099,21 @@ PL         .byte  #%11101000
            .byte  #%11101000
            .byte  #%10001000
            .byte  #%10001110
-           .byte  #0
+           
 
 AY         .byte  #%01001010
            .byte  #%10101010
            .byte  #%11100100
            .byte  #%10100100
            .byte  #%10100100
-           .byte  #0
+           
 
 ER         .byte  #%11101110
            .byte  #%10001010
            .byte  #%11001110
            .byte  #%10001100
            .byte  #%11101010
-           .byte  #0
+           
 
 _W         .byte  #%00001010
            .byte  #%00001010
@@ -7171,13 +7157,6 @@ CanvasSelectTableR      .byte #%10000000
                         .byte #%00000010
                         .byte #%00000001
 
-NO         .byte  #%11101110
-           .byte  #%10101010
-           .byte  #%10101010
-           .byte  #%10101010
-           .byte  #%10101110
-           .byte  #0
-
 _T         .byte  #%00001110
            .byte  #%00000100
            .byte  #%00000100
@@ -7196,6 +7175,8 @@ ME         .byte  #%10101110
            .byte  #%10101000
            .byte  #%10101110
 
+Enemy0Value .byte #2
+            .byte #3
 
         echo "----"
         echo "Rom Total Bank1:"
