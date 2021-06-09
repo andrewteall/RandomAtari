@@ -18,6 +18,11 @@ MISSLE_SIZE_TWO_CLOCKS          = #16
 MISSLE_SIZE_FOUR_CLOCKS         = #32
 MISSLE_SIZE_EIGHT_CLOCKS        = #48
 
+BALL_SIZE_ONE_CLOCK             = #0
+BALL_SIZE_TWO_CLOCKS            = #16
+BALL_SIZE_FOUR_CLOCKS           = #32
+BALL_SIZE_EIGHT_CLOCKS          = #48
+
 P1_JOYSTICK_UP                  = #%00000001
 P1_JOYSTICK_DOWN                = #%00000010
 P1_JOYSTICK_LEFT                = #%00000100
@@ -3641,6 +3646,12 @@ P1Score2DigitPtr        ds 2
 P0ScoreArr              ds 5
 P1ScoreArr              ds 5
 
+FlyGameNotePtrCh0     ds 2
+FlyGameNotePtrCh1     ds 2
+FlyGameFrameCtrTrk0   ds 1
+FlyGameFrameCtrTrk1   ds 1
+
+
         echo "----"
         echo "Ram Total Fly Game(Bank 1):"
         echo "----",([* - $80]d) ,"/", (* - $80) ,"bytes of RAM Used for Fly Game in Bank 1"
@@ -3954,6 +3965,16 @@ OnePlayerGame
         ldx #100
         stx Enemy0GenTimer
         stx Enemy1GenTimer
+
+        lda #<FlyGameTrack0                     ; Init for Rom Music Player
+        sta FlyGameNotePtrCh0
+        lda #>FlyGameTrack0
+        sta FlyGameNotePtrCh0+1
+
+        lda #<FlyGameTrack1                     ; Init for Rom Music Player
+        sta FlyGameNotePtrCh1
+        lda #>FlyGameTrack1
+        sta FlyGameNotePtrCh1+1
         
         ldx #FLY_GAME_TIMER_DURATION
         stx CountdownTimer
@@ -5430,8 +5451,51 @@ SkipEnemyMovement
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Enemys Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 SkipPlayerControls
+
+;;;;;;;;;;;;;;;;;;;; Rom Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+; 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldy #0                                          ; 2     Initialize Y-Index to 0
+        lda (FlyGameNotePtrCh0),y                       ; 5     Load first note duration to A
+        cmp FlyGameFrameCtrTrk0                         ; 3     See if it equals the Frame Counter
+        beq FlyGameTrack0NextNote                       ; 2/3   If so move the NotePtr to the next note
+
+        cmp #255                                        ; 2     See if the notes duration equals 255
+        bne FlyGameSkipResetTrack0                      ; 2/3   If so go back to the beginning of the track
+
+        lda #<FlyGameTrack0                             ; 4     Store the low byte of the track to 
+        sta FlyGameNotePtrCh0                           ; 3     the Note Pointer
+        lda #>FlyGameTrack0                             ; 4     Store the High byte of the track to
+        sta FlyGameNotePtrCh0+1                         ; 3     the Note Pointer + 1
+FlyGameSkipResetTrack0
+
+        iny                                             ; 2     Increment Y (Y=1) to point to the Note Volume
+        lda (FlyGameNotePtrCh0),y                       ; 5     Load Volume to A
+        sta AUDV0                                       ; 3     and set the Note Volume
+        iny                                             ; 2     Increment Y (Y=2) to point to the Note Frequency
+        lda (FlyGameNotePtrCh0),y                       ; 5     Load Frequency to A
+        sta AUDF0                                       ; 3     and set the Note Frequency
+        iny                                             ; 2     Increment Y (Y=3) to point to the Note Control
+        lda (FlyGameNotePtrCh0),y                       ; 5     Load Control to A
+        sta AUDC0                                       ; 3     and set the Note Control
+        inc FlyGameFrameCtrTrk0                         ; 5     Increment the Frame Counter to duration compare later
+        sec                                             ; 2     Set the carry to prepare to always branch
+        bcs KeepPlaying                                 ; 3     Branch to the end of the media player
+FlyGameTrack0NextNote
+        lda FlyGameNotePtrCh0                           ; 3     Load the Note Pointer to A
+        clc                                             ; 2     Clear the carry 
+        adc #4                                          ; 2     Add 4 to move the Notep pointer to the next note
+        sta FlyGameNotePtrCh0                           ; 3     Store the new note pointer
+
+        lda #0                                          ; 2     Load Zero to
+        sta FlyGameFrameCtrTrk0                         ; 3     Reset the Frame counter
+
+KeepPlaying
+
+;;;;;;;;;;;;;;;;;; End Rom Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 FlyGameOverscanWaitLoop
         lda TIMINT
@@ -5497,6 +5561,8 @@ BrushYPos                       ds 1
 CanvasRowLineCtr                ds 1
 DebounceCtr                     ds 1
 
+ToolSelectXPos                  ds 1
+
 BrushColor                      ds 1
 BackgroundColor                 ds 1
 ControlColor                    ds 1
@@ -5531,6 +5597,12 @@ ClearRam
 
         lda #30
         sta DebounceCtr
+
+        lda #58
+        sta ToolSelectXPos
+
+        lda #BALL_SIZE_FOUR_CLOCKS
+        sta CTRLPF
 
         lda #ATARI_PAINT_BACKGROUND_COLOR
         sta BackgroundColor
@@ -5652,27 +5724,20 @@ AtariPaintDrawTitle
 ; End Title Text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         
-        lda #MISSLE_SIZE_TWO_CLOCKS | #TWO_COPIES_MEDIUM
-        sta NUSIZ0
-        sta NUSIZ1
-
-        ldy #0
-AtariPaintTitleBottomBuffer
-        inx
-        cpx #15
-        sta WSYNC
-        bne AtariPaintTitleBottomBuffer
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Control Row
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #MISSLE_SIZE_FOUR_CLOCKS | #TWO_COPIES_MEDIUM
+        sta NUSIZ0
+        sta NUSIZ1
+        ldy #0
 AtariPaintControlRow
-        SLEEP 4
+        cpx #15
+        bmi SkipControlRow
 
         lda ControlColor
         sta COLUP0
         sta COLUP1
-
 
         lda F_,y
         sta GRP0
@@ -5690,16 +5755,25 @@ AtariPaintControlRow
         
         inc ControlColor
         iny
+
+        lda #ATARI_PAINT_TITLE_COLOR
+        sta COLUP0
+SkipControlRow
         inx
         sta WSYNC
-        cpx #20
+        cpx #21
         bne AtariPaintControlRow
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; End Control Row
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        ; lda #2
-        ; sta ENABL
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Control Select Row
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #MISSLE_SIZE_FOUR_CLOCKS
+        sta NUSIZ0
+
         lda #0
         ldy BrushYPos
         cpy #21
@@ -5707,68 +5781,39 @@ AtariPaintControlRow
         lda #2
 ControlSkipDrawBrush
         sta ENAM0
-        
-        lda #ATARI_PAINT_TITLE_COLOR
-        sta COLUP0
 
-        lda #MISSLE_SIZE_FOUR_CLOCKS
-        sta NUSIZ0
-        sta NUSIZ1
+        lda #2
+        sta ENABL
 
+        sta WSYNC
         lda #0
-        sta GRP0
-        sta GRP1
-        sta GRP0
-        lda #%00010000
-        sta CTRLPF
-        
-        lda #0
-        sta PF0
-        sta PF1
-        sta PF2
-        sta GRP1
-        sta GRP0
-        sta ENAM0 
+        sta ENABL
+        sta ENAM0
 
         lda #MISSLE_SIZE_TWO_CLOCKS
         sta NUSIZ0
         sta NUSIZ1
-        ; lda #0
-        ; sta ENABL
 
-        lda BrushXPos
-        cmp #ATARI_PAINT_BRUSH_HORIZONTAL_OVERFLOW
-        bcs SkipAdjustWSYNC
         sta WSYNC
-SkipAdjustWSYNC
-
-        txa
-        pha
-        ldx #2                                  ; Set Player Missle 0 Position
-        lda BrushXPos
-        jsr CalcXPos_bank1
         sta WSYNC
-        sta HMOVE
-        pla
-        tax
-        
         lda #255
         sta PF0
         sta PF1
         sta PF2
-        
-        ldx BackgroundColor
-        stx COLUBK
 
         ldx #24
         inx
-
+        
         sta WSYNC
-        SLEEP 3
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; End Control Select Row
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Palette
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        SLEEP 3
 AtariPaintPalette
         lda #GRAY
         sta COLUPF
@@ -6052,24 +6097,31 @@ SkipSetBrushMinHPos
         dec BrushXPos
 SkipSetBrushMaxHPos
 
-        ldy BrushYPos
-        cpy #21
-        bne SkipMoveBrush
+;         ldy BrushYPos
+;         cpy #21
+;         bne SkipMoveBrush
 
-        cpx #114
-        bcc SkipMoveBrush2
+;         cpx #114
+;         bcc SkipMoveBrush2
 
-        lda #110
-        sta BrushXPos
-SkipMoveBrush2
+;         lda #110
+;         sta BrushXPos
+; SkipMoveBrush2
 
-        cpx #42
-        bcs SkipMoveBrush
+;         cpx #42
+;         bcs SkipMoveBrush
         
-        lda #42
-        sta BrushXPos
+;         lda #42
+;         sta BrushXPos
 
 SkipMoveBrush
+
+        ldx #2                                  ; Set Player Missle 0 Position
+        lda BrushXPos
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Brush Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -6269,6 +6321,9 @@ SkipPaintTile
         lda #0
         sta DrawOrEraseFlag
         sta ForegroundBackgroundFlag
+        lda BrushXPos
+        sta ToolSelectXPos
+
         jmp SkipSetCanvasControl
 
 SkipSetFGColor
@@ -6279,6 +6334,9 @@ SkipSetFGColor
 
         lda #1
         sta ForegroundBackgroundFlag
+
+        lda BrushXPos
+        sta ToolSelectXPos
         jmp SkipSetCanvasControl
 SkipSetBGColor
         cmp #94
@@ -6288,6 +6346,9 @@ SkipSetBGColor
 
         lda #1
         sta DrawOrEraseFlag
+
+        lda BrushXPos
+        sta ToolSelectXPos
         
         jmp SkipSetCanvasControl
 SkipSetErase
@@ -6426,11 +6487,11 @@ SkipSetBrushColor
         sta NUSIZ0
         sta NUSIZ1
 
-        ; ldx #4                                  ; Set Player Ball Position
-        ; lda BrushXPos
-        ; jsr CalcXPos_bank1
-        ; sta WSYNC
-        ; sta HMOVE
+        ldx #4                                  ; Set Player Ball Position
+        lda ToolSelectXPos
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
         ; SLEEP 24
         ; sta HMCLR
 
@@ -6662,18 +6723,21 @@ F_         .byte  #%11100000
            .byte  #%11000000
            .byte  #%10000000
            .byte  #%10000000
+           .byte  #0
 
 B_         .byte  #%11000000
            .byte  #%10100000
            .byte  #%11000000
            .byte  #%10100000
            .byte  #%11000000
+           .byte  #0
 
 C_         .byte  #%11100000
            .byte  #%10000000
            .byte  #%10000000
            .byte  #%10000000
            .byte  #%11100000
+           .byte  #0
 
 Space      .byte  #%00000000
            .byte  #%00000000
@@ -6872,8 +6936,8 @@ ME         .byte  #%10101110
            .byte  #%10101000
            .byte  #%10101110
 
-Enemy0Value .byte #2
-            .byte #3
+FlyGameTrack0   .byte 0,0,0,0,255
+FlyGameTrack1
 
         echo "----"
         echo "Rom Total Bank1:"
