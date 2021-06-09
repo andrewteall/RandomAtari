@@ -5466,6 +5466,8 @@ ATARI_PAINT_BRUSH_START_YPOS                = #99
 ATARI_PAINT_MOVE_BRUSH_DELAY                = #8
 ATARI_PAINT_BRUSH_HORIZONTAL_OVERFLOW       = #$8A
 
+ATARI_PAINT_CANVAS_SIZE                     = #104
+
 BLACK                                       = #$00
 WHITE                                       = #$0F
 RED                                         = #$42
@@ -5508,7 +5510,7 @@ CanvasByteMask                  ds 1
 CanvasRow                       ds 1
 CanvasIdx                       ds 1
 
-Canvas                  ds 96
+Canvas                          ds ATARI_PAINT_CANVAS_SIZE
 
         echo "----"
         echo "Ram Total Atari Paint(Bank 1):"
@@ -5517,7 +5519,6 @@ Canvas                  ds 96
         SEG
         
 ; TODO: Atari Paint
-; TODO: Add two rows of canvas drawing
 AtariPaint
         ldx #0
         txa
@@ -5610,9 +5611,7 @@ AtariPaintTitleWaitLoop
         lda TIMINT
         and #%10000000
         beq AtariPaintTitleWaitLoop
-        
-        SLEEP 6
-        
+                
         inx                                             ; 2
 AtariPaintDrawTitle
         stx TempXPos                                    ; 3     6
@@ -5889,7 +5888,7 @@ SkipResetCanvasRowLineCtr
         sta PF0                                         ; 3     (8)
 
         inx                                             ; 2
-        cpx #180                                        ; 2
+        cpx #191                                        ; 2
         sta WSYNC                                       ; 3
         bne AtariPaintCanvas                            ; 2/3   (10)    (76)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -6003,9 +6002,9 @@ SkipMoveBrushDown
         ldy #21
 SkipSetBrushMinVPos
 
-        cpy #183
+        cpy #195
         bne SkipSetBrushMaxVPos
-        ldy #177
+        ldy #189
 SkipSetBrushMaxVPos
         sty BrushYPos
 
@@ -6316,7 +6315,7 @@ ClearCanvasArray
         lda #0
         sta Canvas,y
         iny
-        cpy #96
+        cpy #ATARI_PAINT_CANVAS_SIZE
         bne ClearCanvasArray
         sta ClearCanvasFlag
 SkipClearCanvas
