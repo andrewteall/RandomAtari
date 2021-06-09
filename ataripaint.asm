@@ -3524,7 +3524,7 @@ FLY_GAME_GAME_BACKGROUND_COLOR          = #$0A
 FLY_GAME_GAME_OVER_BACKGROUND_COLOR     = #$0A
 FLY_GAME_GAME_OVER_RESTART_DELAY        = #60
 FLY_GAME_COUNTDOWN_TIMER_SECOND_DIVIDER = #60
-FLY_GAME_TIMER_DURATION                 = #9  ;#153
+FLY_GAME_TIMER_DURATION                 = #153  ;#9  
 
 P0XSTARTPOS                             = #15
 P0YSTARTPOS                             = #78
@@ -3929,7 +3929,6 @@ FlyGameTitleScreenOverscanWaitLoop
 ; TODO: Enemy position seems off
 ; TODO: Add Music
 ; TODO: Set Player and Game Colors
-; TODO: Difficulty level chnages fly speed and control
 
 ; TODO: Condense Ram
 ; TODO: Add Enemy Lifecycle
@@ -5239,6 +5238,15 @@ SkipPlayerDetectHit
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Enemys Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+        lda SWCHB
+        and #%01000000
+        bne MoveEnemies
+        lda Flasher
+        and #1
+        beq MoveEnemies
+        jmp SkipEnemyMovement
+MoveEnemies
+
         ldx #0
 EnemyMovement
         lda Enemy0GenTimer,x
@@ -5294,7 +5302,7 @@ SkipGenerateEnemy0
 
         lda Enemy0XPos,x
         stx LineTemp
-
+        
         cpx #0
         bne ExecuteEnemy1Pos
         ldx #2
@@ -5303,9 +5311,10 @@ ExecuteEnemy1Pos
         ldx #3
 ExecuteEnemy0Pos
         jsr CalcXPos_bank1
+
+
         sta WSYNC
-        sta HMOVE
-        
+        sta HMOVE    
         ldx LineTemp
 
         lda Enemy0GenTimer,x
@@ -5348,19 +5357,19 @@ SkipGenerateNewE0WayPoints
         sec
         sbc Enemy0XPos,x
         bne SkipSetE0HMoveFlat
-        lda #$0
-        sta HMM0,x
+        ; lda #$0
+        ; sta HMM0,x
         jmp SkipSetE0HMoveRight
 SkipSetE0HMoveFlat
         bcc SkipSetE0HMoveLeft
-        lda #$F0
-        sta HMM0,x
+        ; lda #$F0
+        ; sta HMM0,x
         inc Enemy0XPos,x
         jmp SkipSetE0HMoveRight
 SkipSetE0HMoveLeft
         bcs SkipSetE0HMoveRight
-        lda #$10
-        sta HMM0,x
+        ; lda #$10
+        ; sta HMM0,x
         dec Enemy0XPos,x
 SkipSetE0HMoveRight
 
@@ -5380,24 +5389,26 @@ SkipSetE0VMoveLeft
         dec Enemy0YPos,x
 SkipSetE0VMoveRight
 
-        ; lda Flasher
-        ; and #1
-        ; bne SkipHMOVE        
-        sta WSYNC
-        sta HMOVE
-SkipHMOVE
+        lda SWCHB
+        and #%10000000
+        bne CrazyEnemies
 
         lda Enemy0XPos,x
         sec
         sbc Enemy0HWayPoint,x
         bne SkipRegenWayPoints
-        ;beq RegenWayPoints
-
+        jmp SkipCrazyEnemies
+CrazyEnemies
+        lda Enemy0XPos,x
+        sec
+        sbc Enemy0HWayPoint,x
+        beq RegenWayPoints
+SkipCrazyEnemies
         lda Enemy0YPos,x
         sec
         sbc Enemy0VWayPoint,x
         bne SkipRegenWayPoints
-;RegenWayPoints
+RegenWayPoints
         lda #0 
         sta Enemy0HWayPoint,x
 SkipRegenWayPoints
