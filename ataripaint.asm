@@ -5238,14 +5238,7 @@ SkipPlayerDetectHit
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Enemys Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda SWCHB
-        and #%01000000
-        bne MoveEnemies
-        lda Flasher
-        and #1
-        beq MoveEnemies
-        jmp SkipEnemyMovement
-MoveEnemies
+        
 
         ldx #0
 EnemyMovement
@@ -5254,6 +5247,14 @@ EnemyMovement
         dec Enemy0GenTimer,x
 SkipEnemy0CountdownTimer
 
+        lda SWCHB
+        and #%01000000
+        bne MoveEnemies
+        lda Flasher
+        and #1
+        beq MoveEnemies
+        jmp SkipEnemyMovement2
+MoveEnemies
         lda Enemy0GenTimer,x
         cmp #1
         bne SkipGenerateEnemy0
@@ -5420,7 +5421,7 @@ SkipEnemy0Movement
         clc
         adc #ENEMYHEIGHT*2
         sta Enemy0YPosEnd,x
-
+SkipEnemyMovement2
         inx
         cpx #2
         beq SkipEnemyMovement
