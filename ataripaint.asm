@@ -5585,6 +5585,7 @@ Canvas                          ds ATARI_PAINT_CANVAS_SIZE
         SEG
         
 ; TODO: Atari Paint
+; TODO: Add Color Mode
 AtariPaint
         ldx #0
         txa
@@ -5891,10 +5892,14 @@ PaletteDrawBrush
         
         lda #0
         inx
+        lda SWCHB
+        and #%00001000
+        cmp #8
+        bne SkipSingleColorCanvas
         sta WSYNC
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Canvas
+; Single Color Canvas
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 AtariPaintCanvas
         cpx BrushYPos                                   ; 3
@@ -5936,10 +5941,63 @@ SkipResetCanvasRowLineCtr
         cpx #191                                        ; 2
         sta WSYNC                                       ; 3
         bne AtariPaintCanvas                            ; 2/3   (10)    (76)
+        jmp EndOfCanvas
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; End Canvas
+; End Single Color Canvas
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Multi Color Canvas
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+SkipSingleColorCanvas
+        sta WSYNC
+AtariPaintMultiColorCanvas
+        
+        cpx BrushYPos                                   ; 3
+        bne SkipDrawMultiColorBrush                     ; 2/3
+        lda #2                                          ; 2
+SkipDrawMultiColorBrush
+        sta ENAM0                                       ; 3     (10)
+        
+        lda Canvas,y                                    ; 4
+        sta COLUPF                                      ; 3
+        lda Canvas+1,y                                  ; 4
+        sta PF2                                         ; 3
+        lda Canvas+2,y                                  ; 4
+        sta PF0                                         ; 3
+        lda Canvas+3,y                                  ; 4
+        sta PF1                                         ; 3     (28)
+        
+        dec CanvasRowLineCtr                            ; 5
+        bne SkipResetMultiColorCanvasRowLineCtr         ; 2/3
+        
+        tya                                             ; 2
+        clc                                             ; 2
+        adc #4                                          ; 2 
+        tay                                             ; 2
+
+        lda #6                                          ; 2
+        sta CanvasRowLineCtr                            ; 3     (20)
+
+SkipResetMultiColorCanvasRowLineCtr
+
+        ; SLEEP 12
+
+        lda #0                                          ; 2
+        sta PF2                                         ; 3
+        sta PF0                                         ; 3     (8)
+        ; sta PF1                                         ; 3
+
+        inx                                             ; 2
+        cpx #191                                        ; 2
+        sta WSYNC                                       ; 3
+        bne AtariPaintMultiColorCanvas                            ; 2/3   (10)    (76)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; End Multi Color Canvas
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+EndOfCanvas
         lda #0
         sta PF2
         sta PF0
@@ -6186,6 +6244,8 @@ Modulo8
         adc #8
         sta CanvasByteIdx
 
+
+
         lda BrushXPos
         cmp #50
         bpl SkipSetCanvasIdx0
@@ -6275,10 +6335,16 @@ LoadTableErasePF12
         ldx #3
         stx CanvasIdx
 CanvasIdxSet
+        stx TempLetterBuffer
+        
         txa
         clc
         adc CanvasRow
         sta CanvasIdx
+        
+        sec
+        sbc TempLetterBuffer
+        sta TempLetterBuffer
         
         ldy CanvasIdx
         lda Canvas,y
@@ -6292,8 +6358,14 @@ LoadCanvasByteMask
 LoadEraseCanvasByteMask
 
         sta Canvas,y
-        jmp SkipPaintTile
 
+        lda SWCHB
+        and #%00001000
+        cmp #8
+        beq SkipPaintTile
+        ldy TempLetterBuffer
+        lda BrushColor
+        sta Canvas,y
 SkipPaintTile
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Calculate Tile to Paint ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
