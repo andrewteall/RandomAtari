@@ -23,6 +23,15 @@ BALL_SIZE_TWO_CLOCKS            = #16
 BALL_SIZE_FOUR_CLOCKS           = #32
 BALL_SIZE_EIGHT_CLOCKS          = #48
 
+MISSLE_BALL_ENABLE              = #2
+MISSLE_BALL_DISABLE             = #0
+
+SWITCH_GAME_RESET               = #1
+SWITCH_GAME_SELECT              = #2
+SWITCH_COLOR_TV                 = #8
+SWITCH_P0_PRO_DIFFICULTY        = #64
+SWITCH_P1_PRO_DIFFICULTY        = #128
+
 P1_JOYSTICK_UP                  = #%00000001
 P1_JOYSTICK_DOWN                = #%00000010
 P1_JOYSTICK_LEFT                = #%00000100
@@ -2527,7 +2536,7 @@ SkipDecDebounceCtr_Bank0
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Change Bank ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda SWCHB
-        and #%00000010
+        and #SWITCH_GAME_SELECT
         ora DebounceCtr
         bne SkipSwitchToBank1
         ; Put game select logic code here
@@ -3870,7 +3879,7 @@ FlyGameTitleScreenBottomBuffer
 SkipDecDebounceCtr_FlyGameTitleScreen
 
         lda SWCHB
-        and #%00000010
+        and #SWITCH_GAME_SELECT
         ora DebounceCtr
         ;bne SkipSwitchToBank0
         bne SkipSwitchToAtariPaint
@@ -4903,7 +4912,7 @@ GameSkipP1FireDecDebounceCtr
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Check Bank Switching ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda SWCHB
-        and #%00000010
+        and #SWITCH_GAME_SELECT
         ora DebounceCtr
         ;bne GameSkipSwitchToBank0
         bne GameSkipSwitchToAtariPaint
@@ -5269,7 +5278,7 @@ EnemyMovement
 SkipEnemy0CountdownTimer
 
         lda SWCHB
-        and #%01000000
+        and #SWITCH_P0_PRO_DIFFICULTY
         bne MoveEnemies
         lda Flasher
         and #1
@@ -5412,7 +5421,7 @@ SkipSetE0VMoveLeft
 SkipSetE0VMoveRight
 
         lda SWCHB
-        and #%10000000
+        and #SWITCH_P1_PRO_DIFFICULTY
         bne CrazyEnemies
 
         lda Enemy0XPos,x
@@ -5517,20 +5526,20 @@ FlyGameOverscanWaitLoop
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Atari Paint Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ATARI_PAINT_TITLE_H_POS                     = #57
-ATARI_PAINT_TITLE_SLEEPTIMER                = TITLE_H_POS/#3 +#51
 ATARI_PAINT_TITLE_COLOR                     = #$02
+ATARI_PAINT_TITLE_ALIGNMENT_TIMER           = #48
 
 ATARI_PAINT_BACKGROUND_COLOR                = #$0F
 ATARI_PAINT_FOREGROUND_SELECTED_COLOR       = #$88
-ATARI_PAINT_BACKGROUND_SELECTED_COLOR       = #$42
-ATARI_PAINT_CANVAS_OVERFLOW_MASK_POS        = #129
+
+ATARI_PAINT_CONTROL_INITIAL_SELECTION_POS   = #58
 
 ATARI_PAINT_BRUSH_START_XPOS                = #78
 ATARI_PAINT_BRUSH_START_YPOS                = #99
-ATARI_PAINT_MOVE_BRUSH_DELAY                = #8
-ATARI_PAINT_BRUSH_HORIZONTAL_OVERFLOW       = #$8A
+ATARI_PAINT_BRUSH_MOVE_DELAY                = #8
 
 ATARI_PAINT_CANVAS_SIZE                     = #104
+ATARI_PAINT_CANVAS_OVERFLOW_MASK_POS        = #127
 
 BLACK                                       = #$00
 WHITE                                       = #$0F
@@ -5585,7 +5594,6 @@ Canvas                          ds ATARI_PAINT_CANVAS_SIZE
         SEG
         
 ; TODO: Atari Paint
-; TODO: Add Color Mode
 AtariPaint
         ldx #0
         txa
@@ -5599,7 +5607,7 @@ ClearRam
         lda #30
         sta DebounceCtr
 
-        lda #58
+        lda #ATARI_PAINT_CONTROL_INITIAL_SELECTION_POS
         sta ToolSelectXPos
 
         lda #BALL_SIZE_FOUR_CLOCKS
@@ -5619,18 +5627,16 @@ ClearRam
         sta WSYNC
         sta HMOVE
 
-        ldx #1                                  ; Set Player 1 Position
-        lda #ATARI_PAINT_TITLE_H_POS+8
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
-
         ldx #3                                  ; Set Missle 1 Position
         lda #ATARI_PAINT_CANVAS_OVERFLOW_MASK_POS
         jsr CalcXPos_bank1
         sta WSYNC
         sta HMOVE
 
+        lda #$F0
+        sta HMM1
+        sta WSYNC
+        sta HMOVE
 AtariPaintFrame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Start VBLANK Processing ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5673,11 +5679,10 @@ AtariPaintViewableScreen
         cpx #3
         bne AtariPaintViewableScreen
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Title Text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #48
+        lda #ATARI_PAINT_TITLE_ALIGNMENT_TIMER
         sta TIM1T
 
 AtariPaintTitleWaitLoop
@@ -5685,42 +5690,42 @@ AtariPaintTitleWaitLoop
         and #%10000000
         beq AtariPaintTitleWaitLoop
                 
-        inx                                             ; 2
+        inx
 AtariPaintDrawTitle
-        stx TempXPos                                    ; 3     6
-        sty TempYPos                                    ; 3     9
+        stx TempXPos                                    ; 3     6       Store X Register so we can use it again
+        sty TempYPos                                    ; 3     9       Store Y Register so we can use it again
         
-        ldx T_,y                                        ; 4     13
-        stx TempLetterBuffer                                  ; 3     16
+        ldx T_,y                                        ; 4     13      Load Graphics into the Y Register and
+        stx TempLetterBuffer                            ; 3     16      store it to memory to save time later
         
-        ldx IN,y                                        ; 4     20
+        ldx IN,y                                        ; 4     20      Load Graphics into the X Register and
+                                                        ;               store it to memory to save time later
 
-        lda AT,y                                        ; 4     24
-        sta GRP0                                        ; 3     27      MU -> [GRP0]
+        lda AT,y                                        ; 4     24      Load Graphics
+        sta GRP0                                        ; 3     27      AT -> [GRP0]
         
-        lda AR,y                                        ; 4     31
-        sta GRP1                                        ; 3     34      SI -> [GRP1], [GRP0] -> GRP0
+        lda AR,y                                        ; 4     31      Load Graphics
+        sta GRP1                                        ; 3     34      AR -> [GRP1], [GRP0] -> GRP0
         
-        lda I_,y                                        ; 4     38
-        sta GRP0                                        ; 3     41      C  -> [GRP0]. [GRP1] -> GRP1
+        lda I_,y                                        ; 4     38      Load Graphics
+        sta GRP0                                        ; 3     41      I  -> [GRP0]. [GRP1] -> GRP1
         
-        lda PA,y                                        ; 4     45
-        ldy TempLetterBuffer                                  ; 3     48
-        sta GRP1                                        ; 3     51      MA -> [GRP1], [GRP0] -> GRP0
-        stx GRP0                                        ; 3     54      KE -> [GRP0], [GRP1] -> GRP1
-        sty GRP1                                        ; 3     57      R  -> [GRP1], [GRP0] -> GRP0
+        lda PA,y                                        ; 4     45      Load Graphics
+        ldy TempLetterBuffer                            ; 3     48      Load Graphics previously stored in memory
+        sta GRP1                                        ; 3     51      PA -> [GRP1], [GRP0] -> GRP0
+        stx GRP0                                        ; 3     54      IN -> [GRP0], [GRP1] -> GRP1
+        sty GRP1                                        ; 3     57      T  -> [GRP1], [GRP0] -> GRP0
         stx GRP0                                        ; 3     60      ?? -> [GRP0], [GRP1] -> GRP1
         
-        ldx TempXPos                                    ; 3     63
-        ldy TempYPos                                    ; 3     66
-        iny                                             ; 2     68
+        ldx TempXPos                                    ; 3     63      Restore X Register to previous value
+        ldy TempYPos                                    ; 3     66      Restore Y Register to previous value
+        iny                                             ; 2     68      Increment Y for graphics index
 
-        inx                                             ; 2     70
-        cpx #10                                         ; 2     72
-        nop                                             ; 2     74
-        nop                                             ; 2     76
-        bne AtariPaintDrawTitle                         ; 2/3   2/3
-        
+        inx                                             ; 2     70      Increment X for the line counter
+        cpx #10                                         ; 2     72      Check if we're on line 10
+        nop                                             ; 2     74      Waste 2 cycles
+        nop                                             ; 2     76      Waste 2 cycles to get 76 cycle alignment
+        bne AtariPaintDrawTitle                         ; 2/3   2/3     If not to line 10 cont drawing the letters
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; End Title Text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5768,45 +5773,65 @@ SkipControlRow
 ; End Control Row
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Control Select Row
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #MISSLE_SIZE_FOUR_CLOCKS
         sta NUSIZ0
 
-        lda #0
+        lda #MISSLE_BALL_DISABLE
         ldy BrushYPos
         cpy #21
         bne ControlSkipDrawBrush
-        lda #2
+        lda #MISSLE_BALL_ENABLE
 ControlSkipDrawBrush
         sta ENAM0
 
-        lda #2
+        lda #MISSLE_BALL_ENABLE
         sta ENABL
-
         sta WSYNC
-        lda #0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #MISSLE_BALL_DISABLE
         sta ENABL
         sta ENAM0
 
         lda #MISSLE_SIZE_TWO_CLOCKS
         sta NUSIZ0
-        sta NUSIZ1
 
         sta WSYNC
-        sta WSYNC
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
+        ldy #4
+PositionP1Mask
+        dey
+        bne PositionP1Mask
+        SLEEP 3
+        sta RESP1
+        lda #$30
+        sta HMP1
+        
+        ldy #8
+HMOVECountdown
+        dey
+        bne HMOVECountdown
+
+        sta HMOVE
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #255
         sta PF0
         sta PF1
         sta PF2
+        
+        lda SWCHB
+        and #SWITCH_COLOR_TV
+        bne SkipColorCanvas
+        lda #255
+        sta GRP1
+SkipColorCanvas
 
         ldx #24
         inx
         
         sta WSYNC
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; End Control Select Row
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5821,15 +5846,15 @@ AtariPaintPalette
         
         cpx BrushYPos
         bne PaletteSkipDrawBrush
-        lda #2
+        lda #MISSLE_BALL_ENABLE
         jmp PaletteDrawBrush
 PaletteSkipDrawBrush
-        lda #0
+        lda #MISSLE_BALL_DISABLE
         nop
 PaletteDrawBrush
 
-        ; sta.w ENAM0
-        sta ENAM0
+        sta.w ENAM0
+        ; sta ENAM0
 
         lda #WHITE
         sta COLUPF
@@ -5868,34 +5893,35 @@ PaletteDrawBrush
 ; End Palette
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        ldy #0
+        ldy #MISSLE_BALL_DISABLE
         inx 
         
         sty ENAM0
         lda BackgroundColor
         sta COLUBK
         sta WSYNC
-        lda #0
-        sta PF0
-        sta PF1
-        sta PF2
+        ; lda #0
+        sty PF0
+        sty PF1
+        sty PF2
+        sty GRP0
         
         lda BackgroundColor
         sta COLUP1
-        lda #MISSLE_SIZE_FOUR_CLOCKS
+        lda #MISSLE_SIZE_FOUR_CLOCKS | #QUAD_SIZED_PLAYER
         sta NUSIZ1
-        lda #2
+        lda #MISSLE_BALL_ENABLE
         sta ENAM1
         
         lda BrushColor
         sta COLUPF
         
-        lda #0
+        lda #MISSLE_BALL_DISABLE
         inx
+        
         lda SWCHB
-        and #%00001000
-        cmp #8
-        bne SkipSingleColorCanvas
+        and #SWITCH_COLOR_TV
+        beq SkipSingleColorCanvas
         sta WSYNC
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5904,7 +5930,7 @@ PaletteDrawBrush
 AtariPaintCanvas
         cpx BrushYPos                                   ; 3
         bne SkipDrawBrush                               ; 2/3
-        lda #2                                          ; 2
+        lda #MISSLE_BALL_ENABLE                         ; 2
 SkipDrawBrush
         sta ENAM0                                       ; 3     (10)
         
@@ -5927,13 +5953,9 @@ SkipDrawBrush
         
         lda #6                                          ; 2
         sta CanvasRowLineCtr                            ; 3     (20)
-        ; iny                                             ; 2
-        ; iny                                             ; 2
-        ; iny                                             ; 2
-        ; iny                                             ; 2     (20)
 SkipResetCanvasRowLineCtr
 
-        lda #0                                          ; 2
+        lda #MISSLE_BALL_DISABLE                        ; 2
         sta PF2                                         ; 3
         sta PF0                                         ; 3     (8)
 
@@ -5955,7 +5977,7 @@ AtariPaintMultiColorCanvas
         
         cpx BrushYPos                                   ; 3
         bne SkipDrawMultiColorBrush                     ; 2/3
-        lda #2                                          ; 2
+        lda #MISSLE_BALL_ENABLE                         ; 2
 SkipDrawMultiColorBrush
         sta ENAM0                                       ; 3     (10)
         
@@ -5981,17 +6003,14 @@ SkipDrawMultiColorBrush
 
 SkipResetMultiColorCanvasRowLineCtr
 
-        ; SLEEP 12
-
-        lda #0                                          ; 2
+        lda #MISSLE_BALL_DISABLE                        ; 2
         sta PF2                                         ; 3
         sta PF0                                         ; 3     (8)
-        ; sta PF1                                         ; 3
 
         inx                                             ; 2
         cpx #191                                        ; 2
         sta WSYNC                                       ; 3
-        bne AtariPaintMultiColorCanvas                            ; 2/3   (10)    (76)
+        bne AtariPaintMultiColorCanvas                  ; 2/3   (10)    (76)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; End Multi Color Canvas
@@ -6036,7 +6055,7 @@ AtariPaintEndOfScreenBuffer
         lda DebounceCtr
         bne AtariPaintSkipSwitchToBank0
         lda SWCHB
-        and #%00000010
+        and #SWITCH_GAME_SELECT
         ora DebounceCtr
         bne AtariPaintSkipSwitchToBank0
         ; Put game select logic code here
@@ -6085,7 +6104,7 @@ MoveBrush
         sec
         sbc #6
         tay
-        lda #ATARI_PAINT_MOVE_BRUSH_DELAY
+        lda #ATARI_PAINT_BRUSH_MOVE_DELAY
         sta DebounceCtr
 SkipMoveBrushUp
 
@@ -6096,7 +6115,7 @@ SkipMoveBrushUp
         clc
         adc #6
         tay
-        lda #ATARI_PAINT_MOVE_BRUSH_DELAY
+        lda #ATARI_PAINT_BRUSH_MOVE_DELAY
         sta DebounceCtr
 SkipMoveBrushDown
 
@@ -6115,22 +6134,22 @@ SkipSetBrushMaxVPos
         lda #P0_JOYSTICK_LEFT          
         and SWCHA
         bne SkipMoveBrushLeft
-        dec BrushXPos
-        dec BrushXPos
-        dec BrushXPos
-        dec BrushXPos
-        lda #ATARI_PAINT_MOVE_BRUSH_DELAY
+        lda BrushXPos
+        sec
+        sbc #4
+        sta BrushXPos
+        lda #ATARI_PAINT_BRUSH_MOVE_DELAY
         sta DebounceCtr
 SkipMoveBrushLeft
 
         lda #P0_JOYSTICK_RIGHT
         and SWCHA
         bne SkipMoveBrushRight
-        inc BrushXPos
-        inc BrushXPos
-        inc BrushXPos
-        inc BrushXPos
-        lda #ATARI_PAINT_MOVE_BRUSH_DELAY
+        lda BrushXPos
+        clc
+        adc #4
+        sta BrushXPos
+        lda #ATARI_PAINT_BRUSH_MOVE_DELAY
         sta DebounceCtr
 SkipMoveBrushRight
        
@@ -6140,37 +6159,20 @@ SkipMoveBrushRight
         cpx #254
         bne SkipSetBrushMinHPos
         sty HMP0
-        inc BrushXPos
-        inc BrushXPos
-        inc BrushXPos
-        inc BrushXPos
+        lda BrushXPos
+        clc
+        adc #4
+        sta BrushXPos
 SkipSetBrushMinHPos
 
         cpx #162
         bne SkipSetBrushMaxHPos
         sty HMP0
-        dec BrushXPos
-        dec BrushXPos
-        dec BrushXPos
-        dec BrushXPos
+        lda BrushXPos
+        sec
+        sbc #4
+        sta BrushXPos
 SkipSetBrushMaxHPos
-
-;         ldy BrushYPos
-;         cpy #21
-;         bne SkipMoveBrush
-
-;         cpx #114
-;         bcc SkipMoveBrush2
-
-;         lda #110
-;         sta BrushXPos
-; SkipMoveBrush2
-
-;         cpx #42
-;         bcs SkipMoveBrush
-        
-;         lda #42
-;         sta BrushXPos
 
 SkipMoveBrush
 
@@ -6360,9 +6362,10 @@ LoadEraseCanvasByteMask
         sta Canvas,y
 
         lda SWCHB
-        and #%00001000
-        cmp #8
-        beq SkipPaintTile
+        and #SWITCH_COLOR_TV
+        bne SkipPaintTile
+        lda DrawOrEraseFlag
+        bne SkipPaintTile
         ldy TempLetterBuffer
         lda BrushColor
         sta Canvas,y
@@ -6406,6 +6409,9 @@ SkipSetFGColor
 
         lda #1
         sta ForegroundBackgroundFlag
+
+        lda #0
+        sta DrawOrEraseFlag
 
         lda BrushXPos
         sta ToolSelectXPos
@@ -6540,13 +6546,23 @@ SkipSetBrushColor
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Set Brush or Background Color ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Reset For Next Frame ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #0
         sta ENAM1
         sta COLUPF
+        sta GRP1
+        sta GRP0
 
-        lda #ATARI_PAINT_TITLE_COLOR            ; Set the player colors for the title
-        sta COLUP0
-        sta COLUP1
+        ldy #ATARI_PAINT_TITLE_COLOR                    ; Set the player colors for the title
+        lda SWCHB
+        and #SWITCH_COLOR_TV
+        bne BrushColorIndicatior
+        ldy BrushColor
+BrushColorIndicatior
+        sty COLUP0
+        sty COLUP1
 
         lda #ATARI_PAINT_FOREGROUND_SELECTED_COLOR
         sta ControlColor
@@ -6559,15 +6575,23 @@ SkipSetBrushColor
         sta NUSIZ0
         sta NUSIZ1
 
+        ldx #1                                  ; Set Player 1 Position
+        lda #ATARI_PAINT_TITLE_H_POS+8
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
+
         ldx #4                                  ; Set Player Ball Position
         lda ToolSelectXPos
         jsr CalcXPos_bank1
         sta WSYNC
         sta HMOVE
-        ; SLEEP 24
-        ; sta HMCLR
 
         ldx #0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Reset For Next Frame ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 AtariPaintOverscanWaitLoop
         lda TIMINT
         beq AtariPaintOverscanWaitLoop
@@ -7009,7 +7033,7 @@ ME         .byte  #%10101110
            .byte  #%10101110
 
 FlyGameTrack0   .byte 0,0,0,0,255
-FlyGameTrack1
+FlyGameTrack1   .byte 0,0,0,0,255
 
         echo "----"
         echo "Rom Total Bank1:"
