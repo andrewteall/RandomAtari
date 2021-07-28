@@ -139,7 +139,7 @@ Track0Builder           ds #TRACKSIZE+1         ; Array Memory Allocation to sto
 Track1Builder           ds #TRACKSIZE+1         ; Array Memory Allocation to store the bytes(notes) saved to Track 1
                                                 ; Plus 1 extra byte to have a control byte at the end of each Track
 
-        echo "Ram Total Atari Music 0):"
+        echo "Ram Total Atari Music(Bank 0):"
         echo "----",([* - $80]d) ,"/", (* - $80) ,"bytes of RAM Used for Atari Music in Bank 0"
         echo "----",([$100 - *]d) ,"/", ($100 - *) , "bytes of RAM left for Atari Music in Bank 0"
 
@@ -230,6 +230,7 @@ Clear
 ; TODO: Atari Music
 ; TODO: Add Labels under controls to display usage
 ; TODO: Finalize Colors and Decor and Name
+; TODO: Allow single track for track length
 
 StartOfFrame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -3534,11 +3535,19 @@ FLY_GAME_TITLE_COLOR                    = #$02
 FLY_GAME_TITLE_VPOS                     = #56
 FLY_GAME_TITLE_HPOS                     = #59
 
-FLY_GAME_GAME_BACKGROUND_COLOR          = #$0A
+
 FLY_GAME_GAME_OVER_BACKGROUND_COLOR     = #$0A
+FLY_GAME_GAME_BACKGROUND_COLOR          = #$9E ;0A
+FLY_GAME_SCORE_COLOR                    = #$72
+FLY_GAME_JOIN_COLOR                     = #$46
+FLY_GAME_TIMER_COLOR                    = #$0F ;62
+FLY_GAME_PLAYER0_COLOR                  = #$03
+FLY_GAME_PLAYER1_COLOR                  = #$0F  ;83
+
 FLY_GAME_GAME_OVER_RESTART_DELAY        = #60
 FLY_GAME_COUNTDOWN_TIMER_SECOND_DIVIDER = #60
-FLY_GAME_TIMER_DURATION                 = #153  ;#9  
+FLY_GAME_TIMER_DURATION                 = #153  ;#9
+FLY_GAME_ENEMY_GENERATION_DELAY         = #50
 
 P0XSTARTPOS                             = #15
 P0YSTARTPOS                             = #78
@@ -3557,19 +3566,27 @@ P2_JOIN_FLASHRATE                       = #52
         
         SEG.U bank1vars
         ORG Overlay
-Game1SelectionGfx       ds 2
-Game2SelectionGfx       ds 2
+
+TempXPos                ds 1
+TempYPos                ds 1
+TempLetterBuffer        ds 1
+
 GameSelectFlag          ds 1
-SkipGameFlag            ds 1
+StartGameFlag           ds 1
+GameOverFlag            ds 1
 DebounceCtr             ds 1                    ; Gotta Keep this in spot 7 to match Bank0
 P1FireDebounceCtr       ds 1
-BlockP0Fire             ds 1
+
+Game1SelectionGfx       ds 2
+Game2SelectionGfx       ds 2
+EnemySpeedOptionGfx1    ds 2
+EnemySpeedOptionGfx2    ds 2
+EnemyMovementOptionGfx1 ds 2
+EnemyMovementOptionGfx2 ds 2
+
+BlockP0Swat             ds 1
 BlockP1Fire             ds 1
-LetterBuffer2           ds 1
-LineTemp2               ds 1
-YTemp2                  ds 1
-Flasher                 ds 1
-GameOverFlag            ds 1
+FlasherCtr              ds 1
 Winner                  ds 5
 CountdownTimer          ds 1
 CountdownTimerInterval  ds 1
@@ -3577,83 +3594,59 @@ CountdownTimerTmp1      ds 1
 CountdownTimerTmp2      ds 1
 CountdownTimerIdx       ds 1
 CountdownTimerGfx       ds 5
-CountdownTimerGfxPtr    ds 2
-
+; CountdownTimerGfxPtr    ds 2
 
 Player0XPos             ds 1
 Player1XPos             ds 1
-
 Player0YPos             ds 1
 Player1YPos             ds 1
-
 Player0YPosEnd          ds 1
 Player1YPosEnd          ds 1
-
-Player0YPosTmp          ds 1
-Player1YPosTmp          ds 1
-
 DrawP0Sprite            ds 1
 DrawP1Sprite            ds 1
-
 P0SprIdx                ds 1
 P1SprIdx                ds 1
-
 Player0GfxPtr           ds 2
 Player1GfxPtr           ds 2
-
 P0Height                ds 1
 P1Height                ds 1
 
 Enemy0XPos              ds 1
 Enemy1XPos              ds 1
-
 Enemy0YPos              ds 1
 Enemy1YPos              ds 1
-
 Enemy0YPosEnd           ds 1
 Enemy1YPosEnd           ds 1
-
 Enemy0StartEdge         ds 1
 Enemy1StartEdge         ds 1
-
 Enemy0Alive             ds 1
 Enemy1Alive             ds 1
-
 Enemy0GenTimer          ds 1
 Enemy1GenTimer          ds 1
-
 Enemy0HWayPoint         ds 1
 Enemy1HWayPoint         ds 1
-
 Enemy0VWayPoint         ds 1
 Enemy1VWayPoint         ds 1
 
 P0Score                 ds 1
 P1Score                 ds 1
-
 P0Score1                ds 1
 P1Score1                ds 1
-
 P0Score2                ds 1
 P1Score2                ds 1
-
 P0Score1idx             ds 1
 P1Score1idx             ds 1
-
-P0Score1DigitPtr        ds 2
-P1Score1DigitPtr        ds 2
-
+; P0Score1DigitPtr        ds 2
+; P1Score1DigitPtr        ds 2
 P0ScoreTmp              ds 1
 P1ScoreTmp              ds 1
-
 P0Score2idx             ds 1
 P1Score2idx             ds 1
-
-P0Score2DigitPtr        ds 2
-P1Score2DigitPtr        ds 2
-
+; P0Score2DigitPtr        ds 2
+; P1Score2DigitPtr        ds 2
 P0ScoreArr              ds 5
 P1ScoreArr              ds 5
+; ZeroBaseGfxPtr          ds 2
 
 FlyGameNotePtrCh0     ds 2
 FlyGameNotePtrCh1     ds 2
@@ -3668,6 +3661,21 @@ FlyGameFrameCtrTrk1   ds 1
         SEG
         ORG  $2000
         RORG $F000
+        
+; TODO: FlyGame
+
+; TODO: Add Game Title Music
+; TODO: Add Game Title Colors
+; TODO: Add Game Title Art/Gfx
+
+; TODO: Fix Enemy Over and Under flows
+; TODO: Remove HMOVE Lines
+; TODO: Add Game Music
+; TODO: Add Game Sound FX
+; TODO: Set Player and Game Colors
+
+; TODO: Condense Ram
+
 
 SwitchToBank0
         lda $1FF8
@@ -3682,10 +3690,82 @@ Clear
         bne Clear
         cld
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Fly Game Start
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+PlayFlyGame
+FlyGameScreen
         lda #30
         sta DebounceCtr
         sta P1FireDebounceCtr
 
+        lda StartGameFlag
+        beq SkipFlyGameInit
+
+; Fly Game Init
+        lda #P0XSTARTPOS
+        sta Player0XPos
+
+        ldx #P0YSTARTPOS
+        stx Player0YPos
+
+        ldy #FLY_GAME_PLAYER0_COLOR
+        sty COLUP0
+        ldy #FLY_GAME_PLAYER1_COLOR
+        sty COLUP1
+
+        ldy #FLY_GAME_GAME_BACKGROUND_COLOR
+        sta COLUBK
+
+        lda GameSelectFlag
+        beq OnePlayerGame
+        lda #P1XSTARTPOS
+        sta Player1XPos
+        lda #P1YSTARTPOS
+        sta Player1YPos
+OnePlayerGame
+
+        ldx #FLY_GAME_ENEMY_GENERATION_DELAY
+        stx Enemy0GenTimer
+        stx Enemy1GenTimer
+
+        lda #<FlyGameTrack0                     ; Init for Rom Music Player
+        sta FlyGameNotePtrCh0
+        lda #>FlyGameTrack0
+        sta FlyGameNotePtrCh0+1
+
+        lda #<FlyGameTrack1                     ; Init for Rom Music Player
+        sta FlyGameNotePtrCh1
+        lda #>FlyGameTrack1
+        sta FlyGameNotePtrCh1+1
+
+        ; lda #<(Zero_bank1)
+        ; sta ZeroBaseGfxPtr
+        ; sta P0Score1DigitPtr
+        ; sta P0Score2DigitPtr
+        ; sta P1Score1DigitPtr
+        ; sta P1Score2DigitPtr
+        ; sta CountdownTimerGfxPtr
+
+        ; lda #>(Zero_bank1)
+        ; sta ZeroBaseGfxPtr+1
+        ; sta P0Score1DigitPtr+1
+        ; sta P0Score2DigitPtr+1
+        ; sta P1Score1DigitPtr+1
+        ; sta P1Score2DigitPtr+1
+        ; sta CountdownTimerGfxPtr+1
+        
+        ldx #FLY_GAME_TIMER_DURATION
+        stx CountdownTimer
+
+        lda #FLY_GAME_COUNTDOWN_TIMER_SECOND_DIVIDER
+        sta CountdownTimerInterval
+        jmp FlyGameStartOfFrame
+SkipFlyGameInit
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Fly Game Title Init
         ldy #FLY_GAME_TITLE_COLOR
         sty COLUPF
 
@@ -3705,8 +3785,8 @@ Clear
         sta WSYNC
         sta HMOVE
                 
-        lda #TWO_COPIES_CLOSE
-        sta NUSIZ0
+        ; lda #TWO_COPIES_CLOSE
+        ; sta NUSIZ0
 
         lda #<Cursor
         sta Game1SelectionGfx
@@ -3718,43 +3798,322 @@ Clear
         lda #>Space
         sta Game2SelectionGfx+1
 
-StartOfFlyGameTitleScreenFrame
+        lda #<FlyGameTitleTrack0                     ; Init for Rom Music Player
+        sta FlyGameNotePtrCh0
+        lda #>FlyGameTitleTrack0
+        sta FlyGameNotePtrCh0+1
+
+        lda #<FlyGameTitleTrack1                     ; Init for Rom Music Player
+        sta FlyGameNotePtrCh1
+        lda #>FlyGameTitleTrack1
+        sta FlyGameNotePtrCh1+1
+FlyGameStartOfFrame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Start VBLANK Processing
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #0
-        sta VBLANK
-
-; 3 VSYNC Lines
+        ldy #0
         lda #2
-        sta VSYNC ; Turn on VSYNC
 
+        sty VBLANK
+        sty COLUBK
+; 3 VSYNC Lines
+        sta VSYNC ; Turn on VSYNC
         sta WSYNC
         sta WSYNC
         sta WSYNC
-        lda #0
-        sta VSYNC ; Turn off VSYNC
+        sty VSYNC ; Turn off VSYNC
 
 ; 37 VBLANK lines
-        ldx #37                                         ; 2
-FlyGameTitleScreenVerticalBlank
-        sta WSYNC                                       ; 3
-        dex                                             ; 2
-        bne FlyGameTitleScreenVerticalBlank             ; 2/3
+        lda #43
+        sta TIM64T
+
+        lda StartGameFlag
+        bne FlyGameVSYNC
+        jmp SkipFlyGameVBLANK
+FlyGameVSYNC
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Scoring ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+        ldy #0
+CalcPlayerScoreIdx
+        lda P0Score1,y
+        sta P0Score1idx,y
+        asl
+        asl
+        adc P0Score1idx,y
+        sta P0Score1idx,y
+
+        lda P0Score2,y
+        sta P0Score2idx,y
+        asl
+        asl
+        adc P0Score2idx,y
+        sta P0Score2idx,y
+
+        iny
+        cpy #2
+        bne CalcPlayerScoreIdx
+                
+        ldx #0
+        clc
+CalcScoreGraphics
+        ;P0
+        txa
+        ; clc
+        adc P0Score1idx                                 ; 3
+        tay                                             ; 2
+        lda Zero_bank1,y                                ; 4
+        and #%00001111                                  ; 2    
+        sta P0ScoreTmp                                  ; 3     
+
+        txa
+        ; clc   
+        adc P0Score2idx                                 ; 3
+        tay                                             ; 2
+        lda Zero_bank1,y                                ; 4
+        and #%11110000                                  ; 2     
+
+        ora P0ScoreTmp                                  ; 3     
+        sta P0ScoreArr,x                                ; 3
+
+        ;P1
+        txa
+        ; clc
+        adc P1Score1idx                                 ; 3
+        tay                                             ; 2
+        lda Zero_bank1,y                                ; 4
+        and #%00001111                                  ; 2    
+        sta P1ScoreTmp                                  ; 3     
+
+        txa
+        ; clc   
+        adc P1Score2idx                                 ; 3
+        tay                                             ; 2
+        lda Zero_bank1,y                                ; 4
+        and #%11110000                                  ; 2     
+
+        ora P1ScoreTmp                                  ; 3     
+        sta P1ScoreArr,x                                ; 3
+
+        inx
+        cpx #5
+        bcc CalcScoreGraphics                           ; 2/3 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Scoring ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Time Countdown Timer  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda CountdownTimer
+        beq SkipTimer
+        
+        ldy CountdownTimerInterval
+        bne SkipCountdownTimer
+        
+        sed
+        sbc #1
+        sta CountdownTimer
+;         dec CountdownTimer
+;         lda CountdownTimer
+;         and #$0F
+;         cmp #$0F
+;         bne SkipResetTimerHex
+        
+;         lda CountdownTimer
+;         sec
+;         sbc #6
+;         sta CountdownTimer
+; SkipResetTimerHex
+        cld
+
+        lda #FLY_GAME_COUNTDOWN_TIMER_SECOND_DIVIDER
+        sta CountdownTimerInterval
+SkipCountdownTimer
+        dec CountdownTimerInterval
+SkipTimer
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Time Countdown Timer  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Determine Winner  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda GameOverFlag
+        beq SkipDetermineWinner
+        ldy #0
+LoadWinner
+        
+        lda P0Score
+        sec
+        sbc P1Score
+        bpl Player0Wins
+        lda Two_bank1,y
+        and #$0F
+        sta Winner,y
+        jmp Player1Wins
+Player0Wins
+        lda One_bank1,y
+        and #$0F
+        sta Winner,y
+Player1Wins
+
+        iny
+        cpy #5
+        bne LoadWinner
+SkipDetermineWinner
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Determine Winner  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Build Countdown Timer Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ; lda #<(Zero_bank1)
+        ; sta CountdownTimerGfxPtr
+
+        ; lda #>(Zero_bank1)
+        ; sta CountdownTimerGfxPtr+1
+        
+        ldx #0
+CalcCountdownTimer
+        stx CountdownTimerIdx
+
+        lda CountdownTimer
+        and #$0F
+        sta CountdownTimerTmp1
+        asl
+        asl
+        ; clc
+        adc CountdownTimerTmp1
+        ; clc
+        adc CountdownTimerIdx
+        tay 
+        lda Zero_bank1,y 
+        and #$0F
+        sta CountdownTimerTmp1
+        
+
+        lda CountdownTimer
+        and #$F0
+        lsr
+        lsr
+        lsr
+        lsr
+        sta CountdownTimerTmp2
+        asl
+        asl
+        ; clc
+        adc CountdownTimerTmp2
+        ; clc
+        adc CountdownTimerIdx
+        tay 
+        lda Zero_bank1,y 
+        and #$F0
+
+        ora CountdownTimerTmp1
+
+        sta CountdownTimerGfx,x
+        inx
+        cpx #5
+        bne CalcCountdownTimer 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Build Countdown Timer Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        
+        ldx #0
+        stx GRP0
+        stx GRP1
+        stx GRP0
+        lda #PLAYER2JOIN_H_POS
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
+
+        ldx #1
+        lda #PLAYER2JOIN_H_POS+8
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
+
+        lda #THREE_COPIES_CLOSE
+        sta NUSIZ0
+        sta NUSIZ1
+
+        lda #FLY_GAME_JOIN_COLOR
+        sta COLUP0
+        sta COLUP1
+
+        lda #FLY_GAME_SCORE_COLOR
+        sta COLUPF
+
+SkipFlyGameVBLANK
+
+FlyGameVerticalBlankEndWaitLoop
+        lda TIMINT
+        ; and #%10000000
+        beq FlyGameVerticalBlankEndWaitLoop
+        sta WSYNC
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; End VBLANK Processing
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda SkipGameFlag
-        beq FlyGameTitleScreenStart
-        jmp PlayFlyGame
-FlyGameTitleScreenStart
+
+        lda StartGameFlag
+        beq SkipFlyGameScreenSelect
+
+        lda CountdownTimer
+        bne SkipFlyGameGameoverScreen
+
+        lda GameOverFlag
+        bne SkipSetGameOverRestartDelay
+        ldy #FLY_GAME_GAME_OVER_RESTART_DELAY
+        sty BlockP0Swat
+SkipSetGameOverRestartDelay
+        lda #1
+        sta GameOverFlag
+SkipFlyGameGameoverScreen
+
+        lda #FLY_GAME_GAME_BACKGROUND_COLOR
+        sta COLUBK
+
+        ldy #1
+        sty VDELP0
+        sty VDELP1
+
+        ldx #0
+        IF PLAYER2JOIN_H_POS <= 47
+         sta WSYNC
+        ENDIF
+SkipFlyGameScreenSelect
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Viewable Screen Start ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        
+        lda StartGameFlag               ; Determine whether or not to draw the
+        beq FlyGameTitleScreen          ; Title screen or the actual game 
+        jmp FlyGameGameScreen           ; screen
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Fly Game Title Screen ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+FlyGameTitleScreen
         lda #FLY_GAME_TITLE_BG_COLOR
         sta COLUBK
         ldy #0
+        ldx #0
 
 FlyGameTitleLine1
         cpx #FLY_GAME_TITLE_VPOS
         bmi SkipFlyGameTitleLine1
+
         txa
         sbc #FLY_GAME_TITLE_VPOS
         lsr
@@ -3780,6 +4139,7 @@ SkipFlyGameTitleLine1
 FlyGameTitleLine2
         cpx #FLY_GAME_TITLE_VPOS+26
         bmi SkipFlyGameTitleLine2
+        
         txa
         sbc #FLY_GAME_TITLE_VPOS+26
         lsr
@@ -3849,618 +4209,316 @@ SkipFlyGameNumPlayersSelectLine2
         cpx #151
         sta WSYNC
         bne FlyGameNumPlayersSelectLine2
+
+FlyGameOptionsLine1Buffer
+        inx
+        cpx #155
+        sta WSYNC
+        bne FlyGameOptionsLine1Buffer
+
+        lda #THREE_COPIES_CLOSE
+        sta NUSIZ0
+        sta NUSIZ1
+        lda #1
+        sta VDELP0
+        sta VDELP1
+
+        ldy #0
+
+        lda #38
+        sta TIM1T                       
+PositionFlyGameOptionsLine1
+        lda TIMINT
+        beq PositionFlyGameOptionsLine1
+        SLEEP 2
+
+        lda #5
+        sta TIM64T
+FlyGameOptionsLine1
+        ; SLEEP 2
+        sty TempYPos                    ; 3     9
+        
+        ldx ES,y                        ; 4     13
+        stx TempLetterBuffer            ; 3     16
+        
+        ldx MI,y                        ; 4     20
+
+        lda (EnemySpeedOptionGfx1),y    ; 4     24
+        sta GRP0                      ; 3     27 -> [GRP0]
+        
+        lda (EnemySpeedOptionGfx2),y    ; 4     31
+        sta GRP1                        ; 3     34 -> [GRP1], [GRP0] -> GRP0
+        
+        lda _E,y                        ; 4     38
+        sta GRP0                        ; 3     41 -> [GRP0]. [GRP1] -> GRP1
+        
+        lda NE,y                        ; 4     45
+        ldy TempLetterBuffer            ; 3     48
+        sta GRP1                        ; 3     51 -> [GRP1], [GRP0] -> GRP0
+        stx GRP0                        ; 3     54 -> [GRP0], [GRP1] -> GRP1
+        sty GRP1                        ; 3     57 -> [GRP1], [GRP0] -> GRP0
+        stx GRP0                        ; 3     60 ?? -> [GRP0], [GRP1] -> GRP1
+        
+        
+        ldy TempYPos                    ; 3     66
+        iny                             ; 2     68
+        
+        SLEEP 8
+        lda TIMINT                      ; 4
+        beq FlyGameOptionsLine1         ; 2/3   2/3
+
+        ldy #0
+        sty GRP0
+        sty GRP1
+        sty GRP0
+
+FlyGameOptionsLine2Buffer
+        inx
+        cpx #165
+        sta WSYNC
+        bmi FlyGameOptionsLine2Buffer
+
+        lda #50  ;38                         
+        sta TIM1T                       
+PositionFlyGameOptionsLine2
+        lda TIMINT
+        beq PositionFlyGameOptionsLine2
+        SLEEP 2
+
+        lda #5
+        sta TIM64T
+        ; ldy #0
+FlyGameOptionsLine2
+        SLEEP 2
+        sty TempYPos                    ; 3     9
+        
+        ldx ES,y                        ; 4     13
+        stx TempLetterBuffer            ; 3     16
+        
+        ldx MI,y                        ; 4     20
+
+        lda (EnemyMovementOptionGfx1),y ; 4     24
+        sta.w GRP0                      ; 3     27 -> [GRP0]
+        
+        lda (EnemyMovementOptionGfx2),y ; 4     31
+        sta GRP1                        ; 3     34 -> [GRP1], [GRP0] -> GRP0
+        
+        lda _E,y                        ; 4     38
+        sta GRP0                        ; 3     41 -> [GRP0]. [GRP1] -> GRP1
+        
+        lda NE,y                        ; 4     45
+        ldy TempLetterBuffer            ; 3     48
+        sta GRP1                        ; 3     51 -> [GRP1], [GRP0] -> GRP0
+        stx GRP0                        ; 3     54 -> [GRP0], [GRP1] -> GRP1
+        sty GRP1                        ; 3     57 -> [GRP1], [GRP0] -> GRP0
+        stx GRP0                        ; 3     60 ?? -> [GRP0], [GRP1] -> GRP1
+        
+        
+        ldy TempYPos                    ; 3     66
+        iny                             ; 2     68
+        
+        SLEEP 4
+        lda TIMINT                      ; 4
+        beq FlyGameOptionsLine2         ; 2/3   2/3
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-FlyGameTitleScreenBottomBuffer
-        inx
-        cpx #192
-        sta WSYNC
-        bne FlyGameTitleScreenBottomBuffer
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End of Viewable Screen ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #%00000010
-        sta VBLANK
-
-        lda #0
-        sta COLUBK
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Load Overscan Timer ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #37
-        sta TIM64T
-
-        lda DebounceCtr
-        beq SkipDecDebounceCtr_FlyGameTitleScreen
-        dec DebounceCtr
-SkipDecDebounceCtr_FlyGameTitleScreen
-
-        lda SWCHB
-        and #SWITCH_GAME_SELECT
-        ora DebounceCtr
-        ;bne SkipSwitchToBank0
-        bne SkipSwitchToAtariPaint
-        ; Put game select logic code here
-        ;jmp SwitchToBank0
-        jmp AtariPaint
-;SkipSwitchToBank0
-SkipSwitchToAtariPaint
-
-        lda DebounceCtr
-        bne DontStartGame
-SkipDecDebounceCtr_Bank1
-        lda INPT4
-        bmi DontStartGame
-        sta SkipGameFlag
-DontStartGame
-
-        ; if up pressed Game1SelectionGfx
-        ldy SWCHA
-        cpy #%11101111
-        bne SkipSelectFlyGame1Player
-        ldy #0
-        sty GameSelectFlag
-        
-        lda #<Cursor
-        sta Game1SelectionGfx
-        lda #>Cursor
-        sta Game1SelectionGfx+1
-        
-        lda #<Space
-        sta Game2SelectionGfx
-        lda #>Space
-        sta Game2SelectionGfx+1
-SkipSelectFlyGame1Player
-        
-        ; if down pressed Game2SelectionGfx
-        ldy SWCHA
-        cpy #%11011111
-        bne SkipSelectFlyGame2Player
-        ldy #1
-        sty GameSelectFlag
-
-        lda #<Cursor
-        sta Game2SelectionGfx
-        lda #>Cursor
-        sta Game2SelectionGfx+1
-        
-        lda #<Space
-        sta Game1SelectionGfx
-        lda #>Space
-        sta Game1SelectionGfx+1
-SkipSelectFlyGame2Player
-        
-FlyGameTitleScreenOverscanWaitLoop
-        lda INTIM
-        bne FlyGameTitleScreenOverscanWaitLoop
-
-        jmp StartOfFlyGameTitleScreenFrame
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Game Start
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; TODO: FlyGame
-
-; TODO: Enemy position seems off
-; TODO: Add Music
-; TODO: Set Player and Game Colors
-
-; TODO: Condense Ram
-; TODO: Add Enemy Lifecycle
-; TODO: More Randomization in Enemy Gen
-
-
-PlayFlyGame
-FlyGameScreen
-        lda #P0XSTARTPOS
-        sta Player0XPos
-
-        ldx #P0YSTARTPOS
-        stx Player0YPos
-
-        lda GameSelectFlag
-        beq OnePlayerGame
-        lda #P1XSTARTPOS
-        sta Player1XPos
-        lda #P1YSTARTPOS
-        sta Player1YPos
-OnePlayerGame
-
-        ldx #100
-        stx Enemy0GenTimer
-        stx Enemy1GenTimer
-
-        lda #<FlyGameTrack0                     ; Init for Rom Music Player
-        sta FlyGameNotePtrCh0
-        lda #>FlyGameTrack0
-        sta FlyGameNotePtrCh0+1
-
-        lda #<FlyGameTrack1                     ; Init for Rom Music Player
-        sta FlyGameNotePtrCh1
-        lda #>FlyGameTrack1
-        sta FlyGameNotePtrCh1+1
-        
-        ldx #FLY_GAME_TIMER_DURATION
-        stx CountdownTimer
-
-        lda #FLY_GAME_COUNTDOWN_TIMER_SECOND_DIVIDER
-        sta CountdownTimerInterval
-
-FlyGameStartOfFrame
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Start VBLANK Processing
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #0
-        sta VBLANK
-
-        lda #0
-        sta COLUBK
-
-; 3 VSYNC Lines
-        lda #2
-        sta VSYNC ; Turn on VSYNC
-
-        sta WSYNC
-        sta WSYNC
-        sta WSYNC
-        lda #0
-        sta VSYNC ; Turn off VSYNC
-
-; 37 VBLANK lines
-        lda #43
-        sta TIM64T
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Scoring ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-P0ScoreCalc
-        lda P0Score1
-        sta P0Score1idx   
-        
-        asl
-        asl
-        clc
-        adc P0Score1idx
-        
-        sta P0Score1idx
-        
-        lda #<(Zero_bank1)
-        sta P0Score1DigitPtr
-
-        lda #>(Zero_bank1)
-        sta P0Score1DigitPtr+1
-
-        lda P0Score2
-        sta P0Score2idx   
-        
-        asl
-        asl
-        clc
-        adc P0Score2idx
-        sta P0Score2idx
-        
-        lda #<(Zero_bank1)
-        sta P0Score2DigitPtr
-
-        lda #>(Zero_bank1)
-        sta P0Score2DigitPtr+1
-P1ScoreCalc
-        lda P1Score1
-        sta P1Score1idx   
-        asl
-        asl
-        clc
-        adc P1Score1idx
-        sta P1Score1idx
-        
-        lda #<(Zero_bank1)
-        sta P1Score1DigitPtr
-
-        lda #>(Zero_bank1)
-        sta P1Score1DigitPtr+1
-
-        lda P1Score2
-        sta P1Score2idx   
-        asl
-        asl
-        clc
-        adc P1Score2idx
-        sta P1Score2idx
-        
-        lda #<(Zero_bank1)
-        sta P1Score2DigitPtr
-
-        lda #>(Zero_bank1)
-        sta P1Score2DigitPtr+1   
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ldx #0
-CalcScoreGraphics
-        ;P0
-        txa
-        clc
-        adc P0Score1idx                                 ; 3
-        tay                                             ; 2
-        lda (P0Score1DigitPtr),y                        ; 5
-        and #%00001111                                  ; 2    
-        sta P0ScoreTmp                                  ; 3     
-
-        txa
-        clc   
-        adc P0Score2idx                                 ; 3
-        tay                                             ; 2
-        lda (P0Score2DigitPtr),y                        ; 5
-        and #%11110000                                  ; 2     
-
-        ora P0ScoreTmp                                  ; 3     
-        sta P0ScoreArr,x                                ; 3
-
-        ;P1
-        txa
-        clc
-        adc P1Score1idx                                 ; 3
-        tay                                             ; 2
-        lda (P1Score1DigitPtr),y                        ; 5
-        and #%00001111                                  ; 2    
-        sta P1ScoreTmp                                  ; 3     
-
-        txa
-        clc   
-        adc P1Score2idx                                 ; 3
-        tay                                             ; 2
-        lda (P1Score2DigitPtr),y                        ; 5
-        and #%11110000                                  ; 2     
-
-        ora P1ScoreTmp                                  ; 3     
-        sta P1ScoreArr,x                                ; 3
-
-        inx
-        cpx #5
-        bcc CalcScoreGraphics                           ; 2/3 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Scoring ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Time Countdown Timer  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda CountdownTimer
-        beq SkipTimer
-        
-        lda CountdownTimerInterval
-        bne SkipCountdownTimer
-        
-        dec CountdownTimer
-        lda CountdownTimer
-        and #$0F
-        cmp #$0F
-        bne SkipResetTimerHex
-        
-        lda CountdownTimer
-        sec
-        sbc #6
-        sta CountdownTimer
-SkipResetTimerHex
-
-        lda #FLY_GAME_COUNTDOWN_TIMER_SECOND_DIVIDER
-        sta CountdownTimerInterval
-SkipCountdownTimer
-        dec CountdownTimerInterval
-SkipTimer
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Time Countdown Timer  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Determine Winner  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda GameOverFlag
-        beq SkipDetermineWinner
-        ldy #0
-LoadWinner
-        
-        lda P0Score
-        sec
-        sbc P1Score
-        bpl Player0Wins
-        lda Two_bank1,y
-        and #$0F
-        sta Winner,y
-        jmp Player1Wins
-Player0Wins
-        lda One_bank1,y
-        and #$0F
-        sta Winner,y
-Player1Wins
-
-        iny
-        cpy #5
-        bne LoadWinner
-SkipDetermineWinner
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Determine Winner  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Build Countdown Timer Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #<(Zero_bank1)
-        sta CountdownTimerGfxPtr
-
-        lda #>(Zero_bank1)
-        sta CountdownTimerGfxPtr+1
-        
-        ldx #0
-CalcCountdownTimer
-        stx CountdownTimerIdx
-
-        lda CountdownTimer
-        and #$0F
-        sta CountdownTimerTmp1
-        asl
-        asl
-        clc
-        adc CountdownTimerTmp1
-        clc
-        adc CountdownTimerIdx
-        tay 
-        lda (CountdownTimerGfxPtr),y 
-        and #$0F
-        sta CountdownTimerTmp1
-        
-
-        lda CountdownTimer
-        and #$F0
-        lsr
-        lsr
-        lsr
-        lsr
-        sta CountdownTimerTmp2
-        asl
-        asl
-        clc
-        adc CountdownTimerTmp2
-        clc   
-        adc CountdownTimerIdx
-        tay 
-        lda (CountdownTimerGfxPtr),y 
-        and #$F0
-
-        ora CountdownTimerTmp1
-
-        sta CountdownTimerGfx,x
-        inx
-        cpx #5
-        bne CalcCountdownTimer 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Build Countdown Timer Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        
         lda #0
         sta GRP0
         sta GRP1
         sta GRP0
         
-        ldx #0
-        lda #PLAYER2JOIN_H_POS
-        jsr CalcXPos_bank1
+        ldx #24
+FlyGameTitleScreenBottomBuffer
+        dex
         sta WSYNC
-        sta HMOVE
+        bne FlyGameTitleScreenBottomBuffer
 
-        ldx #1
-        lda #PLAYER2JOIN_H_POS+8
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
+        jmp EndofViewableScreen
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Fly Game Title Screen ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda #THREE_COPIES_CLOSE
-        sta NUSIZ0
-        sta NUSIZ1
-        
-FlyGameVerticalBlank
-        lda TIMINT
-        and #%10000000
-        beq FlyGameVerticalBlank
-        sta WSYNC
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Fly Game Game Screen ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; End VBLANK Processing
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-        lda CountdownTimer
-        bne SkipFlyGameGameoverScreen
-
-        lda GameOverFlag
-        bne SkipSetGameOverRestartDelay
-        ldy #FLY_GAME_GAME_OVER_RESTART_DELAY
-        sty BlockP0Fire
-SkipSetGameOverRestartDelay
-        lda #1
-        sta GameOverFlag
-SkipFlyGameGameoverScreen
-
-        lda #FLY_GAME_GAME_BACKGROUND_COLOR
-        sta COLUBK
-
-        ldy #1
-        sty VDELP0
-        sty VDELP1
-
-        ldx #0
-        IF PLAYER2JOIN_H_POS <= 47
-         sta WSYNC
-        ENDIF
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Viewable Screen Start ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda GameSelectFlag
-        bne FlashFire
-
-        ldy #0
-        lda Flasher
-        cmp #P2_JOIN_FLASHRATE/2-10
-        bcs GameViewableScreen
-
-FlashFire
-        inx
-        cpx #9
-        sta WSYNC
-        bne FlashFire
-        jmp Player2Buffer
-  
-GameViewableScreen
-        inx
-        cpx #3
-        sta WSYNC
-        bne GameViewableScreen
+FlyGameGameScreen
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Player 2 Join Text ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #65
-        sta TIM1T
 
-FlyGamePlayer2JoinTextTimerDelay
-        lda TIMINT
-        and #%10000000
-        beq FlyGamePlayer2JoinTextTimerDelay
-        SLEEP 5  
+        lda GameSelectFlag              ; Check to see if it's a two player
+        bne FlyGameSkipDrawPlayer2Join  ; game. If so don't show the Flasher
 
-        inx                                             ; 2
+        lda FlasherCtr                  ; For a one Player game, check the
+        cmp #P2_JOIN_FLASHRATE/2-10     ; Flasher Timer to see if we should
+        bcs FlyGameDrawPlayer2Join      ; Draw the Join Flasher or not
+
+FlyGameSkipDrawPlayer2Join
+        inx                             ; If we're not drawing the flasher then
+        cpx #9                          ; draw empty lines until line 9 then
+        sta WSYNC                       ; move to the Player2Buffer
+        bne FlyGameSkipDrawPlayer2Join  ;
+        jmp Player2Buffer               ;
+  
+FlyGameDrawPlayer2Join                  
+        inx                             ; If we are drawing the flasher then
+        cpx #3                          ; draw 3 blank lines then start drawing
+        sta WSYNC                       ; the flasher
+        bne FlyGameDrawPlayer2Join      ;
+
+        lda #60                         ; Setup the timer to align the Flasher
+        sta TIM1T                       ; text and wait til it expires
+PositionFlyGamePlayer2JoinText
+        lda TIMINT                      ;
+        and #%10000000                  ;
+        beq PositionFlyGamePlayer2JoinText
+
+        lda #5                          ; Setup a timer to draw 6 lines to draw
+        sta TIM64T                      ; the Flasher from line 4 to 9 so that
+        ldy #0                          ; the timer expires when we're done
 DrawPlayer2JoinText
-        stx LineTemp2                                   ; 3     6
-        sty YTemp2                                      ; 3     9
+        ; stx TempXPos                    ; 3     6
+        SLEEP 3
+        sty TempYPos                    ; 3     9
         
-        ldx E_,y                                        ; 4     13
-        stx LetterBuffer2                               ; 3     16
+        ldx E_,y                        ; 4     13
+        stx TempLetterBuffer            ; 3     16
         
-        ldx IR,y                                        ; 4     20
+        ldx IR,y                        ; 4     20
 
-        lda _P,y                                        ; 4     24
-        sta GRP0                                        ; 3     27       -> [GRP0]
+        lda _P,y                        ; 4     24
+        sta GRP0                        ; 3     27 -> [GRP0]
         
-        lda RE_bank1,y                                  ; 4     31
-        sta GRP1                                        ; 3     34       -> [GRP1], [GRP0] -> GRP0
+        lda RE_bank1,y                  ; 4     31
+        sta GRP1                        ; 3     34 -> [GRP1], [GRP0] -> GRP0
         
-        lda SS,y                                        ; 4     38
-        sta GRP0                                        ; 3     41       -> [GRP0]. [GRP1] -> GRP1
+        lda SS,y                        ; 4     38
+        sta GRP0                        ; 3     41 -> [GRP0]. [GRP1] -> GRP1
         
-        lda _F,y                                        ; 4     45
-        ldy LetterBuffer2                               ; 3     48
-        sta GRP1                                        ; 3     51       -> [GRP1], [GRP0] -> GRP0
-        stx GRP0                                        ; 3     54       -> [GRP0], [GRP1] -> GRP1
-        sty GRP1                                        ; 3     57       -> [GRP1], [GRP0] -> GRP0
-        stx GRP0                                        ; 3     60       ?? -> [GRP0], [GRP1] -> GRP1
+        lda _F,y                        ; 4     45
+        ldy TempLetterBuffer            ; 3     48
+        sta GRP1                        ; 3     51 -> [GRP1], [GRP0] -> GRP0
+        stx GRP0                        ; 3     54 -> [GRP0], [GRP1] -> GRP1
+        sty GRP1                        ; 3     57 -> [GRP1], [GRP0] -> GRP0
+        stx GRP0                        ; 3     60 ?? -> [GRP0], [GRP1] -> GRP1
         
-        ldx LineTemp2                                   ; 3     63
-        ldy YTemp2                                      ; 3     66
-        iny                                             ; 2     68
-
-        inx                                             ; 2     70
-        cpx #9                                          ; 2     72
-        nop                                             ; 2     74
-        nop                                             ; 2     76
-        bne DrawPlayer2JoinText                         ; 2/3   2/3
-
+        ; ldx TempXPos                    ; 3     63
+        ldy TempYPos                    ; 3     66
+        iny                             ; 2     68
+        ; inx                             ; 2     70
+        ; cpx #9                          ; 2     72
+        ; nop                             ; 2     74
+        ; nop                             ; 2     76
+        lda TIMINT                      ; 4
+        SLEEP 6
+        beq DrawPlayer2JoinText         ; 2/3   2/3
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Player 2 Join Text ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Setup Score and Timer Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldx #9
 Player2Buffer
         lda #DOUBLE_SIZE_PLAYER
         sta NUSIZ0
         sta NUSIZ1
+
         lda #0
         sta VDELP0
         sta VDELP1
         sta GRP0
         sta GRP1
+
+        lda #FLY_GAME_TIMER_COLOR
+        sta COLUP0
+
         inx
         sta WSYNC
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Align Countdown Timer ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #22
+; Align Countdown Timer 
+        lda #31
         sta TIM1T
-
 PositionCountdownTimer
         lda TIMINT
-        and #%10000000
         beq PositionCountdownTimer
-        
-        SLEEP 3
+        SLEEP 4
 
         sta RESP0
 
         inx
         sta WSYNC
+; End Align Countdown Timer
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Align Countdown Timer ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Setup Score and Timer Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Drawing Score Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Drawing Score Timer Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         
 ScoreArea
-        txa                                             ; 2
-        sbc #10                                         ; 2
-        lsr                                             ; 2
-        lsr                                             ; 2
-        tay                                             ; 2
-        lda P0ScoreArr,y                                ; 4     Get the Score From our Player 0 Score Array
-        sta PF1                                         ; 3     Store Score to PF1
-        lda Zero_bank1,y                                ; 4     Get the Score From our Player 0 Score Array
-        lsr                                             ; 2
-        sta PF2                                         ; 3     Store Score to PF1 
-        nop                                             ; 2     Wait 2 cycles to get past drawing player 0's score
-        nop                                             ; 2     Wait 2 cycles more to get past drawing player 0's score
+        txa                             ; 2
+        sbc #10                         ; 2
+        lsr                             ; 2
+        lsr                             ; 2
+        tay                             ; 2
+        lda P0ScoreArr,y                ; 4     Get the Score From our Player 0 Score Array
+        sta PF1                         ; 3     Store Score to PF1
+        lda Zero_bank1,y                ; 4     Get the Score From our Player 0 Score Array
+        lsr                             ; 2
+        sta PF2                         ; 3     Store Score to PF1 
+        nop                             ; 2     Wait 2 cycles to get past drawing player 0's score
+        nop                             ; 2  30 Wait 2 cycles more to get past drawing player 0's score
         
-        lda P1ScoreArr,y                                ; 4     Get the Score From our Player 1 Score Array
-        sta PF1                                         ; 3     Store Score to PF1
+        lda P1ScoreArr,y                ; 4     Get the Score From our Player 1 Score Array
+        sta PF1                         ; 3  7  Store Score to PF1
         
-        lda #0                                          ; 2
-        cpx #15                                         ; 2
-        bmi SkipDisplayTimer                            ; 2/3
-        cpx #25                                         ; 2
-        bpl SkipDisplayTimer                            ; 2/3
+        lda #0                          ; 2
+        cpx #15                         ; 2
+        bmi SkipDisplayTimer            ; 2/3
+        cpx #25                         ; 2
+        bpl SkipDisplayTimer            ; 2/3 10
 
-        txa                                             ; 2
-        sec                                             ; 2
-        sbc #15                                         ; 2
-        lsr                                             ; 2
-        tay                                             ; 2
-        lda CountdownTimerGfx,y                         ; 4
+        txa                             ; 2
+        sec                             ; 2
+        sbc #15                         ; 2
+        lsr                             ; 2
+        tay                             ; 2
+        lda CountdownTimerGfx,y         ; 4  14
         
 SkipDisplayTimer
-        sta GRP0                                        ; 3
-        inx                                             ; 2     Increment our line counter
-        cpx #31                                         ; 2     See if we're at line 30
-        sta WSYNC                                       ; 3     Go to Next line
-        bne ScoreArea                                   ; 2/3   If at line 30 then move on else branch back
+        sta GRP0                        ; 3
+        inx                             ; 2     Increment our line counter
+        cpx #31                         ; 2     See if we're at line 30
+        sta WSYNC                       ; 3     Go to Next line
+        bne ScoreArea                   ; 2/3 13If at line 30 then move on else branch back
 
-        lda #0                                          ; 2     We're on lines that don't have the score 
-        sta PF1                                         ; 3     so clear the playfield(PF1)
-        sta PF2                                         ; 3
+; Done Drawing the Score
+        lda #0                          ; We're on lines that don't have the score 
+        sta PF1                         ; so clear the playfield(PF1)
+        sta PF2                         ; 
         
-        sta WSYNC                                       ; 3
+        sta WSYNC
         sta WSYNC
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Drawing Score Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Drawing Score and Timer Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        ldx #0
-        stx COLUBK
+        ; ldx #0
+        ; stx COLUBK
+
+        lda #FLY_GAME_PLAYER0_COLOR
+        sta COLUP0
+        lda #FLY_GAME_PLAYER1_COLOR
+        sta COLUP1
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Adjust WSYNC for Player 1 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4480,16 +4538,29 @@ SkipWSYNC2
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Adjust WSYNC for Player 1 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         
+        ldy GameOverFlag
+        beq SkipLoadGameOverTextPosition
+        lda #ATARI_PAINT_TITLE_H_POS
+        sta Player0XPos
+        lda #ATARI_PAINT_TITLE_H_POS+8
+        sta Player1XPos
+SkipLoadGameOverTextPosition
+        lda #$70
+        sta HMM0
+        sta HMM1
+
         ldx #0
         lda Player0XPos
         jsr CalcXPos_bank1
         sta WSYNC
+        ; SLEEP 71
         sta HMOVE
 
         ldx #1
         lda Player1XPos
         jsr CalcXPos_bank1
         sta WSYNC
+        ; SLEEP 71
         sta HMOVE
         
         ldx #1
@@ -4509,7 +4580,7 @@ ScoreAreaBuffer
         ldy #2
         inx 
         sta WSYNC
-        inx 
+        inx
         
         sta WSYNC
         SLEEP 3
@@ -4590,8 +4661,10 @@ SkipP1ResetHeight
         bne FlyGameBoard                        ; 2/3   (14)    (71)
         
         jmp EndofViewableScreen                 ; 3
-        
-        ; TODO: Game Over
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Drawing Players and Enemy ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Game Over Screen Start ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4605,19 +4678,7 @@ DrawGameOverScreen
         sta NUSIZ0
         sta NUSIZ1
 
-        ldx #0                                  ; Set Player 0 Position
-        lda #ATARI_PAINT_TITLE_H_POS
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
-
-        ldx #1                                  ; Set Player 1 Position
-        lda #ATARI_PAINT_TITLE_H_POS+8
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
-
-        ldx #46
+        ldx #42
 DrawGameOverScreenTop
         inx
         cpx #57
@@ -4636,17 +4697,16 @@ DrawGameOverScreenTop
 
 OnePlayerGameOverTextDelay
         lda TIMINT
-        and #%10000000
+        ; and #%10000000
         beq OnePlayerGameOverTextDelay
-        SLEEP 5  
-
+        SLEEP 4  
 
 DrawGameOverScreenText1Player
-        stx LineTemp2                                   ; 3     6
-        sty YTemp2                                      ; 3     9
+        stx TempXPos                                    ; 3     6
+        sty TempYPos                                    ; 3     9
         
         ldx Zero_bank1,y                                ; 4     13
-        stx LetterBuffer2                               ; 3     16
+        stx TempLetterBuffer                            ; 3     16
         
         ldx P0ScoreArr,y                                ; 4     20
 
@@ -4660,14 +4720,14 @@ DrawGameOverScreenText1Player
         sta GRP0                                        ; 3     41       -> [GRP0]. [GRP1] -> GRP1
         
         lda Space,y                                     ; 4     45
-        ldy LetterBuffer2                               ; 3     48
+        ldy TempLetterBuffer                            ; 3     48
         sta GRP1                                        ; 3     51       -> [GRP1], [GRP0] -> GRP0
         stx GRP0                                        ; 3     54       -> [GRP0], [GRP1] -> GRP1
         sty GRP1                                        ; 3     57       -> [GRP1], [GRP0] -> GRP0
         stx GRP0                                        ; 3     60       ?? -> [GRP0], [GRP1] -> GRP1
         
-        ldx LineTemp2                                   ; 3     63
-        ldy YTemp2                                      ; 3     66
+        ldx TempXPos                                    ; 3     63
+        ldy TempYPos                                    ; 3     66
         iny                                             ; 2     68
 
         inx                                             ; 2     70
@@ -4699,17 +4759,17 @@ TwoPlayerGameOver
 
 TwoPlayerGameOverTextDelay
         lda TIMINT
-        and #%10000000
+        ; and #%10000000
         beq TwoPlayerGameOverTextDelay
-        SLEEP 5  
+        SLEEP 4  
 
         ;inx
 DrawGameOverScreenText2Player
-        stx LineTemp2                                   ; 3     6
-        sty YTemp2                                      ; 3     9
+        stx TempXPos                                    ; 3     6
+        sty TempYPos                                    ; 3     9
         
         ldx IN,y                                        ; 4     13
-        stx LetterBuffer2                               ; 3     16
+        stx TempLetterBuffer                            ; 3     16
         
         ldx _W,y                                        ; 4     20
 
@@ -4723,27 +4783,23 @@ DrawGameOverScreenText2Player
         sta GRP0                                        ; 3     41       -> [GRP0]. [GRP1] -> GRP1
         
         lda Winner,y                                    ; 4     45
-        ldy LetterBuffer2                               ; 3     48
+        ldy TempLetterBuffer                            ; 3     48
         sta GRP1                                        ; 3     51       -> [GRP1], [GRP0] -> GRP0
         stx GRP0                                        ; 3     54       -> [GRP0], [GRP1] -> GRP1
         sty GRP1                                        ; 3     57       -> [GRP1], [GRP0] -> GRP0
         stx GRP0                                        ; 3     60       ?? -> [GRP0], [GRP1] -> GRP1
         
-        ldx LineTemp2                                   ; 3     63
-        ldy YTemp2                                      ; 3     66
+        ldx TempXPos                                    ; 3     63
+        ldy TempYPos                                    ; 3     66
         iny                                             ; 2     68
 
         inx                                             ; 2     70
 
-        cpx #63                                         ; 2     72
+        cpx #64                                         ; 2     72
         nop                                             ; 2     74
         nop                                             ; 2     76
         bne DrawGameOverScreenText2Player
 
-        lda #0
-        sta GRP0
-        sta GRP1
-        sta GRP0
         jmp DrawGameOverScreenMiddle
 
 DrawGameOverScreenText2PlayerTieGame
@@ -4755,11 +4811,11 @@ TwoPlayerGameOverTieGameTextDelay
         SLEEP 4 
 
 DrawGameOverScreenTieGameText2Player
-        stx LineTemp2                                   ; 3     6
-        sty YTemp2                                      ; 3     9
+        stx TempXPos                                    ; 3     6
+        sty TempYPos                                    ; 3     9
         
-        ldx Space,y                                        ; 4     13
-        stx LetterBuffer2                               ; 3     16
+        ldx Space,y                                     ; 4     13
+        stx TempLetterBuffer                            ; 3     16
         
         ldx ME,y                                        ; 4     20
 
@@ -4769,32 +4825,26 @@ DrawGameOverScreenTieGameText2Player
         lda IE,y                                        ; 4     31
         sta GRP1                                        ; 3     34       -> [GRP1], [GRP0] -> GRP0
         
-        lda Space,y                                        ; 4     38
+        lda Space,y                                     ; 4     38
         sta GRP0                                        ; 3     41       -> [GRP0]. [GRP1] -> GRP1
         
         lda GA,y                                        ; 4     45
-        ldy LetterBuffer2                               ; 3     48
+        ldy TempLetterBuffer                            ; 3     48
         sta GRP1                                        ; 3     51       -> [GRP1], [GRP0] -> GRP0
         stx GRP0                                        ; 3     54       -> [GRP0], [GRP1] -> GRP1
         sty GRP1                                        ; 3     57       -> [GRP1], [GRP0] -> GRP0
         stx GRP0                                        ; 3     60       ?? -> [GRP0], [GRP1] -> GRP1
         
-        ldx LineTemp2                                   ; 3     63
-        ldy YTemp2                                      ; 3     66
+        ldx TempXPos                                    ; 3     63
+        ldy TempYPos                                    ; 3     66
         iny                                             ; 2     68
 
         inx                                             ; 2     70
 
-        cpx #63                                         ; 2     72
+        cpx #64                                         ; 2     72
         nop                                             ; 2     74
         nop                                             ; 2     76
         bne DrawGameOverScreenTieGameText2Player
-
-        lda #0
-        sta GRP0
-        sta GRP1
-        sta GRP0
-
 
 DrawGameOverScreenMiddle
         inx
@@ -4808,21 +4858,18 @@ DrawGameOverScreenMiddle
         
         lda #55
         sta TIM1T
-
 GameOverTextDelay
         lda TIMINT
-        and #%10000000
+        ; and #%10000000
         beq GameOverTextDelay
         SLEEP 4
 
-
-        ;inx
 DrawGameOverScreenBottomText
-        stx LineTemp2                                   ; 3     6
-        sty YTemp2                                      ; 3     9
+        stx TempXPos                                    ; 3     6
+        sty TempYPos                                    ; 3     9
         
         ldx E_,y                                        ; 4     13
-        stx LetterBuffer2                               ; 3     16
+        stx TempLetterBuffer                            ; 3     16
         
         ldx IR,y                                        ; 4     20
 
@@ -4836,37 +4883,31 @@ DrawGameOverScreenBottomText
         sta GRP0                                        ; 3     41       -> [GRP0]. [GRP1] -> GRP1
         
         lda _F,y                                        ; 4     45
-        ldy LetterBuffer2                               ; 3     48
+        ldy TempLetterBuffer                            ; 3     48
         sta GRP1                                        ; 3     51       -> [GRP1], [GRP0] -> GRP0
         stx GRP0                                        ; 3     54       -> [GRP0], [GRP1] -> GRP1
         sty GRP1                                        ; 3     57       -> [GRP1], [GRP0] -> GRP0
         stx GRP0                                        ; 3     60       ?? -> [GRP0], [GRP1] -> GRP1
         
-        ldx LineTemp2                                   ; 3     63
-        ldy YTemp2                                      ; 3     66
+        ldx TempXPos                                    ; 3     63
+        ldy TempYPos                                    ; 3     66
         iny                                             ; 2     68
 
         inx                                             ; 2     70
-        cpx #106                                        ; 2     72
+        cpx #107                                        ; 2     72
         nop                                             ; 2     74
         nop                                             ; 2     76
         bne DrawGameOverScreenBottomText
 
-        lda #0
-        sta GRP0
-        sta GRP1
-        sta GRP0
-        
 DrawGameOverScreenBottom
-        inx                                     ; 2
-        cpx #192                                ; 2
+        inx                                             ; 2
+        cpx #192                                        ; 2
         sta WSYNC
         bne DrawGameOverScreenBottom
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Game Over Screen Start ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; TODO: FlyGame Overscan
 EndofViewableScreen
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4896,9 +4937,9 @@ EndofViewableScreen
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Check Debouce Counter ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda DebounceCtr
-        beq GameSkipDecDebounceCtr_Bank1
+        beq FlyGameSkipDecDebounceCtr
         dec DebounceCtr
-GameSkipDecDebounceCtr_Bank1
+FlyGameSkipDecDebounceCtr
 
         lda P1FireDebounceCtr
         beq GameSkipP1FireDecDebounceCtr
@@ -4925,16 +4966,128 @@ GameSkipSwitchToAtariPaint
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Check Bank Switching ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+        lda StartGameFlag
+        beq FlyGameTitleOverscan
+        jmp SkipFlyGameTitleOverscan
+FlyGameTitleOverscan
+
+        lda DebounceCtr
+        bne DontStartGame
+SkipDecDebounceCtr_Bank1
+        lda INPT4
+        bmi DontStartGame
+        sta StartGameFlag
+        jmp PlayFlyGame
+DontStartGame
+
+        ; if up pressed Game1SelectionGfx
+        lda #P0_JOYSTICK_UP
+        bit SWCHA 
+        bne SkipSelectFlyGame1Player
+        lda #0
+        sta GameSelectFlag
+        
+        lda #<Cursor
+        sta Game1SelectionGfx
+        lda #>Cursor
+        sta Game1SelectionGfx+1
+        
+        lda #<Space
+        sta Game2SelectionGfx
+        lda #>Space
+        sta Game2SelectionGfx+1
+SkipSelectFlyGame1Player
+        
+        ; if down pressed Game2SelectionGfx
+        lda #P0_JOYSTICK_DOWN
+        bit SWCHA
+        bne SkipSelectFlyGame2Player
+        lda #1
+        sta GameSelectFlag
+
+        lda #<Cursor
+        sta Game2SelectionGfx
+        lda #>Cursor
+        sta Game2SelectionGfx+1
+        
+        lda #<Space
+        sta Game1SelectionGfx
+        lda #>Space
+        sta Game1SelectionGfx+1
+SkipSelectFlyGame2Player
+
+        lda #>FA
+        sta EnemySpeedOptionGfx1+1
+        sta EnemySpeedOptionGfx2+1
+
+        lda SWCHB
+        and #SWITCH_P0_PRO_DIFFICULTY
+        bne FastEnemies
+        lda #<SL
+        sta EnemySpeedOptionGfx1
+        ; lda #>SL
+        ; sta EnemySpeedOptionGfx1+1
+
+        lda #<OW
+        sta EnemySpeedOptionGfx2
+        ; lda #>OW
+        ; sta EnemySpeedOptionGfx2+1
+        jmp SlowEnemies
+FastEnemies
+        lda #<FA
+        sta EnemySpeedOptionGfx1
+        ; lda #>FA
+        ; sta EnemySpeedOptionGfx1+1
+
+        lda #<ST
+        sta EnemySpeedOptionGfx2
+        ; lda #>ST
+        ; sta EnemySpeedOptionGfx2+1
+SlowEnemies
+
+        lda #>FA
+        sta EnemyMovementOptionGfx1+1
+        sta EnemyMovementOptionGfx2+1
+
+        lda SWCHB
+        and #SWITCH_P1_PRO_DIFFICULTY
+        bne WildEnemies
+        lda #<TA
+        sta EnemyMovementOptionGfx1
+
+        lda #<ME
+        sta EnemyMovementOptionGfx2
+        jmp TameEnemies
+WildEnemies
+        lda #<WI
+        sta EnemyMovementOptionGfx1
+
+        lda #<LD
+        sta EnemyMovementOptionGfx2
+TameEnemies
+
+
+        lda #TWO_COPIES_CLOSE
+        sta NUSIZ0
+        lda #ONE_COPY
+        sta NUSIZ1
+        lda #0
+        sta VDELP0
+        sta VDELP1
+
+        jmp FlyGameRomMusicPlayer
+
+SkipFlyGameTitleOverscan
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Player 2 Join Flasher ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda Flasher
+        lda FlasherCtr
         bne DecFlasher
         lda #P2_JOIN_FLASHRATE
-        sta Flasher
+        sta FlasherCtr
         jmp SkipFlasher
 DecFlasher
-        dec Flasher
+        dec FlasherCtr
 SkipFlasher
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Player 2 Join Flasher ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4949,7 +5102,7 @@ SkipFlasher
         cmp #1
         bne SkipRestartFlyGame
         
-        lda BlockP0Fire
+        lda BlockP0Swat
         bne DecrementP0BlockFire
 
         lda INPT4
@@ -4957,7 +5110,7 @@ SkipFlasher
         jmp RestartFlyGame
 DecrementP0BlockFire
         
-        dec BlockP0Fire
+        dec BlockP0Swat
 SkipRestartFlyGame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Restart Fly Game ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4966,9 +5119,9 @@ SkipRestartFlyGame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Game Over Skip Controls ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda GameOverFlag
-        beq SkipDisableControls
-        jmp SkipPlayerControls
+        lda GameOverFlag                ; If the Gameover flag is set then
+        beq SkipDisableControls         ; do not allow any movement of the
+        jmp SkipPlayerControls          ; players
 SkipDisableControls
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Game Over Skip Controls ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5006,6 +5159,8 @@ Player0Control
         lda #P0_JOYSTICK_UP            
         bit SWCHA
         bne SkipMoveP0Up
+        cpy #42
+        beq SkipMoveP0Up
         dey
         dey
 SkipMoveP0Up
@@ -5013,44 +5168,31 @@ SkipMoveP0Up
         lda #P0_JOYSTICK_DOWN
         bit SWCHA
         bne SkipMoveP0Down
+        cpy #166
+        beq SkipMoveP0Down
         iny
         iny
 SkipMoveP0Down
 
-        cpy #40
-        bne SkipSetP0MinVPos
-        ldy #42
-SkipSetP0MinVPos
-
-        cpy #168
-        bne SkipSetP0MaxVPos
-        ldy #166
-SkipSetP0MaxVPos
         sty Player0YPos
-
+        ldy Player0XPos
 ; Player 0 Left/Right Control
         lda #P0_JOYSTICK_LEFT         
         and SWCHA
         bne SkipMoveP0Left
+        cpy #0
+        beq SkipMoveP0Left
         dec Player0XPos
 SkipMoveP0Left
 
         lda #P0_JOYSTICK_RIGHT
         and SWCHA
         bne SkipMoveP0Right
+        cpy #160-#17
+        beq SkipMoveP0Right
         inc Player0XPos
 SkipMoveP0Right
-       
-        ldy #0
-        ldx Player0XPos
-        bne SkipSetP0MinHPos
-        inc Player0XPos
-SkipSetP0MinHPos
 
-        cpx #160-#16
-        bne SkipSetP0MaxHPos
-        dec Player0XPos
-SkipSetP0MaxHPos
 SkipP0Move
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Player 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5060,6 +5202,8 @@ SkipP0Move
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Player 1 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+        lda GameSelectFlag
+        beq SkipP1Move
 Player1Control
 ; Player 1 Up/Down Control
         ldy Player1YPos
@@ -5067,6 +5211,8 @@ Player1Control
         lda #P1_JOYSTICK_UP            
         bit SWCHA
         bne SkipMoveP1Up
+        cpy #42
+        beq SkipMoveP1Up
         dey
         dey
 SkipMoveP1Up
@@ -5074,44 +5220,31 @@ SkipMoveP1Up
         lda #P1_JOYSTICK_DOWN
         bit SWCHA
         bne SkipMoveP1Down
+        cpy #166
+        beq SkipMoveP1Down
         iny
         iny
 SkipMoveP1Down
 
-        cpy #40
-        bne SkipSetP1MinVPos
-        ldy #42
-SkipSetP1MinVPos
-
-        cpy #168
-        bne SkipSetP1MaxVPos
-        ldy #166
-SkipSetP1MaxVPos
         sty Player1YPos
-
+        ldy Player1XPos
 ; Player 1 Left/Right Control
         lda #P1_JOYSTICK_LEFT         
         and SWCHA
         bne SkipMoveP1Left
+        cpy #0
+        beq SkipMoveP1Left
         dec Player1XPos
 SkipMoveP1Left
 
         lda #P1_JOYSTICK_RIGHT
         and SWCHA
         bne SkipMoveP1Right
+        cpy #160-#17
+        beq SkipMoveP1Right
         inc Player1XPos
 SkipMoveP1Right
-       
-        ; ldy #0
-        ldx Player1XPos
-        bne SkipSetP1MinHPos
-        inc Player1XPos
-SkipSetP1MinHPos
 
-        cpx #160-#16
-        bne SkipSetP1MaxHPos
-        dec Player1XPos
-SkipSetP1MaxHPos
 SkipP1Move
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Player 1 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5124,18 +5257,18 @@ SkipP1Move
 HidePlayerSpriteOverflow
         
         lda #PLAYERHEIGHT
-        sta P0Height,Y
+        sta P0Height,y
         
-        lda #135
+        lda #192-#PLAYERHEIGHT*2-4
         cmp Player0YPos,y
-        bcs SkipHideP0Overflow
+        bcs SkipHidePlayerOverflow
         
         lda #192
         sbc Player0YPos,y               ; need carry not set so it's even
         lsr
         sta P0Height,y
 
-SkipHideP0Overflow
+SkipHidePlayerOverflow
         iny
         cpy #2
         bne HidePlayerSpriteOverflow 
@@ -5151,93 +5284,94 @@ PlayerDetectHit
         ldy #0
 
         lda DebounceCtr,x
-        beq P0Fire2
-        jmp P0SkipFire
-P0Fire2
+        beq PlayerSwatOk1
+        jmp PlayerSkipSwat
+PlayerSwatOk1
 
-        lda BlockP0Fire,x
-        beq P0Fire3
+        lda BlockP0Swat,x
+        beq PlayerSwatOk2
         jmp SkipP0HitDetection
-P0Fire3
+PlayerSwatOk2
 
         lda INPT4,x
-        bpl P0Fire
-        jmp P0NotFire 
-P0Fire
+        bpl PlayerSwatOk3
+        jmp PlayerNotSwat1 
+PlayerSwatOk3
         lda #1
-        sta BlockP0Fire,x
+        sta BlockP0Swat,x
 
         lda #8
         sta DebounceCtr,x
 
         cpx #0
         bne LoadPlayer1SwatGfx
-        lda #<PlayerSlapGfx
+        lda #<PlayerSwatGfx
         sta Player0GfxPtr
 
-        lda #>PlayerSlapGfx
+        lda #>PlayerSwatGfx
         sta Player0GfxPtr+1
-        jmp CheckEnemyHitP0
+        jmp CheckEnemyHit
 LoadPlayer1SwatGfx
-        lda #<PlayerSlapGfx
+        lda #<PlayerSwatGfx
         sta Player1GfxPtr
 
-        lda #>PlayerSlapGfx
+        lda #>PlayerSwatGfx
         sta Player1GfxPtr+1
 
-CheckEnemyHitP0
+CheckEnemyHit
         lda Player0XPos,x
+        clc
+        adc #1
         cmp Enemy0XPos,y
-        bcs SkipP0Enemy0Hit
+        bcs SkipPlayerEnemyHit
         clc
         adc #17
         cmp Enemy0XPos,y
-        bcc SkipP0Enemy0Hit
+        bcc SkipPlayerEnemyHit
 
         lda Player0YPos,x
         sec
         sbc #ENEMYHEIGHT*2-1
         cmp Enemy0YPos,y
-        bcs SkipP0Enemy0Hit
+        bcs SkipPlayerEnemyHit
         clc
         adc #28
         cmp Enemy0YPos,y
-        bcc SkipP0Enemy0Hit
+        bcc SkipPlayerEnemyHit
 
         lda #0
         sta Enemy0Alive,y
         sta Enemy0YPos,y
 
-        lda #150
+        lda #FLY_GAME_ENEMY_GENERATION_DELAY
         sta Enemy0GenTimer,y
 
         inc P0Score,x
         inc P0Score1,x
         lda P0Score1,x
         cmp #10
-        bne SkipP0Enemy0Hit
+        bne SkipPlayerEnemyHit
         lda #0
         sta P0Score1,x
         inc P0Score2,x
-
-SkipP0Enemy0Hit
+SkipPlayerEnemyHit
 
         iny 
         cpy #2
-        bne CheckEnemyHitP0
+        bne CheckEnemyHit
 
-        jmp P0SkipFire
+        jmp PlayerSkipSwat
 
 SkipP0HitDetection
 
-P0NotFire
+PlayerNotSwat1
         lda INPT4,x
-        bpl P0NotFire2
+        bpl PlayerNotSwat2
         lda #0
-        sta BlockP0Fire,x
-P0NotFire2
+        sta BlockP0Swat,x
+PlayerNotSwat2
         lda DebounceCtr,x
-        bne P0SkipFire
+        bne PlayerSkipSwat
 
         cpx #0
         bne LoadPlayer1Gfx
@@ -5246,7 +5380,7 @@ P0NotFire2
 
         lda #>PlayerGfx
         sta Player0GfxPtr+1
-        jmp P0SkipFire
+        jmp PlayerSkipSwat
 LoadPlayer1Gfx
         lda #<PlayerGfx
         sta Player1GfxPtr
@@ -5254,7 +5388,7 @@ LoadPlayer1Gfx
         lda #>PlayerGfx
         sta Player1GfxPtr+1
 
-P0SkipFire
+PlayerSkipSwat
         inx 
         cpx #2
         beq SkipPlayerDetectHit
@@ -5265,72 +5399,103 @@ SkipPlayerDetectHit
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Enemys Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Enemies Lifecycle ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-        
-
         ldx #0
 EnemyMovement
-        lda Enemy0GenTimer,x
-        beq SkipEnemy0CountdownTimer
-        dec Enemy0GenTimer,x
-SkipEnemy0CountdownTimer
 
-        lda SWCHB
-        and #SWITCH_P0_PRO_DIFFICULTY
-        bne MoveEnemies
-        lda Flasher
-        and #1
-        beq MoveEnemies
-        jmp SkipEnemyMovement2
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Do Enemies Movement? ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda SWCHB                       ; Check to see is Player 0 difficulty
+        and #SWITCH_P0_PRO_DIFFICULTY   ; is set to A or B. If it's Be then 
+        bne MoveEnemies                 ; we use the modulus of the flasher
+        lda FlasherCtr                     ; to skip moving every other frame
+        and #1                          ; to simulate slow moving enemies
+        beq MoveEnemies                 ; by skipping the enemy movement
+        jmp SkipEnemyMovement          ; code
 MoveEnemies
-        lda Enemy0GenTimer,x
-        cmp #1
-        bne SkipGenerateEnemy0
-DetermineEdge
-        lda INPT4
-        jsr GetRandomNumber
-        and #3
-        sta Enemy0StartEdge,x
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Do Enemies Movement? ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda #1
-        sta Enemy0Alive,x
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Enemies Timer Countdown ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda Enemy0GenTimer,x            ; Check to see if the Enemy countdown
+        beq SkipEnemy0CountdownTimer    ; timer is not 0. If it is not then we
+        dec Enemy0GenTimer,x            ; decrement it
+SkipEnemy0CountdownTimer
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Enemies Timer Countdown ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Check Generate Enemy ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+        lda Enemy0GenTimer,x            ; See if the Enemy Generation Countdown
+        cmp #1                          ; timer is equal to 1. If so then
+        bne SkipGenerateEnemy           ; execute the enemy generation code
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Check Generate Enemy ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Set Enemy Alive ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+SetEnemyAlive
+        lda #1                          ; Start Enemy Generation by setting the
+        sta Enemy0Alive,x               ; enemy to now be alive
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Set Enemy Alive ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Determine Start Edge ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+DetermineEdge
+        lda FlasherCtr                     ; Generate a random number between
+        jsr GetRandomNumber             ; 0-3 to determine what edge to
+        and #3                          ; start on
+        sta Enemy0StartEdge,x
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Determine Start Edge ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Set Enemy Start Position ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda INPT2                       ; Generate a random number to be used
+        jsr GetRandomNumber             ; as a starting X position for the
+        and #158 ;#159 127              ; enemies
+        tay                             ;
 
         ; Generate Start Pos
-        lda Enemy0StartEdge,x
-        ; cmp #0
-        bne SkipTopE0StartEdge
-        lda #0
-        sta Enemy0YPos,x
-        jmp E0StartEdgeSet
+        lda Enemy0StartEdge,x           ; Using the start edge determined above
+        bne SkipTopE0StartEdge          ; Set the enemies X and Y coodinates
+        lda #42                         ; for their starting positions with
+        sta Enemy0YPos,x                ; "Randomly" generated numbers
+        sty Enemy0XPos,x                ;
+        jmp SkipGenerateEnemy           ;
 SkipTopE0StartEdge
+        
         cmp #1
         bne SkipRightSideE0StartEdge
-        lda #0
+        lda #158
+        sta Enemy0XPos,x
+        
+        lda INPT2
+        jsr GetRandomNumber
+        and #148
+        adc #38
+        and #254
         sta Enemy0YPos,x
-        jmp E0StartEdgeSet
+        jmp SkipGenerateEnemy
 SkipRightSideE0StartEdge
         cmp #2
         bne SkipBottomE0StartEdge
-        lda #192-#ENEMYHEIGHT-4
+        lda #192-(#ENEMYHEIGHT*2)
         sta Enemy0YPos,x
-        jmp E0StartEdgeSet
+        sty Enemy0XPos,x
+        jmp SkipGenerateEnemy
 SkipBottomE0StartEdge
         cmp #3
         bne SkipLeftSideE0StartEdge
-        lda #192-#ENEMYHEIGHT-4
-        sta Enemy0YPos,x
-        
-SkipLeftSideE0StartEdge
-E0StartEdgeSet
-        lda INPT4
-        jsr GetRandomNumber
-        and #159
+        lda #1
         sta Enemy0XPos,x
+        
+        lda INPT2
+        jsr GetRandomNumber
+        and #148
+        adc #38
+        and #254
+        sta Enemy0YPos,x
+SkipLeftSideE0StartEdge
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Set Enemy Start Position ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-SkipGenerateEnemy0
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Set Enemy Horizontal Position ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+SkipGenerateEnemy
         lda Enemy0XPos,x
         stx LineTemp
         
@@ -5342,68 +5507,58 @@ ExecuteEnemy1Pos
         ldx #3
 ExecuteEnemy0Pos
         jsr CalcXPos_bank1
-
-
         sta WSYNC
-        sta HMOVE    
+        sta HMOVE
         ldx LineTemp
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Set Enemy Horizontal Position ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda Enemy0GenTimer,x
-        bne SkipEnemy0Alive
-        lda #1
-        sta Enemy0Alive,x
-SkipEnemy0Alive
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Determine Moving Enemies ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda Enemy0Alive,x               ; Check to see if the enemies are alive
+        beq SkipEnemyMovement           ; if so then do movement
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Determine Moving Enemies ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda Enemy0Alive,x
-        beq SkipEnemy0Movement
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Determine Generating New Way Points ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 Enemy0VectorPath
         ;; Do vector path code here
-        lda Enemy0HWayPoint,x
-        bne SkipGenerateNewE0WayPoints
+        lda Enemy0HWayPoint,x           ; Check to see if the Horizontal Way
+        bne SkipGenerateNewE0WayPoints  ; Point is 0 and we need new ones
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Determine Generating New Way Points ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Generate New Way Points ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 RegenE0HSeed
         lda INPT4
         beq RegenE0HSeed
         jsr GetRandomNumber
         and #158
-        ; and #2
-        ; clc
-        ; adc #70
         sta Enemy0HWayPoint,x
 
 RegenE0VSeed
-        lda INPT4,x
+        lda INPT4
         beq RegenE0VSeed
         jsr GetRandomNumber
         and #148
         clc
         adc #38
-        ; and #2
-        ; clc
-        ; adc #72
         sta Enemy0VWayPoint,x
-SkipGenerateNewE0WayPoints
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Generate New Way Points ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda Enemy0HWayPoint,x
-        sec
-        sbc Enemy0XPos,x
-        bne SkipSetE0HMoveFlat
-        ; lda #$0
-        ; sta HMM0,x
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Do Enemy Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+SkipGenerateNewE0WayPoints
+        lda Enemy0HWayPoint,x           ; Subtract Enemy Positions from Way 
+        sec                             ; Points to determine which way the
+        sbc Enemy0XPos,x                ; enemy should move to move toward the
+        bne SkipSetE0HMoveFlat          ; Way Point
         jmp SkipSetE0HMoveRight
 SkipSetE0HMoveFlat
         bcc SkipSetE0HMoveLeft
-        ; lda #$F0
-        ; sta HMM0,x
         inc Enemy0XPos,x
         jmp SkipSetE0HMoveRight
 SkipSetE0HMoveLeft
         bcs SkipSetE0HMoveRight
-        ; lda #$10
-        ; sta HMM0,x
         dec Enemy0XPos,x
 SkipSetE0HMoveRight
-
+        
         lda Enemy0VWayPoint,x
         sec
         sbc Enemy0YPos,x
@@ -5420,15 +5575,20 @@ SkipSetE0VMoveLeft
         dec Enemy0YPos,x
 SkipSetE0VMoveRight
 
-        lda SWCHB
-        and #SWITCH_P1_PRO_DIFFICULTY
-        bne CrazyEnemies
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Do Enemy Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda Enemy0XPos,x
-        sec
-        sbc Enemy0HWayPoint,x
-        bne SkipRegenWayPoints
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Use Crazy Enemies Or Not ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+        lda SWCHB                       ; Check the Player difficulty switch
+        and #SWITCH_P1_PRO_DIFFICULTY   ; to see if it's set to A to use crazy
+        bne CrazyEnemies                ; Enemies.
+
+        lda Enemy0XPos,x                ; Crazy enemies regenerate way points
+        sec                             ; as soon as they reach an endpoint so
+        sbc Enemy0HWayPoint,x           ; they never travel in a straight 
+        bne SkipRegenWayPoints          ; horizontal or vertical line
         jmp SkipCrazyEnemies
+
 CrazyEnemies
         lda Enemy0XPos,x
         sec
@@ -5443,68 +5603,113 @@ RegenWayPoints
         lda #0 
         sta Enemy0HWayPoint,x
 SkipRegenWayPoints
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Use Crazy Enemies Or Not ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-SkipEnemy0Movement   
-        sta HMCLR
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Set Enemy End Point ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda Enemy0YPos,x                ; Add Enemy height to the current enemy
+        clc                             ; Y Position to determine when we 
+        adc #ENEMYHEIGHT*2              ; should stop drawing the enemy
+        sta Enemy0YPosEnd,x             ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Set Enemy End Point ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda Enemy0YPos,x
-        clc
-        adc #ENEMYHEIGHT*2
-        sta Enemy0YPosEnd,x
-SkipEnemyMovement2
-        inx
-        cpx #2
-        beq SkipEnemyMovement
-        jmp EnemyMovement
 SkipEnemyMovement
+        inx                             ; Increment our enemy index to process
+        cpx #2                          ; enemy movement for the next enemy
+        beq EnemyMovementDone           ;
+        jmp EnemyMovement               ;
+EnemyMovementDone
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Enemys Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Enemies Lifecycle ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 SkipPlayerControls
 
-;;;;;;;;;;;;;;;;;;;; Rom Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-; 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ldy #0                                          ; 2     Initialize Y-Index to 0
-        lda (FlyGameNotePtrCh0),y                       ; 5     Load first note duration to A
-        cmp FlyGameFrameCtrTrk0                         ; 3     See if it equals the Frame Counter
-        beq FlyGameTrack0NextNote                       ; 2/3   If so move the NotePtr to the next note
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Rom Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+FlyGameRomMusicPlayer
+; Track 0
+        ldy #0                          ; 2     Initialize Y-Index to 0
+        lda (FlyGameNotePtrCh0),y       ; 5     Load first note duration to A
+        cmp FlyGameFrameCtrTrk0         ; 3     See if it equals the Frame Counter
+        beq FlyGameTrack0NextNote       ; 2/3   If so move the NotePtr to the next note
 
-        cmp #255                                        ; 2     See if the notes duration equals 255
-        bne FlyGameSkipResetTrack0                      ; 2/3   If so go back to the beginning of the track
+        cmp #255                        ; 2     See if the notes duration equals 255
+        bne FlyGameSkipResetTrack0      ; 2/3   If so go back to the beginning of the track
 
-        lda #<FlyGameTrack0                             ; 4     Store the low byte of the track to 
-        sta FlyGameNotePtrCh0                           ; 3     the Note Pointer
-        lda #>FlyGameTrack0                             ; 4     Store the High byte of the track to
-        sta FlyGameNotePtrCh0+1                         ; 3     the Note Pointer + 1
+        lda #<FlyGameTrack0             ; 4     Store the low byte of the track to 
+        sta FlyGameNotePtrCh0           ; 3     the Note Pointer
+        lda #>FlyGameTrack0             ; 4     Store the High byte of the track to
+        sta FlyGameNotePtrCh0+1         ; 3     the Note Pointer + 1
 FlyGameSkipResetTrack0
 
-        iny                                             ; 2     Increment Y (Y=1) to point to the Note Volume
-        lda (FlyGameNotePtrCh0),y                       ; 5     Load Volume to A
-        sta AUDV0                                       ; 3     and set the Note Volume
-        iny                                             ; 2     Increment Y (Y=2) to point to the Note Frequency
-        lda (FlyGameNotePtrCh0),y                       ; 5     Load Frequency to A
-        sta AUDF0                                       ; 3     and set the Note Frequency
-        iny                                             ; 2     Increment Y (Y=3) to point to the Note Control
-        lda (FlyGameNotePtrCh0),y                       ; 5     Load Control to A
-        sta AUDC0                                       ; 3     and set the Note Control
-        inc FlyGameFrameCtrTrk0                         ; 5     Increment the Frame Counter to duration compare later
-        sec                                             ; 2     Set the carry to prepare to always branch
-        bcs KeepPlaying                                 ; 3     Branch to the end of the media player
+        iny                             ; 2     Increment Y (Y=1) to point to the Note Volume
+        lda (FlyGameNotePtrCh0),y       ; 5     Load Volume to A
+        sta AUDV0                       ; 3     and set the Note Volume
+        iny                             ; 2     Increment Y (Y=2) to point to the Note Frequency
+        lda (FlyGameNotePtrCh0),y       ; 5     Load Frequency to A
+        sta AUDF0                       ; 3     and set the Note Frequency
+        iny                             ; 2     Increment Y (Y=3) to point to the Note Control
+        lda (FlyGameNotePtrCh0),y       ; 5     Load Control to A
+        sta AUDC0                       ; 3     and set the Note Control
+        inc FlyGameFrameCtrTrk0         ; 5     Increment the Frame Counter to duration compare later
+        sec                             ; 2     Set the carry to prepare to always branch
+        bcs FlyGameKeepPlayingTrk0             ; 3     Branch to the end of the media player
 FlyGameTrack0NextNote
-        lda FlyGameNotePtrCh0                           ; 3     Load the Note Pointer to A
-        clc                                             ; 2     Clear the carry 
-        adc #4                                          ; 2     Add 4 to move the Notep pointer to the next note
-        sta FlyGameNotePtrCh0                           ; 3     Store the new note pointer
+        lda FlyGameNotePtrCh0           ; 3     Load the Note Pointer to A
+        clc                             ; 2     Clear the carry 
+        adc #4                          ; 2     Add 4 to move the Notep pointer to the next note
+        sta FlyGameNotePtrCh0           ; 3     Store the new note pointer
 
-        lda #0                                          ; 2     Load Zero to
-        sta FlyGameFrameCtrTrk0                         ; 3     Reset the Frame counter
+        lda #0                          ; 2     Load Zero to
+        sta FlyGameFrameCtrTrk0         ; 3     Reset the Frame counter
+FlyGameKeepPlayingTrk0
 
-KeepPlaying
+; Track 1
+        ldy #0                          ; 2     Initialize Y-Index to 0
+        lda (FlyGameNotePtrCh1),y       ; 5     Load first note duration to A
+        cmp FlyGameFrameCtrTrk1         ; 3     See if it equals the Frame Counter
+        beq FlyGameTrack1NextNote       ; 2/3   If so move the NotePtr to the next note
 
-;;;;;;;;;;;;;;;;;; End Rom Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        cmp #255                        ; 2     See if the notes duration equals 255
+        bne FlyGameSkipResetTrack1      ; 2/3   If so go back to the beginning of the track
+
+        lda #<FlyGameTrack1             ; 4     Store the low byte of the track to 
+        sta FlyGameNotePtrCh1           ; 3     the Note Pointer
+        lda #>FlyGameTrack1             ; 4     Store the High byte of the track to
+        sta FlyGameNotePtrCh1+1         ; 3     the Note Pointer + 1
+FlyGameSkipResetTrack1
+
+        iny                             ; 2     Increment Y (Y=1) to point to the Note Volume
+        lda (FlyGameNotePtrCh1),y       ; 5     Load Volume to A
+        sta AUDV1                       ; 3     and set the Note Volume
+        iny                             ; 2     Increment Y (Y=2) to point to the Note Frequency
+        lda (FlyGameNotePtrCh1),y       ; 5     Load Frequency to A
+        sta AUDF1                       ; 3     and set the Note Frequency
+        iny                             ; 2     Increment Y (Y=3) to point to the Note Control
+        lda (FlyGameNotePtrCh1),y       ; 5     Load Control to A
+        sta AUDC1                       ; 3     and set the Note Control
+        inc FlyGameFrameCtrTrk1         ; 5     Increment the Frame Counter to duration compare later
+        sec                             ; 2     Set the carry to prepare to always branch
+        bcs FlyGameKeepPlayingTrk1      ; 3     Branch to the end of the media player
+FlyGameTrack1NextNote
+        lda FlyGameNotePtrCh1           ; 3     Load the Note Pointer to A
+        clc                             ; 2     Clear the carry 
+        adc #4                          ; 2     Add 4 to move the Notep pointer to the next note
+        sta FlyGameNotePtrCh1           ; 3     Store the new note pointer
+
+        lda #0                          ; 2     Load Zero to
+        sta FlyGameFrameCtrTrk1         ; 3     Reset the Frame counter
+FlyGameKeepPlayingTrk1
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Rom Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+        lda SWCHB
+        and #SWITCH_GAME_RESET
+        bne SkipSwitchReset
+        jmp Reset
+SkipSwitchReset
 
 FlyGameOverscanWaitLoop
         lda TIMINT
@@ -5540,6 +5745,7 @@ ATARI_PAINT_BRUSH_MOVE_DELAY                = #8
 
 ATARI_PAINT_CANVAS_SIZE                     = #104
 ATARI_PAINT_CANVAS_OVERFLOW_MASK_POS        = #127
+ATARI_PAINT_CANVAS_ROW_HEIGHT               = #6
 
 BLACK                                       = #$00
 WHITE                                       = #$0F
@@ -5560,30 +5766,32 @@ PURPLE                                      = #$64
 
         SEG.U AtariPaintVars
         ORG Overlay
+
 TempXPos                        ds 1
 TempYPos                        ds 1
 TempLetterBuffer                ds 1
+CanvasRowLineCtr                ds 1
+ControlsColor                   ds 1
+
+        ORG Overlay
+CanvasByteMask                  ds 1
+CanvasRow                       ds 1
+CanvasColorIdx
+CanvasByteBuffer                ds 1
+CanvasIdx                       ds 1
+CanvasByteIdx                   ds 1
+
+BackgroundColor                 ds 1
+
+DebounceCtr                     ds 1
+
+DrawOrEraseFlag                 ds 1
+ForegroundBackgroundFlag        ds 1
 
 BrushXPos                       ds 1
 BrushYPos                       ds 1
-
-CanvasRowLineCtr                ds 1
-DebounceCtr                     ds 1
-
-ToolSelectXPos                  ds 1
-
+BrushSelectedXPos               ds 1
 BrushColor                      ds 1
-BackgroundColor                 ds 1
-ControlColor                    ds 1
-
-DrawOrEraseFlag                 ds 1
-ClearCanvasFlag                 ds 1
-ForegroundBackgroundFlag        ds 1
-
-CanvasByteIdx                   ds 1
-CanvasByteMask                  ds 1
-CanvasRow                       ds 1
-CanvasIdx                       ds 1
 
 Canvas                          ds ATARI_PAINT_CANVAS_SIZE
 
@@ -5608,7 +5816,7 @@ ClearRam
         sta DebounceCtr
 
         lda #ATARI_PAINT_CONTROL_INITIAL_SELECTION_POS
-        sta ToolSelectXPos
+        sta BrushSelectedXPos
 
         lda #BALL_SIZE_FOUR_CLOCKS
         sta CTRLPF
@@ -5679,103 +5887,106 @@ AtariPaintViewableScreen
         cpx #3
         bne AtariPaintViewableScreen
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Title Text
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #ATARI_PAINT_TITLE_ALIGNMENT_TIMER
-        sta TIM1T
-
-AtariPaintTitleWaitLoop
-        lda TIMINT
-        and #%10000000
-        beq AtariPaintTitleWaitLoop
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Title Text ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #ATARI_PAINT_TITLE_ALIGNMENT_TIMER ; Timer to align the Atari Paint
+        sta TIM1T                       ; Title header in the middle of the
+AtariPaintTitleWaitLoop                 ; screen
+        lda TIMINT                      ; Load the values into the built in  
+        and #%10000000                  ; then wait until it has expired
+        beq AtariPaintTitleWaitLoop     ;
+        SLEEP 5
                 
-        inx
+        inx                             ; Increment the line counter for timer
 AtariPaintDrawTitle
-        stx TempXPos                                    ; 3     6       Store X Register so we can use it again
-        sty TempYPos                                    ; 3     9       Store Y Register so we can use it again
+        stx TempXPos                    ; 3     6       Store X Register so we can use it again
+        sty TempYPos                    ; 3     9       Store Y Register so we can use it again
         
-        ldx T_,y                                        ; 4     13      Load Graphics into the Y Register and
-        stx TempLetterBuffer                            ; 3     16      store it to memory to save time later
+        ldx T_,y                        ; 4     13      Load Graphics into the Y Register and
+        stx TempLetterBuffer            ; 3     16      store it to memory to save time later
         
-        ldx IN,y                                        ; 4     20      Load Graphics into the X Register and
-                                                        ;               store it to memory to save time later
+        ldx IN,y                        ; 4     20      Load Graphics into the X Register and
+                                        ;               store it to memory to save time later
 
-        lda AT,y                                        ; 4     24      Load Graphics
-        sta GRP0                                        ; 3     27      AT -> [GRP0]
+        lda AT,y                        ; 4     24      Load Graphics
+        sta GRP0                        ; 3     27      AT -> [GRP0]
         
-        lda AR,y                                        ; 4     31      Load Graphics
-        sta GRP1                                        ; 3     34      AR -> [GRP1], [GRP0] -> GRP0
+        lda AR,y                        ; 4     31      Load Graphics
+        sta GRP1                        ; 3     34      AR -> [GRP1], [GRP0] -> GRP0
         
-        lda I_,y                                        ; 4     38      Load Graphics
-        sta GRP0                                        ; 3     41      I  -> [GRP0]. [GRP1] -> GRP1
+        lda I_,y                        ; 4     38      Load Graphics
+        sta GRP0                        ; 3     41      I  -> [GRP0], [GRP1] -> GRP1
         
-        lda PA,y                                        ; 4     45      Load Graphics
-        ldy TempLetterBuffer                            ; 3     48      Load Graphics previously stored in memory
-        sta GRP1                                        ; 3     51      PA -> [GRP1], [GRP0] -> GRP0
-        stx GRP0                                        ; 3     54      IN -> [GRP0], [GRP1] -> GRP1
-        sty GRP1                                        ; 3     57      T  -> [GRP1], [GRP0] -> GRP0
-        stx GRP0                                        ; 3     60      ?? -> [GRP0], [GRP1] -> GRP1
+        lda PA,y                        ; 4     45      Load Graphics
+        ldy TempLetterBuffer            ; 3     48      Load Graphics previously stored in memory
+        sta GRP1                        ; 3     51      PA -> [GRP1], [GRP0] -> GRP0
+        stx GRP0                        ; 3     54      IN -> [GRP0], [GRP1] -> GRP1
+        sty GRP1                        ; 3     57      T  -> [GRP1], [GRP0] -> GRP0
+        stx GRP0                        ; 3     60      ?? -> [GRP0], [GRP1] -> GRP1
         
-        ldx TempXPos                                    ; 3     63      Restore X Register to previous value
-        ldy TempYPos                                    ; 3     66      Restore Y Register to previous value
-        iny                                             ; 2     68      Increment Y for graphics index
+        ldx TempXPos                    ; 3     63      Restore X Register to previous value
+        ldy TempYPos                    ; 3     66      Restore Y Register to previous value
+        iny                             ; 2     68      Increment Y for graphics index
 
-        inx                                             ; 2     70      Increment X for the line counter
-        cpx #10                                         ; 2     72      Check if we're on line 10
-        nop                                             ; 2     74      Waste 2 cycles
-        nop                                             ; 2     76      Waste 2 cycles to get 76 cycle alignment
-        bne AtariPaintDrawTitle                         ; 2/3   2/3     If not to line 10 cont drawing the letters
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; End Title Text
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        inx                             ; 2     70      Increment X for the line counter
+        cpx #10                         ; 2     72      Check if we're on line 10
+        nop                             ; 2     74      Waste 2 cycles
+        nop                             ; 2     76      Waste 2 cycles to get 76 cycle alignment
+        bne AtariPaintDrawTitle         ; 2/3   2/3     If not to line 10 cont drawing the letters
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Title Text ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Control Row
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #MISSLE_SIZE_FOUR_CLOCKS | #TWO_COPIES_MEDIUM
-        sta NUSIZ0
-        sta NUSIZ1
-        ldy #0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Brush Control Row ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #MISSLE_SIZE_FOUR_CLOCKS | #TWO_COPIES_MEDIUM ; Set the player
+        sta NUSIZ0                      ; graphics to two copies and the
+        sta NUSIZ1                      ; missle graphics to be 4x wide
+
+        ldy #0                          ; Initialize the graphics index to 0
 AtariPaintControlRow
-        cpx #15
-        bmi SkipControlRow
+        cpx #15                         ; Check to see if we're on line 15
+        bmi SkipControlRow              ; yet, if so then
 
-        lda ControlColor
-        sta COLUP0
-        sta COLUP1
+        lda ControlsColor               ; Set the new color for each of the 
+        sta COLUP0                      ; players to make the gradient for
+        sta COLUP1                      ; the Controls Text
 
-        lda F_,y
-        sta GRP0
+        lda F_,y                        ; Load Graphics
+        sta GRP0                        ; F_ -> [GRP0]
         
-        lda B_,y
-        sta GRP1
+        lda B_,y                        ; Load Graphics
+        sta GRP1                        ; B_ -> [GRP1], [GRP0] -> GRP0
 
-        lda E_,y
-        sta GRP0
+        lda E_,y                        ; Load Graphics
+        sta GRP0                        ; E_ -> [GRP0], [GRP1] -> GRP1
         
-        lda C_,y
-        sta GRP1
+        lda C_,y                        ; Load Graphics
+        sta GRP1                        ; C_ -> [GRP1], [GRP0] -> GRP0
 
-        sta GRP0
+        sta GRP0                        ; ?? -> [GRP0], [GRP1] -> GRP1
         
-        inc ControlColor
-        iny
+        inc ControlsColor               ; Increment the ControlsColor gradient
+        iny                             ; Increment Y for the graphics index
 
-        lda #ATARI_PAINT_TITLE_COLOR
-        sta COLUP0
+        lda #ATARI_PAINT_TITLE_COLOR    ; Reset the Player1 color so the cursor
+        sta COLUP0                      ; is the correct color becuase we don't
+                                        ; have time to do this before the next
+                                        ; section
 SkipControlRow
-        inx
-        sta WSYNC
-        cpx #21
-        bne AtariPaintControlRow
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; End Control Row
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        inx                             ; Increment the line counter
+        sta WSYNC                       ; and check to see if we're on line 21
+        cpx #21                         ; If not then repeat if so then move
+        bne AtariPaintControlRow        ; on to the next section
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Brush Control Row ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Control Select Row
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Brush Control Selection Row ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #MISSLE_SIZE_FOUR_CLOCKS
         sta NUSIZ0
 
@@ -5832,13 +6043,13 @@ SkipColorCanvas
         inx
         
         sta WSYNC
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; End Control Select Row
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Brush Control Selection Row ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Palette
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Color Palette ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         SLEEP 3
 AtariPaintPalette
         lda #GRAY
@@ -5853,8 +6064,8 @@ PaletteSkipDrawBrush
         nop
 PaletteDrawBrush
 
-        sta.w ENAM0
-        ; sta ENAM0
+        ; sta.w ENAM0
+        sta ENAM0
 
         lda #WHITE
         sta COLUPF
@@ -5889,9 +6100,9 @@ PaletteDrawBrush
         inx
         cpx #34
         bne AtariPaintPalette                           ; (76)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; End Palette
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Color Palette ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         ldy #MISSLE_BALL_DISABLE
         inx 
@@ -5916,12 +6127,12 @@ PaletteDrawBrush
         lda BrushColor
         sta COLUPF
         
-        lda #MISSLE_BALL_DISABLE
         inx
         
         lda SWCHB
         and #SWITCH_COLOR_TV
         beq SkipSingleColorCanvas
+        lda #MISSLE_BALL_DISABLE
         sta WSYNC
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5946,12 +6157,12 @@ SkipDrawBrush
         dec CanvasRowLineCtr                            ; 5
         bne SkipResetCanvasRowLineCtr                   ; 2/3
         
-        tya                                             ; 2
-        clc                                             ; 2
-        adc #4                                          ; 2 
-        tay                                             ; 2
+        iny                                             ; 2
+        iny                                             ; 2
+        iny                                             ; 2 
+        iny                                             ; 2
         
-        lda #6                                          ; 2
+        lda #ATARI_PAINT_CANVAS_ROW_HEIGHT              ; 2
         sta CanvasRowLineCtr                            ; 3     (20)
 SkipResetCanvasRowLineCtr
 
@@ -5960,7 +6171,7 @@ SkipResetCanvasRowLineCtr
         sta PF0                                         ; 3     (8)
 
         inx                                             ; 2
-        cpx #191                                        ; 2
+        cpx #192                                        ; 2
         sta WSYNC                                       ; 3
         bne AtariPaintCanvas                            ; 2/3   (10)    (76)
         jmp EndOfCanvas
@@ -5972,6 +6183,7 @@ SkipResetCanvasRowLineCtr
 ; Multi Color Canvas
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 SkipSingleColorCanvas
+        lda #MISSLE_BALL_DISABLE
         sta WSYNC
 AtariPaintMultiColorCanvas
         
@@ -5998,9 +6210,8 @@ SkipDrawMultiColorBrush
         adc #4                                          ; 2 
         tay                                             ; 2
 
-        lda #6                                          ; 2
+        lda #ATARI_PAINT_CANVAS_ROW_HEIGHT              ; 2
         sta CanvasRowLineCtr                            ; 3     (20)
-
 SkipResetMultiColorCanvasRowLineCtr
 
         lda #MISSLE_BALL_DISABLE                        ; 2
@@ -6008,7 +6219,7 @@ SkipResetMultiColorCanvasRowLineCtr
         sta PF0                                         ; 3     (8)
 
         inx                                             ; 2
-        cpx #191                                        ; 2
+        cpx #192                                        ; 2
         sta WSYNC                                       ; 3
         bne AtariPaintMultiColorCanvas                  ; 2/3   (10)    (76)
 
@@ -6017,16 +6228,14 @@ SkipResetMultiColorCanvasRowLineCtr
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 EndOfCanvas
-        lda #0
-        sta PF2
-        sta PF0
-        sta PF1
+        ; lda #0
+        
 
-AtariPaintEndOfScreenBuffer
-        sta WSYNC
-        inx
-        cpx #192
-        bne AtariPaintEndOfScreenBuffer
+; AtariPaintEndOfScreenBuffer
+        ; sta WSYNC
+        ; inx
+        ; cpx #192
+        ; bne AtariPaintEndOfScreenBuffer
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Setup Overscan  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -6035,6 +6244,7 @@ AtariPaintEndOfScreenBuffer
 
         lda #0
         sta COLUBK
+        sta PF1
         
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Setup Overscan  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -6078,31 +6288,23 @@ SkipDecDebounceCtr_AtariPaint
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Reset Canvas Row Line Counter ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #6
-        sta CanvasRowLineCtr
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Reset Canvas Indicies ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Brush  Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 BrushControl
         lda DebounceCtr
-        beq MoveBrush
-        jmp SkipMoveBrush
-MoveBrush
+        bne SkipMoveBrush
+
 ; Player 0 Up/Down Control
         ldy BrushYPos
         
         lda #P0_JOYSTICK_UP            
         bit SWCHA
         bne SkipMoveBrushUp
+        cpy #21
+        beq SkipMoveBrushUp
         tya
         sec
-        sbc #6
+        sbc #ATARI_PAINT_CANVAS_ROW_HEIGHT
         tay
         lda #ATARI_PAINT_BRUSH_MOVE_DELAY
         sta DebounceCtr
@@ -6111,23 +6313,16 @@ SkipMoveBrushUp
         lda #P0_JOYSTICK_DOWN
         bit SWCHA
         bne SkipMoveBrushDown
+        cpy #189
+        beq SkipMoveBrushDown
         tya
         clc
-        adc #6
+        adc #ATARI_PAINT_CANVAS_ROW_HEIGHT
         tay
         lda #ATARI_PAINT_BRUSH_MOVE_DELAY
         sta DebounceCtr
 SkipMoveBrushDown
 
-        cpy #15
-        bne SkipSetBrushMinVPos
-        ldy #21
-SkipSetBrushMinVPos
-
-        cpy #195
-        bne SkipSetBrushMaxVPos
-        ldy #189
-SkipSetBrushMaxVPos
         sty BrushYPos
 
 ; Player 0 Left/Right Control
@@ -6135,6 +6330,8 @@ SkipSetBrushMaxVPos
         and SWCHA
         bne SkipMoveBrushLeft
         lda BrushXPos
+        cmp #2
+        beq SkipMoveBrushLeft
         sec
         sbc #4
         sta BrushXPos
@@ -6146,6 +6343,8 @@ SkipMoveBrushLeft
         and SWCHA
         bne SkipMoveBrushRight
         lda BrushXPos
+        cmp #158
+        beq SkipMoveBrushRight
         clc
         adc #4
         sta BrushXPos
@@ -6153,27 +6352,6 @@ SkipMoveBrushLeft
         sta DebounceCtr
 SkipMoveBrushRight
        
-        ldy #0
-
-        ldx BrushXPos
-        cpx #254
-        bne SkipSetBrushMinHPos
-        sty HMP0
-        lda BrushXPos
-        clc
-        adc #4
-        sta BrushXPos
-SkipSetBrushMinHPos
-
-        cpx #162
-        bne SkipSetBrushMaxHPos
-        sty HMP0
-        lda BrushXPos
-        sec
-        sbc #4
-        sta BrushXPos
-SkipSetBrushMaxHPos
-
 SkipMoveBrush
 
         ldx #2                                  ; Set Player Missle 0 Position
@@ -6194,28 +6372,30 @@ SkipMoveBrush
         jmp SkipPaintTile
 PaintTileButtonPressed
 
+; Determine Canvas Row
         ldx #0
         lda BrushYPos
         cmp #36
-        bcs PaintTileYPosCorrect
+        bcs CalculateTilePosition
         jmp SkipPaintTile
-PaintTileYPosCorrect
+CalculateTilePosition
 
         sec
         sbc #36
         sec
 DivideBy6
         inx
-        sbc #6
+        sbc #ATARI_PAINT_CANVAS_ROW_HEIGHT
         bcs DivideBy6
         dex
+
 MultiplyBy4                     ; Multiply X by 4 to find canvas row
         txa
         asl
         asl
         sta CanvasRow
 
-
+; Determine Canvas Column
         lda BrushXPos           ; Load the Brush X Position
         cmp #18                 ; If it's less than 18 then
         bpl PaintTileMinXPosCorrect 
@@ -6228,7 +6408,6 @@ PaintTileMaxXPosCorrect
 
         sec                     ; Subtract 18 so that the "canvas" is
         sbc #18                 ; aligned to the left side of the screen
-
         ldx #0                  ; Set X to 0 to count our divisions
         sec
 DivideBy4
@@ -6246,8 +6425,6 @@ Modulo8
         adc #8
         sta CanvasByteIdx
 
-
-
         lda BrushXPos
         cmp #50
         bpl SkipSetCanvasIdx0
@@ -6257,7 +6434,7 @@ Modulo8
         lda CanvasSelectTableR,y
         ldx DrawOrEraseFlag
         beq LoadTableErasePF10
-        eor #255
+        eor #$FF
 LoadTableErasePF10
 
         sta CanvasByteMask
@@ -6273,7 +6450,7 @@ SkipSetCanvasIdx0
         lda CanvasSelectTable,y
         ldx DrawOrEraseFlag
         beq LoadTableErasePF20
-        eor #255
+        eor #$FF
 
 LoadTableErasePF20
         sta CanvasByteMask
@@ -6289,7 +6466,7 @@ SkipSetCanvasIdx1
         lda CanvasSelectTable,y
         ldx DrawOrEraseFlag
         beq LoadTableErasePF00
-        eor #255
+        eor #$FF
 LoadTableErasePF00
         asl
         asl
@@ -6305,7 +6482,7 @@ SkipSetCanvasIdx2
         lda CanvasSelectTableR,y
         ldx DrawOrEraseFlag
         beq LoadTableErasePF11
-        eor #255
+        eor #$FF
 LoadTableErasePF11
         and #%00001111
         clc
@@ -6314,14 +6491,14 @@ LoadTableErasePF11
         rol
         rol
         
-        sta TempLetterBuffer
+        sta CanvasByteBuffer
 
         ldy CanvasByteIdx
 
         lda CanvasSelectTableR,y
         ldx DrawOrEraseFlag
         beq LoadTableErasePF12
-        eor #255
+        eor #$FF
 LoadTableErasePF12
 
         and #%11110000
@@ -6331,13 +6508,13 @@ LoadTableErasePF12
         ror
         ror
         
-        ora TempLetterBuffer
+        ora CanvasByteBuffer
         sta CanvasByteMask
 
         ldx #3
         stx CanvasIdx
 CanvasIdxSet
-        stx TempLetterBuffer
+        stx CanvasColorIdx
         
         txa
         clc
@@ -6345,8 +6522,8 @@ CanvasIdxSet
         sta CanvasIdx
         
         sec
-        sbc TempLetterBuffer
-        sta TempLetterBuffer
+        sbc CanvasColorIdx
+        sta CanvasColorIdx
         
         ldy CanvasIdx
         lda Canvas,y
@@ -6366,7 +6543,7 @@ LoadEraseCanvasByteMask
         bne SkipPaintTile
         lda DrawOrEraseFlag
         bne SkipPaintTile
-        ldy TempLetterBuffer
+        ldy CanvasColorIdx
         lda BrushColor
         sta Canvas,y
 SkipPaintTile
@@ -6378,113 +6555,85 @@ SkipPaintTile
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Set Playfield Control ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda BrushYPos
-        cmp #24
-        bcs SkipSetCanvasControl
-
-        cmp #14
-        bcc SkipSetCanvasControl
-
+        cmp #21
+        bne SkipSetCanvasControl
         lda INPT4
         bmi SkipSetCanvasControl
 
         lda BrushXPos
-        cmp #62
-        bcs SkipSetFGColor
+
         cmp #58
-        bcc SkipSetFGColor
+        bne SkipSetFGColor
 
         lda #0
         sta DrawOrEraseFlag
         sta ForegroundBackgroundFlag
         lda BrushXPos
-        sta ToolSelectXPos
-
+        sta BrushSelectedXPos
         jmp SkipSetCanvasControl
 
 SkipSetFGColor
-        cmp #70
-        bcs SkipSetBGColor
+
         cmp #66
-        bcc SkipSetBGColor
+        bne SkipSetBGColor
 
         lda #1
         sta ForegroundBackgroundFlag
-
         lda #0
         sta DrawOrEraseFlag
-
         lda BrushXPos
-        sta ToolSelectXPos
+        sta BrushSelectedXPos
         jmp SkipSetCanvasControl
 SkipSetBGColor
-        cmp #94
-        bcs SkipSetErase
+
         cmp #90
-        bcc SkipSetErase
+        bne SkipSetErase
 
         lda #1
         sta DrawOrEraseFlag
-
         lda BrushXPos
-        sta ToolSelectXPos
-        
+        sta BrushSelectedXPos
         jmp SkipSetCanvasControl
 SkipSetErase
 
-        cmp #102
-        bcs SkipSetClear
-        cmp #98
-        bcc SkipSetClear
+        cmp #98                         ; If the Brush H Pos is 98 and fire
+        bne SkipClearCanvas             ; then set all canvas array values to 0
+        
+        ldy #0                          ; Initialize Y to zero
+ClearCanvasArray
+        lda #0                          ; While Y is less than the Canvas size
+        sta Canvas,y                    ; Use Y as the index to store 0 to each 
+        iny                             ; canvas array element then
+        cpy #ATARI_PAINT_CANVAS_SIZE    ; increment Y
+        bne ClearCanvasArray            ; Once Y equal the Cnavas size
+SkipClearCanvas
 
-        lda #1
-        sta ClearCanvasFlag
-SkipSetClear
 SkipSetCanvasControl
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Set Playfield Control ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Clear Canvas ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda ClearCanvasFlag
-        beq SkipClearCanvas
-        ldy #0
-ClearCanvasArray
-        lda #0
-        sta Canvas,y
-        iny
-        cpy #ATARI_PAINT_CANVAS_SIZE
-        bne ClearCanvasArray
-        sta ClearCanvasFlag
-SkipClearCanvas
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Clear Canvas ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Set Brush or Background Color ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda BrushYPos
-        cmp #34
-        bcs SkipSetBrushColor
-
-        cmp #24
-        bcc SkipSetBrushColor
-
-        lda INPT4
-        bmi SkipSetBrushColor
-
-        lda BrushXPos
+        lda BrushYPos                   ; Make sure the Vertial Brush Position
+        cmp #24                         ; is inbetween the upper and lower
+        bcc SkipSetBrushColor           ; limits of the Palette section
+        cmp #34                         ; 
+        bcs SkipSetBrushColor           ; If so then
         
-        cmp #13
-        bcs SkipSetColorGray
-        lda #GRAY
-        jmp SetBrushColor
-SkipSetColorGray
-        cmp #26
-        bcs SkipSetColorWhite
+        lda INPT4                       ; Check to see is the fire button
+        bmi SkipSetBrushColor           ; is pressed
+
+        lda BrushXPos                   ; If it is then check to see where the
+        cmp #13                         ; Horizontal Position of the Brush is
+        bcs SkipSetColorGray            ; located and detemine what color 
+        lda #GRAY                       ; should be loaded into the Brush or
+        jmp SetBrushColor               ; Background color
+SkipSetColorGray                        ; Once the Color is loaded into the
+        cmp #25                         ; Accumulator, jump to the 
+        bcs SkipSetColorWhite           ; SetBrushColor Label
         lda #WHITE
         jmp SetBrushColor
 SkipSetColorWhite
@@ -6528,18 +6677,15 @@ SkipSetColorOrange
         lda #BROWN
         jmp SetBrushColor
 SkipSetColorBrown
-        cmp #161
-        bcs SkipSetColorBlack
-        lda #BLACK
-        jmp SetBrushColor
-SkipSetColorBlack
+        lda #BLACK                      ; Default to Black
+
 SetBrushColor
-        ldy ForegroundBackgroundFlag
-        bne SetBackGroundColor
-        sta BrushColor
-        jmp SkipSetBrushColor
-SetBackGroundColor
-        sta BackgroundColor
+        ldy ForegroundBackgroundFlag    ; With the color loaded into
+        bne SetBackGroundColor          ; the Accumulator, check the
+        sta BrushColor                  ; ForegroundBackgroundFlag to
+        jmp SkipSetBrushColor           ; see if we if we should set
+SetBackGroundColor                      ; the Brush or Background
+        sta BackgroundColor             ; color
 SkipSetBrushColor
         
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -6549,54 +6695,55 @@ SkipSetBrushColor
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Reset For Next Frame ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #0
-        sta ENAM1
-        sta COLUPF
-        sta GRP1
-        sta GRP0
+        lda #0                          ; Reset or Diable Player
+        sta ENAM1                       ; Grpahics, the Playfield
+        sta COLUPF                      ; color, and Missle 1 used for
+        sta GRP1                        ; masking the right canvas side
+        sta GRP0                        ; overflow
 
-        ldy #ATARI_PAINT_TITLE_COLOR                    ; Set the player colors for the title
-        lda SWCHB
-        and #SWITCH_COLOR_TV
-        bne BrushColorIndicatior
-        ldy BrushColor
+        ldy #ATARI_PAINT_TITLE_COLOR    ; Set the colors for the title
+        lda SWCHB                       ; Check to see if the TV switch
+        and #SWITCH_COLOR_TV            ; is in Color or B/W mode to 
+        bne BrushColorIndicatior        ; determine is the tile is the
+        ldy BrushColor                  ; default color or the selected
 BrushColorIndicatior
-        sty COLUP0
-        sty COLUP1
+        sty COLUP0                      ; color from the palette
+        sty COLUP1                      ; 
 
-        lda #ATARI_PAINT_FOREGROUND_SELECTED_COLOR
-        sta ControlColor
+        lda #ATARI_PAINT_CANVAS_ROW_HEIGHT ; Reset the Canavs Row Line Counter
+        sta CanvasRowLineCtr            ; To the Row Height
 
-        lda #1
-        sta VDELP0
-        sta VDELP1
+        lda #ATARI_PAINT_FOREGROUND_SELECTED_COLOR ; Reset the Control Row
+        sta ControlsColor                ; Color back to the line height
 
-        lda #THREE_COPIES_CLOSE
-        sta NUSIZ0
-        sta NUSIZ1
+        lda #THREE_COPIES_CLOSE         ; Reset the players to have
+        sta NUSIZ0                      ; 3 copies close for the
+        sta NUSIZ1                      ; title
 
-        ldx #1                                  ; Set Player 1 Position
-        lda #ATARI_PAINT_TITLE_H_POS+8
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
+        ldx #1                          ; Enable Vertical Delay on both
+        stx VDELP0                      ; Players for the title
+        stx VDELP1                      ; 
 
-        ldx #4                                  ; Set Player Ball Position
-        lda ToolSelectXPos
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
+        lda #ATARI_PAINT_TITLE_H_POS+8  ; Set Player 1 Position reusing
+        jsr CalcXPos_bank1              ; X set to 1 from above for the
+        sta WSYNC                       ; title since Player 1 is used
+        sta HMOVE                       ; to mask the left canvas side
 
-        ldx #0
+        ldx #4                          ; Set Player Ball Position
+        lda BrushSelectedXPos           ; based on what Tool is 
+        jsr CalcXPos_bank1              ; selected from the control row
+        sta WSYNC                       ;
+        sta HMOVE                       ;
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Reset For Next Frame ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 AtariPaintOverscanWaitLoop
-        lda TIMINT
-        beq AtariPaintOverscanWaitLoop
-
-        jmp AtariPaintFrame
+        lda TIMINT                      ; Check to see if our timer has expired
+        beq AtariPaintOverscanWaitLoop  ; and we are done with our overscan 
+                                        
+        jmp AtariPaintFrame             ; Then we start the next Frame
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -6687,75 +6834,67 @@ PlayerGfx  .byte #%01111110
            .byte #%00011000
            .byte #%00011000
            .byte #%00011000
-           .byte #0
-           .byte #0
-           .byte #0
-           .byte #0
-           .byte #0
-           .byte #0
+        ;    .byte #0
+        ;    .byte #0
 
-ON         .byte  #%11101110
+PlayerSwatGfx  
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%11111111
+           .byte #%10000001
+           .byte #%10000001
+           .byte #%10000001
+           .byte #%11111111
+           .byte #%00011000
+           .byte #%00011000
+           .byte #%00011000
+           .byte #%00011000
+           .byte #%00011000
+           .byte #%00011000
+           .byte #%00011000
+           .byte #%00011000
+Space      .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000
+           .byte #%00000000     ; (22)
+           .byte #%00000000
+           .byte #%00000000     ; (24)
+
+
+ON         .byte  #%01001100
            .byte  #%10101010
            .byte  #%10101010
            .byte  #%10101010
-           .byte  #%11101010
+           .byte  #%01001010
            .byte  #0
 
-O_         .byte  #%11100000
+O_         .byte  #%01000000
            .byte  #%10100000
            .byte  #%10100000
            .byte  #%10100000
-           .byte  #%11100000
+           .byte  #%01000000
            .byte  #0
 
 TW         .byte  #%11101010
            .byte  #%01001010
            .byte  #%01001110
            .byte  #%01001110
-           .byte  #%01001110
+           .byte  #%01001010
            .byte  #0
 
-PlayerSlapGfx  
-           .byte #%00000000
-           .byte #%00000000
-           .byte #%00000000
-           .byte #%00000000
-           .byte #%00000000
-           .byte #%11111111
-           .byte #%10000001
-           .byte #%10000001
-           .byte #%10000001
-           .byte #%11111111
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00000000
-           .byte #%00000000
-           .byte #%00000000
-           .byte #%00000000     ; (22)
-           .byte #%00000000
-           .byte #%00000000     ; (24)
-           .byte #%00000000
-           .byte #%00000000     ; (26)
-           .byte #%00000000
-           .byte #%00000000     ; (28)
-
-
-
-GA         .byte  #%11101110
+GA         .byte  #%01100100
            .byte  #%10001010
-           .byte  #%11101110
+           .byte  #%10101110
            .byte  #%10101010
-           .byte  #%11101010
+           .byte  #%01101010
+           .byte  #0
 
 MER        .byte  #%01110101
            .byte  #%00010111
-           .byte  #%01110101
+           .byte  #%00110101
            .byte  #%00010101
            .byte  #%01110101
 
@@ -6766,14 +6905,14 @@ FL         .byte  #%11101000
            .byte  #%10001110
 
 Y_         .byte  #%00000101
-           .byte  #%00000111
+           .byte  #%00000101
            .byte  #%00000010
            .byte  #%00000010
            .byte  #%00000010
 
 E_         .byte  #%11100000
            .byte  #%10000000
-           .byte  #%11100000
+           .byte  #%11000000
            .byte  #%10000000
            .byte  #%11100000
            .byte  #0
@@ -6783,36 +6922,41 @@ _P         .byte  #%00001110
            .byte  #%00001110
            .byte  #%00001000
            .byte  #%00001000
+           .byte  #0
 
 RE_bank1   .byte  #%11101110
            .byte  #%10101000
-           .byte  #%11101110
+           .byte  #%11101100
            .byte  #%11001000
            .byte  #%10101110
+           .byte  #0
 
 IR         .byte  #%11101110
            .byte  #%01001010
            .byte  #%01001110
            .byte  #%01001100
            .byte  #%11101010
+           .byte  #0
 
 SS         .byte  #%11101110
            .byte  #%10001000
            .byte  #%11101110
            .byte  #%00100010
            .byte  #%11101110
+           .byte  #0
 
 _F         .byte  #%00001110
            .byte  #%00001000
            .byte  #%00001110
            .byte  #%00001000
            .byte  #%00001000
+           .byte  #0
 
-W          .byte  #%10101010
-           .byte  #%10101010
-           .byte  #%11101110
-           .byte  #%11101110
-           .byte  #%11101110
+; W          .byte  #%10101010
+;            .byte  #%10101010
+;            .byte  #%11101110
+;            .byte  #%11101110
+;            .byte  #%11101110
 
 F_         .byte  #%11100000
            .byte  #%10000000
@@ -6835,12 +6979,12 @@ C_         .byte  #%11100000
            .byte  #%11100000
            .byte  #0
 
-Space      .byte  #%00000000
-           .byte  #%00000000
-           .byte  #%00000000
-           .byte  #%00000000
-           .byte  #%00000000
-           .byte  #0
+; Space      .byte  #%00000000
+;            .byte  #%00000000
+;            .byte  #%00000000
+;            .byte  #%00000000
+;            .byte  #%00000000
+;            .byte  #0
 
 Cursor     .byte  #%00001000
            .byte  #%00001100
@@ -6956,6 +7100,7 @@ PL         .byte  #%11101000
            .byte  #%11101000
            .byte  #%10001000
            .byte  #%10001110
+           .byte  #0
            
 
 AY         .byte  #%01001010
@@ -6963,6 +7108,7 @@ AY         .byte  #%01001010
            .byte  #%11100100
            .byte  #%10100100
            .byte  #%10100100
+           .byte  #0
            
 
 ER         .byte  #%11101110
@@ -6970,6 +7116,7 @@ ER         .byte  #%11101110
            .byte  #%11001110
            .byte  #%10001100
            .byte  #%11101010
+           .byte  #0
            
 
 _W         .byte  #%00001010
@@ -6977,6 +7124,7 @@ _W         .byte  #%00001010
            .byte  #%00001110
            .byte  #%00001110
            .byte  #%00001110
+           .byte  #0
 
 SC         .byte  #%11101110
            .byte  #%10001000
@@ -7019,18 +7167,99 @@ _T         .byte  #%00001110
            .byte  #%00000100
            .byte  #%00000100
            .byte  #%00000100
+           .byte  #0
 
 IE         .byte  #%11101110
            .byte  #%01001000
            .byte  #%01001110
            .byte  #%01001000
            .byte  #%11101110
+           .byte  #0
 
 ME         .byte  #%10101110
            .byte  #%11101000
            .byte  #%10101110
            .byte  #%10101000
            .byte  #%10101110
+           .byte  #0
+
+
+_E         .byte  #%00001110
+           .byte  #%00001000
+           .byte  #%00001100
+           .byte  #%00001000
+           .byte  #%00001110
+           
+
+NE         .byte  #%11001110
+           .byte  #%10101000
+           .byte  #%10101110
+           .byte  #%10101000
+           .byte  #%10101110
+           
+
+MI         .byte  #%10101110
+           .byte  #%11100100
+           .byte  #%10100100
+           .byte  #%10100100
+           .byte  #%10101110
+           
+
+ES         .byte  #%11101110
+           .byte  #%10001000
+           .byte  #%11001110
+           .byte  #%10000010
+           .byte  #%11101110
+           
+
+SL         .byte  #%11101000
+           .byte  #%10001000
+           .byte  #%11101000
+           .byte  #%00101000
+           .byte  #%11101110
+           
+
+OW         .byte  #%11101010
+           .byte  #%10101010
+           .byte  #%10101110
+           .byte  #%10101110
+           .byte  #%11101010
+           
+
+FA         .byte  #%11100100
+           .byte  #%10001010
+           .byte  #%11001110
+           .byte  #%10001010
+           .byte  #%10001010
+           
+
+ST         .byte  #%11101110
+           .byte  #%10000100
+           .byte  #%11100100
+           .byte  #%00100100
+           .byte  #%11100100
+           
+
+TA         .byte  #%11100100
+           .byte  #%01001010
+           .byte  #%01001110
+           .byte  #%01001010
+           .byte  #%01001010
+
+WI         .byte  #%10101110
+           .byte  #%10100100
+           .byte  #%10100100
+           .byte  #%11100100
+           .byte  #%10101110
+
+LD         .byte  #%10001100
+           .byte  #%10001010
+           .byte  #%10001010
+           .byte  #%10001010
+           .byte  #%11101100
+
+FlyGameTitleTrack0   .byte 0,0,0,0,255
+FlyGameTitleTrack1   .byte 0,0,0,0,255
 
 FlyGameTrack0   .byte 0,0,0,0,255
 FlyGameTrack1   .byte 0,0,0,0,255
