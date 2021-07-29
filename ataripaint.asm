@@ -3529,11 +3529,12 @@ ENDBank1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Bank1 Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-FLY_GAME_TITLE_BG_COLOR                 = #57
+FLY_GAME_TITLE_BG_COLOR                 = #$9E ;57
 FLY_GAME_TITLE_COLOR                    = #$02
 
-FLY_GAME_TITLE_VPOS                     = #56
+FLY_GAME_TITLE_VPOS                     = #41 ;56
 FLY_GAME_TITLE_HPOS                     = #59
+FLY_GAME_TITLE_MENU_VPOS                = #121 ;#135
 
 
 FLY_GAME_GAME_OVER_BACKGROUND_COLOR     = #$0A
@@ -3553,6 +3554,8 @@ P0XSTARTPOS                             = #15
 P0YSTARTPOS                             = #78
 P1XSTARTPOS                             = #125
 P1YSTARTPOS                             = #78
+
+FLY_GAME_FIELD_START_LINE               = #42
 
 PLAYERHEIGHT                            = #24
 ENEMYHEIGHT                             = #4
@@ -3579,10 +3582,10 @@ P1FireDebounceCtr       ds 1
 
 Game1SelectionGfx       ds 2
 Game2SelectionGfx       ds 2
-EnemySpeedOptionGfx1    ds 2
-EnemySpeedOptionGfx2    ds 2
-EnemyMovementOptionGfx1 ds 2
-EnemyMovementOptionGfx2 ds 2
+EnemyOptionGfx1         ds 2
+EnemyOptionGfx2         ds 2
+
+OptionsLoopCtr          ds 1
 
 BlockP0Swat             ds 1
 BlockP1Fire             ds 1
@@ -3594,7 +3597,6 @@ CountdownTimerTmp1      ds 1
 CountdownTimerTmp2      ds 1
 CountdownTimerIdx       ds 1
 CountdownTimerGfx       ds 5
-; CountdownTimerGfxPtr    ds 2
 
 Player0XPos             ds 1
 Player1XPos             ds 1
@@ -3636,17 +3638,12 @@ P0Score2                ds 1
 P1Score2                ds 1
 P0Score1idx             ds 1
 P1Score1idx             ds 1
-; P0Score1DigitPtr        ds 2
-; P1Score1DigitPtr        ds 2
 P0ScoreTmp              ds 1
 P1ScoreTmp              ds 1
 P0Score2idx             ds 1
 P1Score2idx             ds 1
-; P0Score2DigitPtr        ds 2
-; P1Score2DigitPtr        ds 2
 P0ScoreArr              ds 5
 P1ScoreArr              ds 5
-; ZeroBaseGfxPtr          ds 2
 
 FlyGameNotePtrCh0     ds 2
 FlyGameNotePtrCh1     ds 2
@@ -3741,22 +3738,6 @@ OnePlayerGame
         lda #>FlyGameTrack1
         sta FlyGameNotePtrCh1+1
 
-        ; lda #<(Zero_bank1)
-        ; sta ZeroBaseGfxPtr
-        ; sta P0Score1DigitPtr
-        ; sta P0Score2DigitPtr
-        ; sta P1Score1DigitPtr
-        ; sta P1Score2DigitPtr
-        ; sta CountdownTimerGfxPtr
-
-        ; lda #>(Zero_bank1)
-        ; sta ZeroBaseGfxPtr+1
-        ; sta P0Score1DigitPtr+1
-        ; sta P0Score2DigitPtr+1
-        ; sta P1Score1DigitPtr+1
-        ; sta P1Score2DigitPtr+1
-        ; sta CountdownTimerGfxPtr+1
-        
         ldx #FLY_GAME_TIMER_DURATION
         stx CountdownTimer
 
@@ -3768,7 +3749,7 @@ SkipFlyGameInit
 ; Fly Game Title Init
         ldy #FLY_GAME_TITLE_COLOR
         sty COLUPF
-
+        
         ldy #FLY_GAME_TITLE_COLOR
         sty COLUP0
         sty COLUP1
@@ -3807,6 +3788,7 @@ SkipFlyGameInit
         sta FlyGameNotePtrCh1
         lda #>FlyGameTitleTrack1
         sta FlyGameNotePtrCh1+1
+
 FlyGameStartOfFrame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Start VBLANK Processing
@@ -3971,11 +3953,6 @@ SkipDetermineWinner
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Build Countdown Timer Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ; lda #<(Zero_bank1)
-        ; sta CountdownTimerGfxPtr
-
-        ; lda #>(Zero_bank1)
-        ; sta CountdownTimerGfxPtr+1
         
         ldx #0
 CalcCountdownTimer
@@ -4126,7 +4103,7 @@ FlyGameTitleLine1
         sta PF2
         
         SLEEP 3
-
+        
         lda #0
         sta PF1
         sta PF2
@@ -4167,11 +4144,11 @@ SkipFlyGameTitleLine2
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 FlyGameNumPlayersSelectLine1 
-        cpx #135
+        cpx #FLY_GAME_TITLE_MENU_VPOS
         bmi SkipFlyGameNumPlayersSelectLine1
         txa                                             ; 2
         sec                                             ; 2
-        sbc #135                                        ; 2
+        sbc #FLY_GAME_TITLE_MENU_VPOS                   ; 2
         tay                                             ; 2
         lda (Game1SelectionGfx),y                       ; 4
         sta GRP0                                        ; 3
@@ -4184,16 +4161,16 @@ FlyGameNumPlayersSelectLine1
         sta GRP0                                        ; 3
 SkipFlyGameNumPlayersSelectLine1
         inx
-        cpx #141
+        cpx #FLY_GAME_TITLE_MENU_VPOS+6
         sta WSYNC
         bne FlyGameNumPlayersSelectLine1
 
 FlyGameNumPlayersSelectLine2 
-        cpx #145
+        cpx #FLY_GAME_TITLE_MENU_VPOS+10
         bmi SkipFlyGameNumPlayersSelectLine2
         txa                                             ; 2
         sec
-        sbc #145                                        ; 2
+        sbc #FLY_GAME_TITLE_MENU_VPOS+10                ; 2
         tay                                             ; 2 
         lda (Game2SelectionGfx),y                       ; 4
         sta GRP0                                        ; 3
@@ -4206,15 +4183,9 @@ FlyGameNumPlayersSelectLine2
         sta GRP0                                        ; 3
 SkipFlyGameNumPlayersSelectLine2
         inx
-        cpx #151
+        cpx #FLY_GAME_TITLE_MENU_VPOS+16
         sta WSYNC
         bne FlyGameNumPlayersSelectLine2
-
-FlyGameOptionsLine1Buffer
-        inx
-        cpx #155
-        sta WSYNC
-        bne FlyGameOptionsLine1Buffer
 
         lda #THREE_COPIES_CLOSE
         sta NUSIZ0
@@ -4224,29 +4195,37 @@ FlyGameOptionsLine1Buffer
         sta VDELP1
 
         ldy #0
+        sty OptionsLoopCtr
 
-        lda #38
+DrawOptions
+        ldx #4
+FlyGameOptionsLineBuffer
+        dex
+        sta WSYNC
+        bne FlyGameOptionsLineBuffer
+
+        lda #50
         sta TIM1T                       
-PositionFlyGameOptionsLine1
+PositionFlyGameOptionsLine
         lda TIMINT
-        beq PositionFlyGameOptionsLine1
+        beq PositionFlyGameOptionsLine
         SLEEP 2
 
         lda #5
         sta TIM64T
-FlyGameOptionsLine1
-        ; SLEEP 2
+FlyGameOptionsLine
+        SLEEP 2
         sty TempYPos                    ; 3     9
         
         ldx ES,y                        ; 4     13
-        stx TempLetterBuffer            ; 3     16
+        stx.w TempLetterBuffer          ; 3     16
         
         ldx MI,y                        ; 4     20
 
-        lda (EnemySpeedOptionGfx1),y    ; 4     24
-        sta GRP0                      ; 3     27 -> [GRP0]
+        lda (EnemyOptionGfx1),y         ; 4     24
+        sta GRP0                        ; 3     27 -> [GRP0]
         
-        lda (EnemySpeedOptionGfx2),y    ; 4     31
+        lda (EnemyOptionGfx2),y         ; 4     31
         sta GRP1                        ; 3     34 -> [GRP1], [GRP0] -> GRP0
         
         lda _E,y                        ; 4     38
@@ -4259,75 +4238,45 @@ FlyGameOptionsLine1
         sty GRP1                        ; 3     57 -> [GRP1], [GRP0] -> GRP0
         stx GRP0                        ; 3     60 ?? -> [GRP0], [GRP1] -> GRP1
         
-        
         ldy TempYPos                    ; 3     66
         iny                             ; 2     68
         
-        SLEEP 8
+        SLEEP 5
         lda TIMINT                      ; 4
-        beq FlyGameOptionsLine1         ; 2/3   2/3
+        beq FlyGameOptionsLine          ; 2/3   2/3
 
         ldy #0
         sty GRP0
         sty GRP1
         sty GRP0
 
-FlyGameOptionsLine2Buffer
-        inx
-        cpx #165
-        sta WSYNC
-        bmi FlyGameOptionsLine2Buffer
+        lda #>WI
+        sta EnemyOptionGfx1+1
+        sta EnemyOptionGfx2+1
 
-        lda #50  ;38                         
-        sta TIM1T                       
-PositionFlyGameOptionsLine2
-        lda TIMINT
-        beq PositionFlyGameOptionsLine2
-        SLEEP 2
+        lda SWCHB
+        and #SWITCH_P1_PRO_DIFFICULTY
+        bne WildEnemies
+        lda #<TA
+        sta EnemyOptionGfx1
 
-        lda #5
-        sta TIM64T
-        ; ldy #0
-FlyGameOptionsLine2
-        SLEEP 2
-        sty TempYPos                    ; 3     9
-        
-        ldx ES,y                        ; 4     13
-        stx TempLetterBuffer            ; 3     16
-        
-        ldx MI,y                        ; 4     20
+        lda #<ME
+        sta EnemyOptionGfx2
+        jmp TameEnemies
+WildEnemies
+        lda #<WI
+        sta EnemyOptionGfx1
 
-        lda (EnemyMovementOptionGfx1),y ; 4     24
-        sta.w GRP0                      ; 3     27 -> [GRP0]
-        
-        lda (EnemyMovementOptionGfx2),y ; 4     31
-        sta GRP1                        ; 3     34 -> [GRP1], [GRP0] -> GRP0
-        
-        lda _E,y                        ; 4     38
-        sta GRP0                        ; 3     41 -> [GRP0]. [GRP1] -> GRP1
-        
-        lda NE,y                        ; 4     45
-        ldy TempLetterBuffer            ; 3     48
-        sta GRP1                        ; 3     51 -> [GRP1], [GRP0] -> GRP0
-        stx GRP0                        ; 3     54 -> [GRP0], [GRP1] -> GRP1
-        sty GRP1                        ; 3     57 -> [GRP1], [GRP0] -> GRP0
-        stx GRP0                        ; 3     60 ?? -> [GRP0], [GRP1] -> GRP1
-        
-        
-        ldy TempYPos                    ; 3     66
-        iny                             ; 2     68
-        
-        SLEEP 4
-        lda TIMINT                      ; 4
-        beq FlyGameOptionsLine2         ; 2/3   2/3
+        lda #<LD
+        sta EnemyOptionGfx2
+TameEnemies
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #0
-        sta GRP0
-        sta GRP1
-        sta GRP0
+        inc OptionsLoopCtr
+        lda OptionsLoopCtr
+        cmp #2
+        bne DrawOptions
         
-        ldx #24
+        ldx #21+(#135-#FLY_GAME_TITLE_MENU_VPOS)
 FlyGameTitleScreenBottomBuffer
         dex
         sta WSYNC
@@ -4383,7 +4332,7 @@ PositionFlyGamePlayer2JoinText
         ldy #0                          ; the timer expires when we're done
 DrawPlayer2JoinText
         ; stx TempXPos                    ; 3     6
-        SLEEP 3
+        SLEEP 3                         ; 3     6
         sty TempYPos                    ; 3     9
         
         ldx E_,y                        ; 4     13
@@ -4407,15 +4356,15 @@ DrawPlayer2JoinText
         sty GRP1                        ; 3     57 -> [GRP1], [GRP0] -> GRP0
         stx GRP0                        ; 3     60 ?? -> [GRP0], [GRP1] -> GRP1
         
-        ; ldx TempXPos                    ; 3     63
-        ldy TempYPos                    ; 3     66
-        iny                             ; 2     68
+        ldy TempYPos                    ; 3     63
+        iny                             ; 2     65
+        ; ldx TempXPos                    ; 3     68
         ; inx                             ; 2     70
         ; cpx #9                          ; 2     72
         ; nop                             ; 2     74
         ; nop                             ; 2     76
-        lda TIMINT                      ; 4
-        SLEEP 6
+        lda TIMINT                      ; 4     69
+        SLEEP 7
         beq DrawPlayer2JoinText         ; 2/3   2/3
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Player 2 Join Text ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4512,8 +4461,8 @@ SkipDisplayTimer
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Drawing Score and Timer Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        ; ldx #0
-        ; stx COLUBK
+        ldx #0
+        stx COLUBK
 
         lda #FLY_GAME_PLAYER0_COLOR
         sta COLUP0
@@ -4521,7 +4470,7 @@ SkipDisplayTimer
         sta COLUP1
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Adjust WSYNC for Player 1 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Adjust WSYNC for Players ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda Player0XPos
         cmp #$87
@@ -4535,7 +4484,7 @@ SkipWSYNC
         sta WSYNC
 SkipWSYNC2
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Adjust WSYNC for Player 1 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Adjust WSYNC for Players ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         
         ldy GameOverFlag
@@ -4678,7 +4627,7 @@ DrawGameOverScreen
         sta NUSIZ0
         sta NUSIZ1
 
-        ldx #42
+        ldx #FLY_GAME_FIELD_START_LINE
 DrawGameOverScreenTop
         inx
         cpx #57
@@ -5017,55 +4966,33 @@ SkipSelectFlyGame1Player
 SkipSelectFlyGame2Player
 
         lda #>FA
-        sta EnemySpeedOptionGfx1+1
-        sta EnemySpeedOptionGfx2+1
+        sta EnemyOptionGfx1+1
+        sta EnemyOptionGfx2+1
 
         lda SWCHB
         and #SWITCH_P0_PRO_DIFFICULTY
         bne FastEnemies
         lda #<SL
-        sta EnemySpeedOptionGfx1
+        sta EnemyOptionGfx1
         ; lda #>SL
-        ; sta EnemySpeedOptionGfx1+1
+        ; sta EnemyOptionGfx1+1
 
         lda #<OW
-        sta EnemySpeedOptionGfx2
+        sta EnemyOptionGfx2
         ; lda #>OW
-        ; sta EnemySpeedOptionGfx2+1
+        ; sta EnemyOptionGfx2+1
         jmp SlowEnemies
 FastEnemies
         lda #<FA
-        sta EnemySpeedOptionGfx1
+        sta EnemyOptionGfx1
         ; lda #>FA
-        ; sta EnemySpeedOptionGfx1+1
+        ; sta EnemyOptionGfx1+1
 
         lda #<ST
-        sta EnemySpeedOptionGfx2
+        sta EnemyOptionGfx2
         ; lda #>ST
-        ; sta EnemySpeedOptionGfx2+1
+        ; sta EnemyOptionGfx2+1
 SlowEnemies
-
-        lda #>FA
-        sta EnemyMovementOptionGfx1+1
-        sta EnemyMovementOptionGfx2+1
-
-        lda SWCHB
-        and #SWITCH_P1_PRO_DIFFICULTY
-        bne WildEnemies
-        lda #<TA
-        sta EnemyMovementOptionGfx1
-
-        lda #<ME
-        sta EnemyMovementOptionGfx2
-        jmp TameEnemies
-WildEnemies
-        lda #<WI
-        sta EnemyMovementOptionGfx1
-
-        lda #<LD
-        sta EnemyMovementOptionGfx2
-TameEnemies
-
 
         lda #TWO_COPIES_CLOSE
         sta NUSIZ0
@@ -5150,130 +5077,73 @@ SkipP1JoinGame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Player 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
-Player0Control
-; Player 0 Up/Down Control
-        ldy Player0YPos
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Player Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+        ldx #0
+PlayerControl
+; Player Up/Down Control
+        ldy Player0YPos,x
         
-        lda #P0_JOYSTICK_UP            
+        lda P0JoyStickUp,x
         bit SWCHA
-        bne SkipMoveP0Up
-        cpy #42
-        beq SkipMoveP0Up
+        bne SkipMovePlayerUp
+        cpy #FLY_GAME_FIELD_START_LINE
+        beq SkipMovePlayerUp
         dey
         dey
-SkipMoveP0Up
+SkipMovePlayerUp
 
-        lda #P0_JOYSTICK_DOWN
+        lda P0JoyStickDown,x
         bit SWCHA
-        bne SkipMoveP0Down
-        cpy #166
-        beq SkipMoveP0Down
+        bne SkipMovePlayerDown
+        cpy #192-#PLAYERHEIGHT
+        beq SkipMovePlayerDown
         iny
         iny
-SkipMoveP0Down
+SkipMovePlayerDown
+        sty Player0YPos,x
 
-        sty Player0YPos
-        ldy Player0XPos
-; Player 0 Left/Right Control
-        lda #P0_JOYSTICK_LEFT         
+        ldy Player0XPos,x
+; Player Left/Right Control
+        lda P0JoyStickLeft,x
         and SWCHA
-        bne SkipMoveP0Left
+        bne SkipMovePlayerLeft
         cpy #0
-        beq SkipMoveP0Left
-        dec Player0XPos
-SkipMoveP0Left
+        beq SkipMovePlayerLeft
+        dec Player0XPos,x
+SkipMovePlayerLeft
 
-        lda #P0_JOYSTICK_RIGHT
+        lda P0JoyStickRight,x
         and SWCHA
-        bne SkipMoveP0Right
+        bne SkipMovePlayerRight
         cpy #160-#17
-        beq SkipMoveP0Right
-        inc Player0XPos
-SkipMoveP0Right
+        beq SkipMovePlayerRight
+        inc Player0XPos,x
+SkipMovePlayerRight
 
-SkipP0Move
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Player 0 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Player 1 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-        lda GameSelectFlag
-        beq SkipP1Move
-Player1Control
-; Player 1 Up/Down Control
-        ldy Player1YPos
-        
-        lda #P1_JOYSTICK_UP            
-        bit SWCHA
-        bne SkipMoveP1Up
-        cpy #42
-        beq SkipMoveP1Up
-        dey
-        dey
-SkipMoveP1Up
-
-        lda #P1_JOYSTICK_DOWN
-        bit SWCHA
-        bne SkipMoveP1Down
-        cpy #166
-        beq SkipMoveP1Down
-        iny
-        iny
-SkipMoveP1Down
-
-        sty Player1YPos
-        ldy Player1XPos
-; Player 1 Left/Right Control
-        lda #P1_JOYSTICK_LEFT         
-        and SWCHA
-        bne SkipMoveP1Left
-        cpy #0
-        beq SkipMoveP1Left
-        dec Player1XPos
-SkipMoveP1Left
-
-        lda #P1_JOYSTICK_RIGHT
-        and SWCHA
-        bne SkipMoveP1Right
-        cpy #160-#17
-        beq SkipMoveP1Right
-        inc Player1XPos
-SkipMoveP1Right
-
-SkipP1Move
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Player 1 Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Hide Players Sprite Overflow ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ldy #0
-HidePlayerSpriteOverflow
-        
+;; Hide Player Overflow
         lda #PLAYERHEIGHT
-        sta P0Height,y
+        sta P0Height,x
         
         lda #192-#PLAYERHEIGHT*2-4
-        cmp Player0YPos,y
+        cmp Player0YPos,x
         bcs SkipHidePlayerOverflow
-        
         lda #192
-        sbc Player0YPos,y               ; need carry not set so it's even
+        sbc Player0YPos,x               ; need carry not set so it's even
         lsr
-        sta P0Height,y
-
+        sta P0Height,x
 SkipHidePlayerOverflow
-        iny
-        cpy #2
-        bne HidePlayerSpriteOverflow 
+
+        inx
+        lda GameSelectFlag
+        beq SkipPlayer1Move
+        cpx #1
+        beq PlayerControl
+SkipPlayer1Move
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Hide Players Sprite Overflow ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Player Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5453,7 +5323,7 @@ DetermineEdge
         ; Generate Start Pos
         lda Enemy0StartEdge,x           ; Using the start edge determined above
         bne SkipTopE0StartEdge          ; Set the enemies X and Y coodinates
-        lda #42                         ; for their starting positions with
+        lda #FLY_GAME_FIELD_START_LINE ; for their starting positions with
         sta Enemy0YPos,x                ; "Randomly" generated numbers
         sty Enemy0XPos,x                ;
         jmp SkipGenerateEnemy           ;
@@ -5466,9 +5336,10 @@ SkipTopE0StartEdge
         
         lda INPT2
         jsr GetRandomNumber
-        and #148
-        adc #38
-        and #254
+        and #192-#FLY_GAME_FIELD_START_LINE-(ENEMYHEIGHT*2)-2
+        clc
+        adc #FLY_GAME_FIELD_START_LINE
+        ; and #254
         sta Enemy0YPos,x
         jmp SkipGenerateEnemy
 SkipRightSideE0StartEdge
@@ -5486,9 +5357,10 @@ SkipBottomE0StartEdge
         
         lda INPT2
         jsr GetRandomNumber
-        and #148
-        adc #38
-        and #254
+        and #192-#FLY_GAME_FIELD_START_LINE-(ENEMYHEIGHT*2)-2 ;142
+        clc
+        adc #FLY_GAME_FIELD_START_LINE
+        ; and #254
         sta Enemy0YPos,x
 SkipLeftSideE0StartEdge
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Set Enemy Start Position ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5536,9 +5408,9 @@ RegenE0VSeed
         lda INPT4
         beq RegenE0VSeed
         jsr GetRandomNumber
-        and #148
+        and #192-#FLY_GAME_FIELD_START_LINE-(ENEMYHEIGHT*2)-2 ;#148
         clc
-        adc #38
+        adc #FLY_GAME_FIELD_START_LINE
         sta Enemy0VWayPoint,x
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Generate New Way Points ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -5705,11 +5577,17 @@ FlyGameKeepPlayingTrk1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Rom Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Reset Game ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda SWCHB
         and #SWITCH_GAME_RESET
         bne SkipSwitchReset
         jmp Reset
 SkipSwitchReset
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Reset Game ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 FlyGameOverscanWaitLoop
         lda TIMINT
@@ -7257,6 +7135,15 @@ LD         .byte  #%10001100
            .byte  #%10001010
            .byte  #%10001010
            .byte  #%11101100
+
+P0JoyStickUp                  .byte #%00010000
+P1JoyStickUp                  .byte #%00000001
+P0JoyStickDown                .byte #%00100000
+P1JoyStickDown                .byte #%00000010
+P0JoyStickLeft                .byte #%01000000
+P1JoyStickLeft                .byte #%00000100
+P0JoyStickRight               .byte #%10000000
+P1JoyStickRight               .byte #%00001000
 
 FlyGameTitleTrack0   .byte 0,0,0,0,255
 FlyGameTitleTrack1   .byte 0,0,0,0,255
