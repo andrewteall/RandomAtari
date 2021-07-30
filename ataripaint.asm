@@ -3665,7 +3665,6 @@ FlyGameFrameCtrTrk1   ds 1
 ; TODO: Add Game Title Colors
 ; TODO: Add Game Title Art/Gfx
 
-; TODO: Fix Enemy Over and Under flows
 ; TODO: Remove HMOVE Lines
 ; TODO: Add Game Music
 ; TODO: Add Game Sound FX
@@ -3765,9 +3764,6 @@ SkipFlyGameInit
         jsr CalcXPos_bank1
         sta WSYNC
         sta HMOVE
-                
-        ; lda #TWO_COPIES_CLOSE
-        ; sta NUSIZ0
 
         lda #<Cursor
         sta Game1SelectionGfx
@@ -3898,17 +3894,6 @@ CalcScoreGraphics
         sed
         sbc #1
         sta CountdownTimer
-;         dec CountdownTimer
-;         lda CountdownTimer
-;         and #$0F
-;         cmp #$0F
-;         bne SkipResetTimerHex
-        
-;         lda CountdownTimer
-;         sec
-;         sbc #6
-;         sta CountdownTimer
-; SkipResetTimerHex
         cld
 
         lda #FLY_GAME_COUNTDOWN_TIMER_SECOND_DIVIDER
@@ -3955,7 +3940,7 @@ SkipDetermineWinner
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         
         ldx #0
-CalcCountdownTimer
+BuildCountdownTimerGraphics
         stx CountdownTimerIdx
 
         lda CountdownTimer
@@ -3995,7 +3980,7 @@ CalcCountdownTimer
         sta CountdownTimerGfx,x
         inx
         cpx #5
-        bne CalcCountdownTimer 
+        bne BuildCountdownTimerGraphics 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Build Countdown Timer Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4026,12 +4011,11 @@ CalcCountdownTimer
 
         lda #FLY_GAME_SCORE_COLOR
         sta COLUPF
-
 SkipFlyGameVBLANK
 
 FlyGameVerticalBlankEndWaitLoop
         lda TIMINT
-        ; and #%10000000
+        and #%10000000
         beq FlyGameVerticalBlankEndWaitLoop
         sta WSYNC
 
@@ -4494,9 +4478,9 @@ SkipWSYNC2
         lda #ATARI_PAINT_TITLE_H_POS+8
         sta Player1XPos
 SkipLoadGameOverTextPosition
-        lda #$70
-        sta HMM0
-        sta HMM1
+        ; lda #$70
+        ; sta HMM0
+        ; sta HMM1
 
         ldx #0
         lda Player0XPos
@@ -4606,8 +4590,8 @@ SkipP1ResetHeight
         inx                                     ; 2
         inx                                     ; 2
         cpx #192                                ; 2
-        sta WSYNC                               ; 3
-        bne FlyGameBoard                        ; 2/3   (14)    (71)
+        sta WSYNC                               ; 3     (11)    (68)
+        bne FlyGameBoard                        ; 2/3
         
         jmp EndofViewableScreen                 ; 3
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5076,9 +5060,9 @@ SkipP1JoinGame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Player 2 Join Game ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Player Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Player Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         ldx #0
 PlayerControl
@@ -5142,9 +5126,9 @@ SkipHidePlayerOverflow
         beq PlayerControl
 SkipPlayer1Move
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Player Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Player Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Players Detect Hit ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5591,6 +5575,7 @@ SkipSwitchReset
 
 FlyGameOverscanWaitLoop
         lda TIMINT
+        and #%10000000
         beq FlyGameOverscanWaitLoop
 
         jmp FlyGameStartOfFrame
