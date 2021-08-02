@@ -3527,44 +3527,42 @@ ENDBank1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Bank1 Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Fly Game Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-FLY_GAME_TITLE_BG_COLOR                 = #$9E ;57
-FLY_GAME_TITLE_COLOR                    = #$02
+FLY_GAME_TITLE_BACKGROUND_COLOR         = #$9E ;57
+FLY_GAME_TITLE_TEXT_COLOR               = #$02
 
 FLY_GAME_TITLE_VPOS                     = #41 ;56
 FLY_GAME_TITLE_HPOS                     = #59
 FLY_GAME_TITLE_MENU_VPOS                = #121 ;#135
+FLY_GAME_GAME_OVER_TEXT_HPOS            = #57
 
-
-FLY_GAME_GAME_OVER_BACKGROUND_COLOR     = #$0A
 FLY_GAME_GAME_BACKGROUND_COLOR          = #$9E ;0A
-FLY_GAME_SCORE_COLOR                    = #$72
-FLY_GAME_JOIN_COLOR                     = #$46
+FLY_GAME_SCORE_COLOR                    = #$96;86;72
+FLY_GAME_JOIN_COLOR                     = #$48 ;46
 FLY_GAME_TIMER_COLOR                    = #$0F ;62
-FLY_GAME_PLAYER0_COLOR                  = #$03
-FLY_GAME_PLAYER1_COLOR                  = #$0F  ;83
+FLY_GAME_PLAYER0_COLOR                  = #$02
+FLY_GAME_PLAYER1_COLOR                  = #$48 ;0F  ;83
 
 FLY_GAME_GAME_OVER_RESTART_DELAY        = #60
 FLY_GAME_COUNTDOWN_TIMER_SECOND_DIVIDER = #60
-FLY_GAME_TIMER_DURATION                 = #153  ;#9
+FLY_GAME_TIMER_DURATION                 = #$4
 FLY_GAME_ENEMY_GENERATION_DELAY         = #50
 
-P0XSTARTPOS                             = #15
-P0YSTARTPOS                             = #78
-P1XSTARTPOS                             = #125
-P1YSTARTPOS                             = #78
+FLY_GAME_P0_X_START_POS                 = #15
+FLY_GAME_P0_Y_START_POS                 = #78
+FLY_GAME_P1_X_START_POS                 = #125
+FLY_GAME_P1_Y_START_POS                 = #78
+
+FLY_GAME_PLAYER_HEIGHT                  = #24
+FLY_GAME_ENEMY_HEIGHT                   = #4
 
 FLY_GAME_FIELD_START_LINE               = #42
-
-PLAYERHEIGHT                            = #24
-ENEMYHEIGHT                             = #4
-
-PLAYER2JOIN_H_POS                       = #100
-P2_JOIN_FLASHRATE                       = #52
+FLY_GAME_P1_JOIN_HPOS                   = #100
+FLY_GAME_P1_JOIN_FLASH_RATE             = #52
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Fly Game Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         
         SEG.U bank1vars
@@ -3577,15 +3575,15 @@ TempLetterBuffer        ds 1
 GameSelectFlag          ds 1
 StartGameFlag           ds 1
 GameOverFlag            ds 1
+
 DebounceCtr             ds 1                    ; Gotta Keep this in spot 7 to match Bank0
 P1FireDebounceCtr       ds 1
+OptionsLoopCtr          ds 1
 
 Game1SelectionGfx       ds 2
 Game2SelectionGfx       ds 2
 EnemyOptionGfx1         ds 2
 EnemyOptionGfx2         ds 2
-
-OptionsLoopCtr          ds 1
 
 BlockP0Swat             ds 1
 BlockP1Fire             ds 1
@@ -3645,10 +3643,10 @@ P1Score2idx             ds 1
 P0ScoreArr              ds 5
 P1ScoreArr              ds 5
 
-FlyGameNotePtrCh0     ds 2
-FlyGameNotePtrCh1     ds 2
-FlyGameFrameCtrTrk0   ds 1
-FlyGameFrameCtrTrk1   ds 1
+FlyGameNotePtrCh0       ds 2
+FlyGameNotePtrCh1       ds 2
+FlyGameFrameCtrTrk0     ds 1
+FlyGameFrameCtrTrk1     ds 1
 
 
         echo "----"
@@ -3662,15 +3660,9 @@ FlyGameFrameCtrTrk1   ds 1
 ; TODO: FlyGame
 
 ; TODO: Add Game Title Music
-; TODO: Add Game Title Colors
-; TODO: Add Game Title Art/Gfx
-
-; TODO: Remove HMOVE Lines
 ; TODO: Add Game Music
 ; TODO: Add Game Sound FX
-; TODO: Set Player and Game Colors
-
-; TODO: Condense Ram
+; TODO: Optimize Code
 
 
 SwitchToBank0
@@ -3686,135 +3678,142 @@ Clear
         bne Clear
         cld
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Fly Game Start
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Fly Game Start ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 PlayFlyGame
-FlyGameScreen
-        lda #30
-        sta DebounceCtr
-        sta P1FireDebounceCtr
+        lda #30                         ; Initialize the Deboucer Counters to
+        sta DebounceCtr                 ; 30 frames to prevent reading any 
+        sta P1FireDebounceCtr           ; button presses during each start up
 
-        lda StartGameFlag
-        beq SkipFlyGameInit
+        lda #FLY_GAME_TITLE_BACKGROUND_COLOR
+        sta COLUBK
 
-; Fly Game Init
-        lda #P0XSTARTPOS
+        lda StartGameFlag               ; Check to see if the game is started
+        beq FlyGameTitleInit            ; and init the game or the title screen
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Fly Game Game Init  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda #FLY_GAME_P0_X_START_POS
         sta Player0XPos
-
-        ldx #P0YSTARTPOS
+        ldx #FLY_GAME_P0_Y_START_POS
         stx Player0YPos
+
+        lda GameSelectFlag
+        beq OnePlayerGame
+        lda #FLY_GAME_P1_X_START_POS
+        sta Player1XPos
+        lda #FLY_GAME_P1_Y_START_POS
+        sta Player1YPos
+OnePlayerGame
 
         ldy #FLY_GAME_PLAYER0_COLOR
         sty COLUP0
         ldy #FLY_GAME_PLAYER1_COLOR
         sty COLUP1
 
-        ldy #FLY_GAME_GAME_BACKGROUND_COLOR
-        sta COLUBK
-
-        lda GameSelectFlag
-        beq OnePlayerGame
-        lda #P1XSTARTPOS
-        sta Player1XPos
-        lda #P1YSTARTPOS
-        sta Player1YPos
-OnePlayerGame
+        ; ldy #FLY_GAME_GAME_BACKGROUND_COLOR
+        ; sta COLUBK
 
         ldx #FLY_GAME_ENEMY_GENERATION_DELAY
         stx Enemy0GenTimer
         stx Enemy1GenTimer
-
-        lda #<FlyGameTrack0                     ; Init for Rom Music Player
-        sta FlyGameNotePtrCh0
-        lda #>FlyGameTrack0
-        sta FlyGameNotePtrCh0+1
-
-        lda #<FlyGameTrack1                     ; Init for Rom Music Player
-        sta FlyGameNotePtrCh1
-        lda #>FlyGameTrack1
-        sta FlyGameNotePtrCh1+1
 
         ldx #FLY_GAME_TIMER_DURATION
         stx CountdownTimer
 
         lda #FLY_GAME_COUNTDOWN_TIMER_SECOND_DIVIDER
         sta CountdownTimerInterval
-        jmp FlyGameStartOfFrame
-SkipFlyGameInit
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Fly Game Title Init
-        ldy #FLY_GAME_TITLE_COLOR
-        sty COLUPF
-        
-        ldy #FLY_GAME_TITLE_COLOR
-        sty COLUP0
-        sty COLUP1
 
-        ldx #0
-        lda #FLY_GAME_TITLE_HPOS
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
-        
-        ldx #1
-        lda #FLY_GAME_TITLE_HPOS+8
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
+        lda #<FlyGameTrack0             ; Initialize Note Pointer 0 to the
+        sta FlyGameNotePtrCh0           ; beginning of Game Music Track 0 in
+        lda #>FlyGameTrack0             ; Rom for the Music Player
+        sta FlyGameNotePtrCh0+1         ;
 
-        lda #<Cursor
-        sta Game1SelectionGfx
-        lda #>Cursor
-        sta Game1SelectionGfx+1
-
-        lda #<Space
-        sta Game2SelectionGfx
-        lda #>Space
-        sta Game2SelectionGfx+1
-
-        lda #<FlyGameTitleTrack0                     ; Init for Rom Music Player
-        sta FlyGameNotePtrCh0
-        lda #>FlyGameTitleTrack0
-        sta FlyGameNotePtrCh0+1
-
-        lda #<FlyGameTitleTrack1                     ; Init for Rom Music Player
-        sta FlyGameNotePtrCh1
-        lda #>FlyGameTitleTrack1
+        lda #<FlyGameTrack1             ; Initialize Note Pointer 1 to the
+        sta FlyGameNotePtrCh1           ; beginning of Game Music Track 1 in
+        lda #>FlyGameTrack1             ; Rom for the Music Player
         sta FlyGameNotePtrCh1+1
 
+        jmp FlyGameStartOfFrame
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Fly Game Game Init  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Fly Game Title Init  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+FlyGameTitleInit
+        ldy #FLY_GAME_TITLE_TEXT_COLOR  ; Set the color for all the text on the
+        sty COLUPF                      ; title screen
+        sty COLUP0                      ;
+        sty COLUP1                      ;
+
+        ldx #0                          ; Horizontally position the player
+        lda #FLY_GAME_TITLE_HPOS        ; sprites to draw the Start Menu
+        jsr CalcXPos_bank1              ; on the Title Screen
+        sta WSYNC                       ; Player 0 is positioned according to
+        sta HMOVE                       ; FLY_GAME_TITLE_HPOS
+        
+        ldx #1                          ; and Player 1 is positioned 8 pixels
+        lda #FLY_GAME_TITLE_HPOS+8      ; to the right of Player 0 since our
+        jsr CalcXPos_bank1              ; font is 8 pixels wide
+        sta WSYNC                       ;
+        sta HMOVE                       ;
+
+        lda #<Cursor                    ; Set the Start Menu Cursor to default
+        sta Game1SelectionGfx           ; to a One player Game
+        lda #>Cursor                    ; 
+        sta Game1SelectionGfx+1         ; 
+
+        lda #<Space                     ; Make the Two player game not selected
+        sta Game2SelectionGfx           ; in the Start Menu
+        lda #>Space                     ;
+        sta Game2SelectionGfx+1         ;
+
+        lda #<FlyGameTitleTrack0        ; Initialize Note Pointer 0 to the
+        sta FlyGameNotePtrCh0           ; beginning of Title Music Track 0 in
+        lda #>FlyGameTitleTrack0        ; Rom for the Music Player
+        sta FlyGameNotePtrCh0+1         ;
+
+        lda #<FlyGameTitleTrack1        ; Initialize Note Pointer 1 to the
+        sta FlyGameNotePtrCh1           ; beginning of Title Music Track 1 in
+        lda #>FlyGameTitleTrack1        ; Rom for the Music Player
+        sta FlyGameNotePtrCh1+1         ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Fly Game Title Init  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
 FlyGameStartOfFrame
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Start VBLANK Processing
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Start VBLANK ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldy #0
         lda #2
 
-        sty VBLANK
-        sty COLUBK
-; 3 VSYNC Lines
-        sta VSYNC ; Turn on VSYNC
-        sta WSYNC
-        sta WSYNC
-        sta WSYNC
-        sty VSYNC ; Turn off VSYNC
+        sta VSYNC                       ; Turn on VSYNC
+        sta WSYNC                       ; Wait 3 lines
+        sta WSYNC                       ;
+        sta WSYNC                       ;
+        sty VSYNC                       ; Turn off VSYNC
 
-; 37 VBLANK lines
-        lda #43
-        sta TIM64T
+        lda #43                         ; Set a Timer to take 37 lines for the
+        sta TIM64T                      ; VBLANK 
 
         lda StartGameFlag
-        bne FlyGameVSYNC
-        jmp SkipFlyGameVBLANK
-FlyGameVSYNC
+        bne FlyGameVBLANKProcessing
+        jmp SkipFlyGameVBLANKProcessing
+FlyGameVBLANKProcessing
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Scoring ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        ldy #0
 CalcPlayerScoreIdx
         lda P0Score1,y
         sta P0Score1idx,y
@@ -3839,71 +3838,44 @@ CalcPlayerScoreIdx
 CalcScoreGraphics
         ;P0
         txa
-        ; clc
-        adc P0Score1idx                                 ; 3
-        tay                                             ; 2
-        lda Zero_bank1,y                                ; 4
-        and #%00001111                                  ; 2    
-        sta P0ScoreTmp                                  ; 3     
+        adc P0Score1idx
+        tay
+        lda Zero_bank1,y
+        and #$0F
+        sta P0ScoreTmp
 
         txa
-        ; clc   
-        adc P0Score2idx                                 ; 3
-        tay                                             ; 2
-        lda Zero_bank1,y                                ; 4
-        and #%11110000                                  ; 2     
+        adc P0Score2idx
+        tay
+        lda Zero_bank1,y
+        and #$F0
 
-        ora P0ScoreTmp                                  ; 3     
-        sta P0ScoreArr,x                                ; 3
+        ora P0ScoreTmp
+        sta P0ScoreArr,x
 
         ;P1
         txa
-        ; clc
-        adc P1Score1idx                                 ; 3
-        tay                                             ; 2
-        lda Zero_bank1,y                                ; 4
-        and #%00001111                                  ; 2    
-        sta P1ScoreTmp                                  ; 3     
+        adc P1Score1idx
+        tay
+        lda Zero_bank1,y
+        and #$0F
+        sta P1ScoreTmp
 
         txa
-        ; clc   
-        adc P1Score2idx                                 ; 3
-        tay                                             ; 2
-        lda Zero_bank1,y                                ; 4
-        and #%11110000                                  ; 2     
+        adc P1Score2idx
+        tay
+        lda Zero_bank1,y
+        and #$F0
 
-        ora P1ScoreTmp                                  ; 3     
-        sta P1ScoreArr,x                                ; 3
+        ora P1ScoreTmp
+        sta P1ScoreArr,x
 
         inx
         cpx #5
-        bcc CalcScoreGraphics                           ; 2/3 
+        bcc CalcScoreGraphics
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Scoring ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Time Countdown Timer  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda CountdownTimer
-        beq SkipTimer
-        
-        ldy CountdownTimerInterval
-        bne SkipCountdownTimer
-        
-        sed
-        sbc #1
-        sta CountdownTimer
-        cld
-
-        lda #FLY_GAME_COUNTDOWN_TIMER_SECOND_DIVIDER
-        sta CountdownTimerInterval
-SkipCountdownTimer
-        dec CountdownTimerInterval
-SkipTimer
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Time Countdown Timer  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Determine Winner  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -3933,6 +3905,29 @@ Player1Wins
 SkipDetermineWinner
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Determine Winner  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Time Countdown Timer  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda CountdownTimer
+        beq SkipTimer
+        
+        ldy CountdownTimerInterval
+        bne SkipCountdownTimer
+        
+        sed
+        sbc #1
+        sta CountdownTimer
+        cld
+
+        lda #FLY_GAME_COUNTDOWN_TIMER_SECOND_DIVIDER
+        sta CountdownTimerInterval
+SkipCountdownTimer
+        dec CountdownTimerInterval
+SkipTimer
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Time Countdown Timer  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -3990,13 +3985,13 @@ BuildCountdownTimerGraphics
         stx GRP0
         stx GRP1
         stx GRP0
-        lda #PLAYER2JOIN_H_POS
+        lda #FLY_GAME_P1_JOIN_HPOS
         jsr CalcXPos_bank1
         sta WSYNC
         sta HMOVE
 
         ldx #1
-        lda #PLAYER2JOIN_H_POS+8
+        lda #FLY_GAME_P1_JOIN_HPOS+8
         jsr CalcXPos_bank1
         sta WSYNC
         sta HMOVE
@@ -4011,17 +4006,18 @@ BuildCountdownTimerGraphics
 
         lda #FLY_GAME_SCORE_COLOR
         sta COLUPF
-SkipFlyGameVBLANK
+SkipFlyGameVBLANKProcessing
 
 FlyGameVerticalBlankEndWaitLoop
         lda TIMINT
         and #%10000000
         beq FlyGameVerticalBlankEndWaitLoop
         sta WSYNC
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; End VBLANK Processing
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ; lda #0
+        sta VBLANK
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End VBLANK ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         lda StartGameFlag
         beq SkipFlyGameScreenSelect
@@ -4038,15 +4034,15 @@ SkipSetGameOverRestartDelay
         sta GameOverFlag
 SkipFlyGameGameoverScreen
 
-        lda #FLY_GAME_GAME_BACKGROUND_COLOR
-        sta COLUBK
+        ; lda #FLY_GAME_GAME_BACKGROUND_COLOR
+        ; sta COLUBK
 
         ldy #1
         sty VDELP0
         sty VDELP1
 
         ldx #0
-        IF PLAYER2JOIN_H_POS <= 47
+        IF FLY_GAME_P1_JOIN_HPOS <= 47
          sta WSYNC
         ENDIF
 SkipFlyGameScreenSelect
@@ -4066,8 +4062,8 @@ SkipFlyGameScreenSelect
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 FlyGameTitleScreen
-        lda #FLY_GAME_TITLE_BG_COLOR
-        sta COLUBK
+        ; lda #FLY_GAME_TITLE_BACKGROUND_COLOR
+        ; sta COLUBK
         ldy #0
         ldx #0
 
@@ -4091,6 +4087,7 @@ FlyGameTitleLine1
         lda #0
         sta PF1
         sta PF2
+ 
 SkipFlyGameTitleLine1
         inx
         cpx #FLY_GAME_TITLE_VPOS+20
@@ -4181,6 +4178,36 @@ SkipFlyGameNumPlayersSelectLine2
         ldy #0
         sty OptionsLoopCtr
 
+        lda #>FA
+        sta EnemyOptionGfx1+1
+        sta EnemyOptionGfx2+1
+
+        lda SWCHB
+        and #SWITCH_P0_PRO_DIFFICULTY
+        bne FastEnemies
+        lda #<SL
+        sta EnemyOptionGfx1
+        ; lda #>SL
+        ; sta EnemyOptionGfx1+1
+
+        lda #<OW
+        sta EnemyOptionGfx2
+        ; lda #>OW
+        ; sta EnemyOptionGfx2+1
+        jmp SlowEnemies
+FastEnemies
+        lda #<FA
+        sta EnemyOptionGfx1
+        ; lda #>FA
+        ; sta EnemyOptionGfx1+1
+
+        lda #<ST
+        sta EnemyOptionGfx2
+        ; lda #>ST
+        ; sta EnemyOptionGfx2+1
+SlowEnemies
+
+
 DrawOptions
         ldx #4
 FlyGameOptionsLineBuffer
@@ -4234,9 +4261,9 @@ FlyGameOptionsLine
         sty GRP1
         sty GRP0
 
-        lda #>WI
-        sta EnemyOptionGfx1+1
-        sta EnemyOptionGfx2+1
+        ; lda #>WI
+        ; sta EnemyOptionGfx1+1
+        ; sta EnemyOptionGfx2+1
 
         lda SWCHB
         and #SWITCH_P1_PRO_DIFFICULTY
@@ -4288,8 +4315,8 @@ FlyGameGameScreen
         bne FlyGameSkipDrawPlayer2Join  ; game. If so don't show the Flasher
 
         lda FlasherCtr                  ; For a one Player game, check the
-        cmp #P2_JOIN_FLASHRATE/2-10     ; Flasher Timer to see if we should
-        bcs FlyGameDrawPlayer2Join      ; Draw the Join Flasher or not
+        cmp #FLY_GAME_P1_JOIN_FLASH_RATE/2-10 ; Flasher Timer to see if we
+        bcs FlyGameDrawPlayer2Join      ; should draw the Join Flasher or not
 
 FlyGameSkipDrawPlayer2Join
         inx                             ; If we're not drawing the flasher then
@@ -4445,8 +4472,9 @@ SkipDisplayTimer
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Drawing Score and Timer Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        ldx #0
-        stx COLUBK
+        ldx #2
+        stx VBLANK
+        ; stx COLUBK
 
         lda #FLY_GAME_PLAYER0_COLOR
         sta COLUP0
@@ -4456,60 +4484,63 @@ SkipDisplayTimer
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Adjust WSYNC for Players ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda Player0XPos
-        cmp #$87
-        bcs SkipWSYNC
-        sta WSYNC
-SkipWSYNC
+;         lda Player0XPos
+;         cmp #$87
+;         bcs SkipWSYNC
+;         sta WSYNC
+; SkipWSYNC
 
-        lda Player1XPos
-        cmp #$87
-        bcs SkipWSYNC2
-        sta WSYNC
-SkipWSYNC2
+;         lda Player1XPos
+;         cmp #$87
+;         bcs SkipWSYNC2
+;         sta WSYNC
+; SkipWSYNC2
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Adjust WSYNC for Players ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         
         ldy GameOverFlag
         beq SkipLoadGameOverTextPosition
-        lda #ATARI_PAINT_TITLE_H_POS
+        lda #FLY_GAME_GAME_OVER_TEXT_HPOS
         sta Player0XPos
-        lda #ATARI_PAINT_TITLE_H_POS+8
+        lda #FLY_GAME_GAME_OVER_TEXT_HPOS+8
         sta Player1XPos
 SkipLoadGameOverTextPosition
-        ; lda #$70
-        ; sta HMM0
-        ; sta HMM1
 
         ldx #0
         lda Player0XPos
+        cmp #$87
+        bcs SkipWSYNCP0
+        sta WSYNC
+SkipWSYNCP0
         jsr CalcXPos_bank1
         sta WSYNC
-        ; SLEEP 71
         sta HMOVE
 
         ldx #1
         lda Player1XPos
+        cmp #$87
+        bcs SkipWSYNCP1
+        sta WSYNC
+SkipWSYNCP1
         jsr CalcXPos_bank1
         sta WSYNC
-        ; SLEEP 71
         sta HMOVE
         
-        ldx #1
+        lda #0
         stx VDELP0
         
-        ldx #39
-        
+        ldx #40
 ScoreAreaBuffer
-        inx
-        lda #FLY_GAME_GAME_BACKGROUND_COLOR
+        ; lda #FLY_GAME_GAME_BACKGROUND_COLOR
         sta WSYNC
+        ; sta COLUBK
+        sta VBLANK
+
         ldy GameOverFlag
         bne DrawGameOverScreen
         
-        sta COLUBK
-        lda #0
+        ; lda #0
         ldy #2
         inx 
         sta WSYNC
@@ -4602,10 +4633,14 @@ SkipP1ResetHeight
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Game Over Screen Start ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 DrawGameOverScreen
-        sta COLUBK
+        ; sta COLUBK
         lda #1
         sta VDELP0
         sta VDELP1
+
+        lda #FLY_GAME_PLAYER0_COLOR
+        sta COLUP0
+        sta COLUP1
 
         lda #THREE_COPIES_CLOSE
         sta NUSIZ0
@@ -4632,7 +4667,7 @@ OnePlayerGameOverTextDelay
         lda TIMINT
         ; and #%10000000
         beq OnePlayerGameOverTextDelay
-        SLEEP 4  
+        SLEEP 4
 
 DrawGameOverScreenText1Player
         stx TempXPos                                    ; 3     6
@@ -4666,9 +4701,9 @@ DrawGameOverScreenText1Player
         inx                                             ; 2     70
 
         cpx #63                                         ; 2     72
-        nop                                             ; 2     74
-        nop                                             ; 2     76
-        ; SLEEP 3
+        ; nop                                             ; 2     74
+        ; nop                                             ; 2     76
+        SLEEP 4
         bne DrawGameOverScreenText1Player
 
         lda #0
@@ -4851,7 +4886,7 @@ EndofViewableScreen
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Setup Overscan  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #%00000010
+        lda #2
         sta VBLANK
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Setup Overscan  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4949,35 +4984,6 @@ SkipSelectFlyGame1Player
         sta Game1SelectionGfx+1
 SkipSelectFlyGame2Player
 
-        lda #>FA
-        sta EnemyOptionGfx1+1
-        sta EnemyOptionGfx2+1
-
-        lda SWCHB
-        and #SWITCH_P0_PRO_DIFFICULTY
-        bne FastEnemies
-        lda #<SL
-        sta EnemyOptionGfx1
-        ; lda #>SL
-        ; sta EnemyOptionGfx1+1
-
-        lda #<OW
-        sta EnemyOptionGfx2
-        ; lda #>OW
-        ; sta EnemyOptionGfx2+1
-        jmp SlowEnemies
-FastEnemies
-        lda #<FA
-        sta EnemyOptionGfx1
-        ; lda #>FA
-        ; sta EnemyOptionGfx1+1
-
-        lda #<ST
-        sta EnemyOptionGfx2
-        ; lda #>ST
-        ; sta EnemyOptionGfx2+1
-SlowEnemies
-
         lda #TWO_COPIES_CLOSE
         sta NUSIZ0
         lda #ONE_COPY
@@ -4994,7 +5000,7 @@ SkipFlyGameTitleOverscan
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda FlasherCtr
         bne DecFlasher
-        lda #P2_JOIN_FLASHRATE
+        lda #FLY_GAME_P1_JOIN_FLASH_RATE
         sta FlasherCtr
         jmp SkipFlasher
 DecFlasher
@@ -5050,9 +5056,9 @@ SkipDisableControls
         lda #1
         sta GameSelectFlag
 
-        lda #P1XSTARTPOS
+        lda #FLY_GAME_P1_X_START_POS
         sta Player1XPos
-        lda #P1YSTARTPOS
+        lda #FLY_GAME_P1_Y_START_POS
         sta Player1YPos
         
 SkipP1JoinGame
@@ -5081,7 +5087,7 @@ SkipMovePlayerUp
         lda P0JoyStickDown,x
         bit SWCHA
         bne SkipMovePlayerDown
-        cpy #192-#PLAYERHEIGHT
+        cpy #192-#FLY_GAME_PLAYER_HEIGHT
         beq SkipMovePlayerDown
         iny
         iny
@@ -5107,10 +5113,10 @@ SkipMovePlayerLeft
 SkipMovePlayerRight
 
 ;; Hide Player Overflow
-        lda #PLAYERHEIGHT
+        lda #FLY_GAME_PLAYER_HEIGHT
         sta P0Height,x
         
-        lda #192-#PLAYERHEIGHT*2-4
+        lda #192-#FLY_GAME_PLAYER_HEIGHT*2-4
         cmp Player0YPos,x
         bcs SkipHidePlayerOverflow
         lda #192
@@ -5185,7 +5191,7 @@ CheckEnemyHit
 
         lda Player0YPos,x
         sec
-        sbc #ENEMYHEIGHT*2-1
+        sbc #FLY_GAME_ENEMY_HEIGHT*2-1
         cmp Enemy0YPos,y
         bcs SkipPlayerEnemyHit
         clc
@@ -5283,7 +5289,6 @@ SkipEnemy0CountdownTimer
         bne SkipGenerateEnemy           ; execute the enemy generation code
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Check Generate Enemy ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Set Enemy Alive ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 SetEnemyAlive
         lda #1                          ; Start Enemy Generation by setting the
@@ -5320,7 +5325,7 @@ SkipTopE0StartEdge
         
         lda INPT2
         jsr GetRandomNumber
-        and #192-#FLY_GAME_FIELD_START_LINE-(ENEMYHEIGHT*2)-2
+        and #192-#FLY_GAME_FIELD_START_LINE-(FLY_GAME_ENEMY_HEIGHT*2)-2
         clc
         adc #FLY_GAME_FIELD_START_LINE
         ; and #254
@@ -5329,7 +5334,7 @@ SkipTopE0StartEdge
 SkipRightSideE0StartEdge
         cmp #2
         bne SkipBottomE0StartEdge
-        lda #192-(#ENEMYHEIGHT*2)
+        lda #192-(#FLY_GAME_ENEMY_HEIGHT*2)
         sta Enemy0YPos,x
         sty Enemy0XPos,x
         jmp SkipGenerateEnemy
@@ -5341,7 +5346,7 @@ SkipBottomE0StartEdge
         
         lda INPT2
         jsr GetRandomNumber
-        and #192-#FLY_GAME_FIELD_START_LINE-(ENEMYHEIGHT*2)-2 ;142
+        and #192-#FLY_GAME_FIELD_START_LINE-(FLY_GAME_ENEMY_HEIGHT*2)-2 ;142
         clc
         adc #FLY_GAME_FIELD_START_LINE
         ; and #254
@@ -5392,7 +5397,7 @@ RegenE0VSeed
         lda INPT4
         beq RegenE0VSeed
         jsr GetRandomNumber
-        and #192-#FLY_GAME_FIELD_START_LINE-(ENEMYHEIGHT*2)-2 ;#148
+        and #192-#FLY_GAME_FIELD_START_LINE-(FLY_GAME_ENEMY_HEIGHT*2)-2 ;#148
         clc
         adc #FLY_GAME_FIELD_START_LINE
         sta Enemy0VWayPoint,x
@@ -5464,7 +5469,7 @@ SkipRegenWayPoints
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Set Enemy End Point ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda Enemy0YPos,x                ; Add Enemy height to the current enemy
         clc                             ; Y Position to determine when we 
-        adc #ENEMYHEIGHT*2              ; should stop drawing the enemy
+        adc #FLY_GAME_ENEMY_HEIGHT*2    ; should stop drawing the enemy
         sta Enemy0YPosEnd,x             ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Set Enemy End Point ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -5710,20 +5715,17 @@ ClearRam
         sta HMOVE
 AtariPaintFrame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Start VBLANK Processing ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Start VBLANK ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #0
-        sta VBLANK
 
 ; 3 VSYNC Lines
         lda #2
         sta VSYNC ; Turn on VSYNC
-
         sta WSYNC
         sta WSYNC
         sta WSYNC
-        lda #0
-        sta VSYNC ; Turn off VSYNC
+        ldy #0
+        sty VSYNC ; Turn off VSYNC
 
 ; 37 VBLANK lines
         ldx #37
@@ -5731,19 +5733,11 @@ AtariPaintVerticalBlank
         sta WSYNC
         dex
         bne AtariPaintVerticalBlank
+        stx VBLANK                      
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End VBLANK Processing ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End VBLANK ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        
-        IF ATARI_PAINT_TITLE_H_POS <= 47
-         sta WSYNC
-        ENDIF
-        
-        ldx #ATARI_PAINT_BACKGROUND_COLOR
-        stx COLUBK
 
-        ldx #0
-        ldy #0
 AtariPaintViewableScreen
         sta WSYNC
         inx
@@ -5902,8 +5896,7 @@ HMOVECountdown
         sta GRP1
 SkipColorCanvas
 
-        ldx #24
-        inx
+        ldx #25
         
         sta WSYNC
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -6068,10 +6061,10 @@ SkipDrawMultiColorBrush
         dec CanvasRowLineCtr                            ; 5
         bne SkipResetMultiColorCanvasRowLineCtr         ; 2/3
         
-        tya                                             ; 2
-        clc                                             ; 2
-        adc #4                                          ; 2 
-        tay                                             ; 2
+        iny                                             ; 2
+        iny                                             ; 2
+        iny                                             ; 2 
+        iny                                             ; 2
 
         lda #ATARI_PAINT_CANVAS_ROW_HEIGHT              ; 2
         sta CanvasRowLineCtr                            ; 3     (20)
@@ -6091,14 +6084,7 @@ SkipResetMultiColorCanvasRowLineCtr
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 EndOfCanvas
-        ; lda #0
-        
 
-; AtariPaintEndOfScreenBuffer
-        ; sta WSYNC
-        ; inx
-        ; cpx #192
-        ; bne AtariPaintEndOfScreenBuffer
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Setup Overscan  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -6106,7 +6092,6 @@ EndOfCanvas
         sta VBLANK
 
         lda #0
-        sta COLUBK
         sta PF1
         
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -6130,9 +6115,7 @@ EndOfCanvas
         lda SWCHB
         and #SWITCH_GAME_SELECT
         ora DebounceCtr
-        bne AtariPaintSkipSwitchToBank0
-        ; Put game select logic code here
-        
+        bne AtariPaintSkipSwitchToBank0        
         jmp SwitchToBank0
 AtariPaintSkipSwitchToBank0
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -6217,7 +6200,7 @@ SkipMoveBrushRight
        
 SkipMoveBrush
 
-        ldx #2                                  ; Set Player Missle 0 Position
+        ldx #2                                  ; Set Missle 0 Position
         lda BrushXPos
         jsr CalcXPos_bank1
         sta WSYNC
@@ -6573,6 +6556,9 @@ BrushColorIndicatior
         sty COLUP0                      ; color from the palette
         sty COLUP1                      ; 
 
+        lda #ATARI_PAINT_BACKGROUND_COLOR ; Set the Background Color back to 
+        sta COLUBK                      ; the default for the top of the screen
+
         lda #ATARI_PAINT_CANVAS_ROW_HEIGHT ; Reset the Canavs Row Line Counter
         sta CanvasRowLineCtr            ; To the Row Height
 
@@ -6697,8 +6683,7 @@ PlayerGfx  .byte #%01111110
            .byte #%00011000
            .byte #%00011000
            .byte #%00011000
-        ;    .byte #0
-        ;    .byte #0
+
 
 PlayerSwatGfx  
            .byte #%00000000
@@ -6801,25 +6786,19 @@ IR         .byte  #%11101110
            .byte  #%11101010
            .byte  #0
 
-SS         .byte  #%11101110
+SS         .byte  #%01100110
            .byte  #%10001000
            .byte  #%11101110
            .byte  #%00100010
-           .byte  #%11101110
+           .byte  #%11001100
            .byte  #0
 
 _F         .byte  #%00001110
            .byte  #%00001000
-           .byte  #%00001110
+           .byte  #%00001100
            .byte  #%00001000
            .byte  #%00001000
            .byte  #0
-
-; W          .byte  #%10101010
-;            .byte  #%10101010
-;            .byte  #%11101110
-;            .byte  #%11101110
-;            .byte  #%11101110
 
 F_         .byte  #%11100000
            .byte  #%10000000
@@ -6841,13 +6820,6 @@ C_         .byte  #%11100000
            .byte  #%10000000
            .byte  #%11100000
            .byte  #0
-
-; Space      .byte  #%00000000
-;            .byte  #%00000000
-;            .byte  #%00000000
-;            .byte  #%00000000
-;            .byte  #%00000000
-;            .byte  #0
 
 Cursor     .byte  #%00001000
            .byte  #%00001100
@@ -6923,7 +6895,7 @@ AT         .byte  #%01001110
            .byte  #%10100100
            .byte  #0
 
-AR         .byte  #%01001110
+AR         .byte  #%01001100
            .byte  #%10101010
            .byte  #%11101110
            .byte  #%10101100
@@ -6937,14 +6909,14 @@ I_         .byte  #%11100000
            .byte  #%11100000
            .byte  #0
 
-PA         .byte  #%11100100
+PA         .byte  #%11000100
            .byte  #%10101010
            .byte  #%11101110
            .byte  #%10001010
            .byte  #%10001010
            .byte  #0
 
-IN         .byte  #%11101110
+IN         .byte  #%11101100
            .byte  #%01001010
            .byte  #%01001010
            .byte  #%01001010
@@ -6986,7 +6958,7 @@ _W         .byte  #%00001010
            .byte  #%00001010
            .byte  #%00001110
            .byte  #%00001110
-           .byte  #%00001110
+           .byte  #%00001010
            .byte  #0
 
 SC         .byte  #%11101110
@@ -7034,18 +7006,17 @@ _T         .byte  #%00001110
 
 IE         .byte  #%11101110
            .byte  #%01001000
-           .byte  #%01001110
+           .byte  #%01001100
            .byte  #%01001000
            .byte  #%11101110
            .byte  #0
 
 ME         .byte  #%10101110
            .byte  #%11101000
-           .byte  #%10101110
+           .byte  #%10101100
            .byte  #%10101000
            .byte  #%10101110
            .byte  #0
-
 
 _E         .byte  #%00001110
            .byte  #%00001000
@@ -7053,56 +7024,48 @@ _E         .byte  #%00001110
            .byte  #%00001000
            .byte  #%00001110
            
-
 NE         .byte  #%11001110
            .byte  #%10101000
-           .byte  #%10101110
+           .byte  #%10101100
            .byte  #%10101000
            .byte  #%10101110
            
-
 MI         .byte  #%10101110
            .byte  #%11100100
            .byte  #%10100100
            .byte  #%10100100
            .byte  #%10101110
            
-
-ES         .byte  #%11101110
+ES         .byte  #%11100110
            .byte  #%10001000
            .byte  #%11001110
            .byte  #%10000010
-           .byte  #%11101110
+           .byte  #%11101100
            
-
-SL         .byte  #%11101000
+SL         .byte  #%01101000
            .byte  #%10001000
            .byte  #%11101000
            .byte  #%00101000
-           .byte  #%11101110
+           .byte  #%11001110
            
-
-OW         .byte  #%11101010
+OW         .byte  #%01001010
            .byte  #%10101010
            .byte  #%10101110
            .byte  #%10101110
-           .byte  #%11101010
+           .byte  #%01001010
            
-
 FA         .byte  #%11100100
            .byte  #%10001010
            .byte  #%11001110
            .byte  #%10001010
            .byte  #%10001010
            
-
-ST         .byte  #%11101110
+ST         .byte  #%01101110
            .byte  #%10000100
            .byte  #%11100100
            .byte  #%00100100
-           .byte  #%11100100
+           .byte  #%11000100
            
-
 TA         .byte  #%11100100
            .byte  #%01001010
            .byte  #%01001110
@@ -7121,14 +7084,14 @@ LD         .byte  #%10001100
            .byte  #%10001010
            .byte  #%11101100
 
-P0JoyStickUp                  .byte #%00010000
-P1JoyStickUp                  .byte #%00000001
-P0JoyStickDown                .byte #%00100000
-P1JoyStickDown                .byte #%00000010
-P0JoyStickLeft                .byte #%01000000
-P1JoyStickLeft                .byte #%00000100
-P0JoyStickRight               .byte #%10000000
-P1JoyStickRight               .byte #%00001000
+P0JoyStickUp                    .byte #P0_JOYSTICK_UP
+P1JoyStickUp                    .byte #P1_JOYSTICK_UP
+P0JoyStickDown                  .byte #P0_JOYSTICK_DOWN
+P1JoyStickDown                  .byte #P1_JOYSTICK_DOWN
+P0JoyStickLeft                  .byte #P0_JOYSTICK_LEFT
+P1JoyStickLeft                  .byte #P1_JOYSTICK_LEFT
+P0JoyStickRight                 .byte #P0_JOYSTICK_RIGHT
+P1JoyStickRight                 .byte #P1_JOYSTICK_RIGHT
 
 FlyGameTitleTrack0   .byte 0,0,0,0,255
 FlyGameTitleTrack1   .byte 0,0,0,0,255
