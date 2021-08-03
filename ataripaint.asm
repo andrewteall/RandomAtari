@@ -3546,7 +3546,7 @@ FLY_GAME_PLAYER1_COLOR                  = #$48 ;0F  ;83
 
 FLY_GAME_GAME_OVER_RESTART_DELAY        = #60
 FLY_GAME_COUNTDOWN_TIMER_SECOND_DIVIDER = #60
-FLY_GAME_TIMER_DURATION                 = #$4
+FLY_GAME_TIMER_DURATION                 = #$3
 FLY_GAME_ENEMY_GENERATION_DELAY         = #50
 
 FLY_GAME_P0_X_START_POS                 = #15
@@ -3557,7 +3557,7 @@ FLY_GAME_P1_Y_START_POS                 = #78
 FLY_GAME_PLAYER_HEIGHT                  = #24
 FLY_GAME_ENEMY_HEIGHT                   = #4
 
-FLY_GAME_FIELD_START_LINE               = #42
+FLY_GAME_FIELD_START_LINE               = #40
 FLY_GAME_P1_JOIN_HPOS                   = #100
 FLY_GAME_P1_JOIN_FLASH_RATE             = #52
 
@@ -4252,7 +4252,7 @@ FlyGameOptionsLine
         ldy TempYPos                    ; 3     66
         iny                             ; 2     68
         
-        SLEEP 5
+        SLEEP 5                         
         lda TIMINT                      ; 4
         beq FlyGameOptionsLine          ; 2/3   2/3
 
@@ -4460,94 +4460,71 @@ SkipDisplayTimer
         cpx #31                         ; 2     See if we're at line 30
         sta WSYNC                       ; 3     Go to Next line
         bne ScoreArea                   ; 2/3 13If at line 30 then move on else branch back
-
-; Done Drawing the Score
-        lda #0                          ; We're on lines that don't have the score 
-        sta PF1                         ; so clear the playfield(PF1)
-        sta PF2                         ; 
-        
-        sta WSYNC
-        sta WSYNC
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Drawing Score and Timer Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        ldx #2
-        stx VBLANK
-        ; stx COLUBK
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Setup Gameover Screen and Game Board ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        lda #FLY_GAME_PLAYER0_COLOR
-        sta COLUP0
-        lda #FLY_GAME_PLAYER1_COLOR
-        sta COLUP1
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Adjust WSYNC for Players ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;         lda Player0XPos
-;         cmp #$87
-;         bcs SkipWSYNC
-;         sta WSYNC
-; SkipWSYNC
-
-;         lda Player1XPos
-;         cmp #$87
-;         bcs SkipWSYNC2
-;         sta WSYNC
-; SkipWSYNC2
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Adjust WSYNC for Players ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        sta PF1                         ; The Accumulator should still be set
+        sta PF2                         ; to 0 so clear the playfield
         
-        ldy GameOverFlag
-        beq SkipLoadGameOverTextPosition
-        lda #FLY_GAME_GAME_OVER_TEXT_HPOS
-        sta Player0XPos
-        lda #FLY_GAME_GAME_OVER_TEXT_HPOS+8
-        sta Player1XPos
+        sta WSYNC                       ; Wait 2 lines for spacing
+        sta WSYNC                       ;
+
+        sta COLUBK                      ; Set the Background to black to hide
+                                        ; HMOVE lines
+
+        lda #FLY_GAME_PLAYER0_COLOR     ; Set the player colors
+        sta COLUP0                      ;
+        lda #FLY_GAME_PLAYER1_COLOR     ;
+        sta COLUP1                      ;
+        
+        ldy GameOverFlag                ; If we're at the end of the game then
+        beq SkipLoadGameOverTextPosition ; load the Positions of the game over
+        lda #FLY_GAME_GAME_OVER_TEXT_HPOS ; text into the Players Horizontal
+        sta Player0XPos                 ; position
+        lda #FLY_GAME_GAME_OVER_TEXT_HPOS+8 ;
+        sta Player1XPos                 ;
 SkipLoadGameOverTextPosition
 
-        ldx #0
-        lda Player0XPos
-        cmp #$87
-        bcs SkipWSYNCP0
-        sta WSYNC
-SkipWSYNCP0
-        jsr CalcXPos_bank1
-        sta WSYNC
+        ldx #0                          ; Set the players Horizontal position
+        lda Player0XPos                 ; since we reused the players sprites
+        cmp #$87                        ; for other features of the game
+        bcs SkipWSYNCP0                 ; previously
+        sta WSYNC                       ; If we're drawing the player after 
+SkipWSYNCP0                             ; position $87 then we need to forgo a
+        jsr CalcXPos_bank1              ; WSYNC since the positioning routine
+        sta WSYNC                       ; will take more than a line to finish
         sta HMOVE
 
-        ldx #1
-        lda Player1XPos
-        cmp #$87
-        bcs SkipWSYNCP1
-        sta WSYNC
+        ldx #1                          ;
+        lda Player1XPos                 ;
+        cmp #$87                        ;
+        bcs SkipWSYNCP1                 ;
+        sta WSYNC                       ;
 SkipWSYNCP1
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
+        jsr CalcXPos_bank1              ;
+        sta WSYNC                       ;
+        sta HMOVE                       ;
         
-        lda #0
-        stx VDELP0
+        stx VDELP0                      ; Set Vertical Delay ON for Player 0
         
-        ldx #40
+        ldx #FLY_GAME_FIELD_START_LINE  ; Set X to the line the board starts
 ScoreAreaBuffer
-        ; lda #FLY_GAME_GAME_BACKGROUND_COLOR
-        sta WSYNC
-        ; sta COLUBK
-        sta VBLANK
+        lda #FLY_GAME_GAME_BACKGROUND_COLOR ; Load the background color
+        ldy #MISSLE_BALL_ENABLE         ; Set Y enable Missles or Ball Sprites
+        sta WSYNC                       ; Move to a new line
+        sta COLUBK                      ; Turn the background color back on
 
-        ldy GameOverFlag
-        bne DrawGameOverScreen
-        
-        ; lda #0
-        ldy #2
-        inx 
-        sta WSYNC
-        inx
-        
-        sta WSYNC
-        SLEEP 3
+        lda GameOverFlag                ; If we're at the end of the game then
+        bne DrawGameOverScreen          ; branch to gameover screen
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Setup Gameover Screen and Game Board ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Drawing Players and Enemy ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4617,7 +4594,7 @@ SkipE1Reset
         sta P1SprIdx                            ; 3
         sta DrawP1Sprite                        ; 3     (13)
 SkipP1ResetHeight
-        ldy #2                                  ; 2
+        ldy #MISSLE_BALL_ENABLE                 ; 2
         inx                                     ; 2
         inx                                     ; 2
         cpx #192                                ; 2
@@ -4633,20 +4610,17 @@ SkipP1ResetHeight
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Game Over Screen Start ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 DrawGameOverScreen
-        ; sta COLUBK
         lda #1
-        sta VDELP0
         sta VDELP1
 
         lda #FLY_GAME_PLAYER0_COLOR
-        sta COLUP0
         sta COLUP1
 
         lda #THREE_COPIES_CLOSE
         sta NUSIZ0
         sta NUSIZ1
 
-        ldx #FLY_GAME_FIELD_START_LINE
+        ldx #FLY_GAME_FIELD_START_LINE+2
 DrawGameOverScreenTop
         inx
         cpx #57
@@ -4660,13 +4634,14 @@ DrawGameOverScreenTop
         inx
         sta WSYNC
 
+        ; lda #51
         lda #55
         sta TIM1T
-
 OnePlayerGameOverTextDelay
         lda TIMINT
         ; and #%10000000
         beq OnePlayerGameOverTextDelay
+        ; SLEEP 2
         SLEEP 4
 
 DrawGameOverScreenText1Player
@@ -4816,21 +4791,16 @@ DrawGameOverScreenTieGameText2Player
 
 DrawGameOverScreenMiddle
         inx
-        cpx #100
+        cpx #101
         sta WSYNC
         bne DrawGameOverScreenMiddle
 
-        ldy #0
-        inx
-        sta WSYNC
-        
+        ldy #0        
         lda #55
         sta TIM1T
 GameOverTextDelay
         lda TIMINT
-        ; and #%10000000
         beq GameOverTextDelay
-        SLEEP 4
 
 DrawGameOverScreenBottomText
         stx TempXPos                                    ; 3     6
@@ -5066,9 +5036,9 @@ SkipP1JoinGame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Player 2 Join Game ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Player Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Player Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         ldx #0
 PlayerControl
@@ -5132,9 +5102,9 @@ SkipHidePlayerOverflow
         beq PlayerControl
 SkipPlayer1Move
 
-; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Player Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Player Movement ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Players Detect Hit ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5492,8 +5462,18 @@ FlyGameRomMusicPlayer
         ldy #0                          ; 2     Initialize Y-Index to 0
         lda (FlyGameNotePtrCh0),y       ; 5     Load first note duration to A
         cmp FlyGameFrameCtrTrk0         ; 3     See if it equals the Frame Counter
-        beq FlyGameTrack0NextNote       ; 2/3   If so move the NotePtr to the next note
+        bne FlyGameTrack0NextNote       ; 2/3   If so move the NotePtr to the next note
 
+        lda FlyGameNotePtrCh0           ; 3     Load the Note Pointer to A
+        clc                             ; 2     Clear the carry 
+        adc #4                          ; 2     Add 4 to move the Notep pointer to the next note
+        sta FlyGameNotePtrCh0           ; 3     Store the new note pointer
+
+        lda #0                          ; 2     Load Zero to
+        sta FlyGameFrameCtrTrk0         ; 3     Reset the Frame counter
+FlyGameTrack0NextNote
+
+        lda (FlyGameNotePtrCh0),y       ; 5     Load first note duration to A
         cmp #255                        ; 2     See if the notes duration equals 255
         bne FlyGameSkipResetTrack0      ; 2/3   If so go back to the beginning of the track
 
@@ -5513,24 +5493,25 @@ FlyGameSkipResetTrack0
         lda (FlyGameNotePtrCh0),y       ; 5     Load Control to A
         sta AUDC0                       ; 3     and set the Note Control
         inc FlyGameFrameCtrTrk0         ; 5     Increment the Frame Counter to duration compare later
-        sec                             ; 2     Set the carry to prepare to always branch
-        bcs FlyGameKeepPlayingTrk0             ; 3     Branch to the end of the media player
-FlyGameTrack0NextNote
-        lda FlyGameNotePtrCh0           ; 3     Load the Note Pointer to A
-        clc                             ; 2     Clear the carry 
-        adc #4                          ; 2     Add 4 to move the Notep pointer to the next note
-        sta FlyGameNotePtrCh0           ; 3     Store the new note pointer
-
-        lda #0                          ; 2     Load Zero to
-        sta FlyGameFrameCtrTrk0         ; 3     Reset the Frame counter
-FlyGameKeepPlayingTrk0
+        ; jmp FlyGameKeepPlayingTrk0      ; 3     Branch to the end of the media player
+; FlyGameKeepPlayingTrk0
 
 ; Track 1
         ldy #0                          ; 2     Initialize Y-Index to 0
         lda (FlyGameNotePtrCh1),y       ; 5     Load first note duration to A
         cmp FlyGameFrameCtrTrk1         ; 3     See if it equals the Frame Counter
-        beq FlyGameTrack1NextNote       ; 2/3   If so move the NotePtr to the next note
+        bne FlyGameTrack1NextNote       ; 2/3   If so move the NotePtr to the next note
 
+        lda FlyGameNotePtrCh1           ; 3     Load the Note Pointer to A
+        clc                             ; 2     Clear the carry 
+        adc #4                          ; 2     Add 4 to move the Notep pointer to the next note
+        sta FlyGameNotePtrCh1           ; 3     Store the new note pointer
+
+        lda #0                          ; 2     Load Zero to
+        sta FlyGameFrameCtrTrk1         ; 3     Reset the Frame counter
+FlyGameTrack1NextNote
+
+        lda (FlyGameNotePtrCh1),y
         cmp #255                        ; 2     See if the notes duration equals 255
         bne FlyGameSkipResetTrack1      ; 2/3   If so go back to the beginning of the track
 
@@ -5550,17 +5531,8 @@ FlyGameSkipResetTrack1
         lda (FlyGameNotePtrCh1),y       ; 5     Load Control to A
         sta AUDC1                       ; 3     and set the Note Control
         inc FlyGameFrameCtrTrk1         ; 5     Increment the Frame Counter to duration compare later
-        sec                             ; 2     Set the carry to prepare to always branch
-        bcs FlyGameKeepPlayingTrk1      ; 3     Branch to the end of the media player
-FlyGameTrack1NextNote
-        lda FlyGameNotePtrCh1           ; 3     Load the Note Pointer to A
-        clc                             ; 2     Clear the carry 
-        adc #4                          ; 2     Add 4 to move the Notep pointer to the next note
-        sta FlyGameNotePtrCh1           ; 3     Store the new note pointer
-
-        lda #0                          ; 2     Load Zero to
-        sta FlyGameFrameCtrTrk1         ; 3     Reset the Frame counter
-FlyGameKeepPlayingTrk1
+        ; jmp FlyGameKeepPlayingTrk1      ; 3     Branch to the end of the media player
+; FlyGameKeepPlayingTrk1
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Rom Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -6710,8 +6682,7 @@ Space      .byte #%00000000
            .byte #%00000000     ; (22)
            .byte #%00000000
            .byte #%00000000     ; (24)
-
-
+        
 ON         .byte  #%01001100
            .byte  #%10101010
            .byte  #%10101010
@@ -7011,6 +6982,21 @@ IE         .byte  #%11101110
            .byte  #%11101110
            .byte  #0
 
+P0JoyStickUp                    .byte #P0_JOYSTICK_UP
+P1JoyStickUp                    .byte #P1_JOYSTICK_UP
+P0JoyStickDown                  .byte #P0_JOYSTICK_DOWN
+P1JoyStickDown                  .byte #P1_JOYSTICK_DOWN
+P0JoyStickLeft                  .byte #P0_JOYSTICK_LEFT
+P1JoyStickLeft                  .byte #P1_JOYSTICK_LEFT
+P0JoyStickRight                 .byte #P0_JOYSTICK_RIGHT
+P1JoyStickRight                 .byte #P1_JOYSTICK_RIGHT
+
+FlyGameTitleTrack0   .byte 0,0,0,0,255
+FlyGameTitleTrack1   .byte 0,0,0,0,255
+
+FlyGameTrack0   .byte 0,0,0,0,255
+FlyGameTrack1   .byte 0,0,0,0,255
+
 ME         .byte  #%10101110
            .byte  #%11101000
            .byte  #%10101100
@@ -7084,20 +7070,6 @@ LD         .byte  #%10001100
            .byte  #%10001010
            .byte  #%11101100
 
-P0JoyStickUp                    .byte #P0_JOYSTICK_UP
-P1JoyStickUp                    .byte #P1_JOYSTICK_UP
-P0JoyStickDown                  .byte #P0_JOYSTICK_DOWN
-P1JoyStickDown                  .byte #P1_JOYSTICK_DOWN
-P0JoyStickLeft                  .byte #P0_JOYSTICK_LEFT
-P1JoyStickLeft                  .byte #P1_JOYSTICK_LEFT
-P0JoyStickRight                 .byte #P0_JOYSTICK_RIGHT
-P1JoyStickRight                 .byte #P1_JOYSTICK_RIGHT
-
-FlyGameTitleTrack0   .byte 0,0,0,0,255
-FlyGameTitleTrack1   .byte 0,0,0,0,255
-
-FlyGameTrack0   .byte 0,0,0,0,255
-FlyGameTrack1   .byte 0,0,0,0,255
 
         echo "----"
         echo "Rom Total Bank1:"
