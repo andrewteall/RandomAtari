@@ -3667,7 +3667,6 @@ FlyGameFrameCtrTrk1     ds 1
 
 SwitchToBank0
         lda $1FF8
-RestartFlyGame
 Reset
         ldx #0
         txa
@@ -3714,9 +3713,6 @@ OnePlayerGame
         sty COLUP0
         ldy #FLY_GAME_PLAYER1_COLOR
         sty COLUP1
-
-        ; ldy #FLY_GAME_GAME_BACKGROUND_COLOR
-        ; sta COLUBK
 
         ldx #FLY_GAME_ENEMY_GENERATION_DELAY
         stx Enemy0GenTimer
@@ -3807,7 +3803,7 @@ FlyGameStartOfFrame
 
         lda StartGameFlag
         bne FlyGameVBLANKProcessing
-        jmp SkipFlyGameVBLANKProcessing
+        jmp FlyGameVerticalBlankEndWaitLoop
 FlyGameVBLANKProcessing
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -3886,7 +3882,7 @@ CalcScoreGraphics
 LoadWinner
         
         lda P0Score
-        sec
+        ; sec
         sbc P1Score
         bpl Player0Wins
         lda Two_bank1,y
@@ -4006,7 +4002,6 @@ BuildCountdownTimerGraphics
 
         lda #FLY_GAME_SCORE_COLOR
         sta COLUPF
-SkipFlyGameVBLANKProcessing
 
 FlyGameVerticalBlankEndWaitLoop
         lda TIMINT
@@ -4034,17 +4029,11 @@ SkipSetGameOverRestartDelay
         sta GameOverFlag
 SkipFlyGameGameoverScreen
 
-        ; lda #FLY_GAME_GAME_BACKGROUND_COLOR
-        ; sta COLUBK
-
         ldy #1
         sty VDELP0
         sty VDELP1
 
         ldx #0
-        IF FLY_GAME_P1_JOIN_HPOS <= 47
-         sta WSYNC
-        ENDIF
 SkipFlyGameScreenSelect
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4994,7 +4983,7 @@ SkipFlasher
 
         lda INPT4
         bmi SkipRestartFlyGame
-        jmp RestartFlyGame
+        jmp Reset
 DecrementP0BlockFire
         
         dec BlockP0Swat
@@ -5466,7 +5455,7 @@ FlyGameRomMusicPlayer
 
         lda FlyGameNotePtrCh0           ; 3     Load the Note Pointer to A
         clc                             ; 2     Clear the carry 
-        adc #4                          ; 2     Add 4 to move the Notep pointer to the next note
+        adc #4                          ; 2     Add 4 to move the Note pointer to the next note
         sta FlyGameNotePtrCh0           ; 3     Store the new note pointer
 
         lda #0                          ; 2     Load Zero to
@@ -6907,7 +6896,6 @@ PL         .byte  #%11101000
            .byte  #%10001000
            .byte  #%10001110
            .byte  #0
-           
 
 AY         .byte  #%01001010
            .byte  #%10101010
@@ -6915,7 +6903,6 @@ AY         .byte  #%01001010
            .byte  #%10100100
            .byte  #%10100100
            .byte  #0
-           
 
 ER         .byte  #%11101110
            .byte  #%10001010
@@ -6923,7 +6910,6 @@ ER         .byte  #%11101110
            .byte  #%10001100
            .byte  #%11101010
            .byte  #0
-           
 
 _W         .byte  #%00001010
            .byte  #%00001010
