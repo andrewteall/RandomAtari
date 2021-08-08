@@ -3546,7 +3546,7 @@ FLY_GAME_PLAYER1_COLOR                  = #$48 ;0F  ;83
 
 FLY_GAME_GAME_OVER_RESTART_DELAY        = #60
 FLY_GAME_COUNTDOWN_TIMER_SECOND_DIVIDER = #60
-FLY_GAME_TIMER_DURATION                 = #$3
+FLY_GAME_TIMER_DURATION                 = #$5
 FLY_GAME_ENEMY_GENERATION_DELAY         = #50
 
 FLY_GAME_P0_X_START_POS                 = #15
@@ -5144,7 +5144,7 @@ CheckEnemyHit
         cmp Enemy0XPos,y
         bcs SkipPlayerEnemyHit
         clc
-        adc #17
+        adc #16
         cmp Enemy0XPos,y
         bcc SkipPlayerEnemyHit
 
@@ -5482,8 +5482,6 @@ FlyGameSkipResetTrack0
         lda (FlyGameNotePtrCh0),y       ; 5     Load Control to A
         sta AUDC0                       ; 3     and set the Note Control
         inc FlyGameFrameCtrTrk0         ; 5     Increment the Frame Counter to duration compare later
-        ; jmp FlyGameKeepPlayingTrk0      ; 3     Branch to the end of the media player
-; FlyGameKeepPlayingTrk0
 
 ; Track 1
         ldy #0                          ; 2     Initialize Y-Index to 0
@@ -5520,8 +5518,7 @@ FlyGameSkipResetTrack1
         lda (FlyGameNotePtrCh1),y       ; 5     Load Control to A
         sta AUDC1                       ; 3     and set the Note Control
         inc FlyGameFrameCtrTrk1         ; 5     Increment the Frame Counter to duration compare later
-        ; jmp FlyGameKeepPlayingTrk1      ; 3     Branch to the end of the media player
-; FlyGameKeepPlayingTrk1
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Rom Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
