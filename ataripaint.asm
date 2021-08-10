@@ -3643,6 +3643,13 @@ P1Score2idx             ds 1
 P0ScoreArr              ds 5
 P1ScoreArr              ds 5
 
+GameOverGfxPtr1         ds 5
+GameOverGfxPtr2         ds 2
+GameOverGfxPtr3         ds 2
+GameOverGfxPtr4         ds 2
+GameOverGfxPtr5         ds 5
+GameOverGfxPtr6         ds 5
+
 FlyGameNotePtrCh0       ds 2
 FlyGameNotePtrCh1       ds 2
 FlyGameFrameCtrTrk0     ds 1
@@ -3904,6 +3911,62 @@ SkipDetermineWinner
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Game Over Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        lda GameOverFlag
+        beq SkipGameOverGraphics
+
+        ; lda #<SC
+        ; sta GameOverGfxPtr1
+        ; lda #>SC
+        ; sta GameOverGfxPtr1+1
+
+        lda #<OR
+        sta GameOverGfxPtr2
+        lda #>OR
+        sta GameOverGfxPtr2+1
+
+        lda #<EColon
+        sta GameOverGfxPtr3
+        lda #>EColon
+        sta GameOverGfxPtr3+1
+
+        lda #<Space
+        sta GameOverGfxPtr4
+        lda #>Space
+        sta GameOverGfxPtr4+1
+
+        ; lda #<Zero_bank1
+        ; sta GameOverGfxPtr6
+        ; lda #>Zero_bank1
+        ; sta GameOverGfxPtr+1
+
+        ldy #0
+LoadGameOverGraphics
+        lda SC,y
+        sta GameOverGfxPtr1,y
+
+
+        lda P0ScoreArr,y
+        sta GameOverGfxPtr5,y
+
+        lda Zero_bank1,y
+        sta GameOverGfxPtr6,y
+
+        iny
+        cpy #5
+        bne LoadGameOverGraphics
+
+
+
+
+SkipGameOverGraphics
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Game Over Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Time Countdown Timer  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda CountdownTimer
@@ -3976,18 +4039,17 @@ BuildCountdownTimerGraphics
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Build Countdown Timer Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        
+        ldx #1
+        lda #FLY_GAME_P1_JOIN_HPOS+8
+        jsr CalcXPos_bank1
+        sta WSYNC
+        sta HMOVE
+
         ldx #0
         stx GRP0
         stx GRP1
         stx GRP0
         lda #FLY_GAME_P1_JOIN_HPOS
-        jsr CalcXPos_bank1
-        sta WSYNC
-        sta HMOVE
-
-        ldx #1
-        lda #FLY_GAME_P1_JOIN_HPOS+8
         jsr CalcXPos_bank1
         sta WSYNC
         sta HMOVE
@@ -4009,7 +4071,7 @@ FlyGameVerticalBlankEndWaitLoop
         beq FlyGameVerticalBlankEndWaitLoop
         sta WSYNC
         ; lda #0
-        sta VBLANK
+        stx VBLANK
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End VBLANK ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4033,7 +4095,7 @@ SkipFlyGameGameoverScreen
         sty VDELP0
         sty VDELP1
 
-        ldx #0
+        ; ldx #0
 SkipFlyGameScreenSelect
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4054,7 +4116,7 @@ FlyGameTitleScreen
         ; lda #FLY_GAME_TITLE_BACKGROUND_COLOR
         ; sta COLUBK
         ldy #0
-        ldx #0
+        ; ldx #0
 
 FlyGameTitleLine1
         cpx #FLY_GAME_TITLE_VPOS
@@ -4373,8 +4435,9 @@ DrawPlayer2JoinText
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Setup Score and Timer Area ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ldx #9
+        
 Player2Buffer
+        ldx #11
         lda #DOUBLE_SIZE_PLAYER
         sta NUSIZ0
         sta NUSIZ1
@@ -4388,7 +4451,7 @@ Player2Buffer
         lda #FLY_GAME_TIMER_COLOR
         sta COLUP0
 
-        inx
+        ; inx
         sta WSYNC
 
 ; Align Countdown Timer 
@@ -4401,7 +4464,7 @@ PositionCountdownTimer
 
         sta RESP0
 
-        inx
+        ; inx
         sta WSYNC
 ; End Align Countdown Timer
 
@@ -4616,15 +4679,17 @@ DrawGameOverScreenTop
         sta WSYNC
         bne DrawGameOverScreenTop
 
-        lda GameSelectFlag
-        bne TwoPlayerGameOver
+        inx
+        ; lda GameSelectFlag
+        ; bne TwoPlayerGameOver
 
         ldy #0
-        inx
+        
         sta WSYNC
 
         ; lda #51
-        lda #55
+        ; lda #55
+        lda #51
         sta TIM1T
 OnePlayerGameOverTextDelay
         lda TIMINT
@@ -4633,158 +4698,195 @@ OnePlayerGameOverTextDelay
         ; SLEEP 2
         SLEEP 4
 
+        lda #5                          ; Setup a timer to draw 5 lines for the
+        sta TIM64T                      ; Game Over Line 1 Graphics
+
 DrawGameOverScreenText1Player
-        stx TempXPos                                    ; 3     6
+        SLEEP 2                                         ; 3     6
         sty TempYPos                                    ; 3     9
         
-        ldx Zero_bank1,y                                ; 4     13
-        stx TempLetterBuffer                            ; 3     16
+        lda GameOverGfxPtr6,y                           ; 4     13
+        sta TempLetterBuffer                            ; 3     16
         
-        ldx P0ScoreArr,y                                ; 4     20
+        ldx GameOverGfxPtr5,y                           ; 4     20
 
-        lda SC,y                                        ; 4     24
-        sta GRP0                                        ; 3     27       -> [GRP0]
+        lda GameOverGfxPtr1,y                           ; 4     25
+        sta GRP0                                        ; 3     28       -> [GRP0]
         
-        lda OR,y                                        ; 4     31
-        sta GRP1                                        ; 3     34       -> [GRP1], [GRP0] -> GRP0
+        lda (GameOverGfxPtr2),y                         ; 5     33
+        sta GRP1                                        ; 3     36       -> [GRP1], [GRP0] -> GRP0
         
-        lda EColon,y                                    ; 4     38
-        sta GRP0                                        ; 3     41       -> [GRP0]. [GRP1] -> GRP1
+        lda (GameOverGfxPtr3),y                         ; 5     41
+        sta GRP0                                        ; 3     44       -> [GRP0]. [GRP1] -> GRP1
         
-        lda Space,y                                     ; 4     45
-        ldy TempLetterBuffer                            ; 3     48
-        sta GRP1                                        ; 3     51       -> [GRP1], [GRP0] -> GRP0
-        stx GRP0                                        ; 3     54       -> [GRP0], [GRP1] -> GRP1
-        sty GRP1                                        ; 3     57       -> [GRP1], [GRP0] -> GRP0
-        stx GRP0                                        ; 3     60       ?? -> [GRP0], [GRP1] -> GRP1
+        lda (GameOverGfxPtr4),y                         ; 5     49
+        ldy TempLetterBuffer                            ; 3     52
+        sta GRP1                                        ; 3     55       -> [GRP1], [GRP0] -> GRP0
+        stx GRP0                                        ; 3     58       -> [GRP0], [GRP1] -> GRP1
+        sty GRP1                                        ; 3     61       -> [GRP1], [GRP0] -> GRP0
+        stx GRP0                                        ; 3     64       ?? -> [GRP0], [GRP1] -> GRP1
         
-        ldx TempXPos                                    ; 3     63
-        ldy TempYPos                                    ; 3     66
-        iny                                             ; 2     68
+        ldy TempYPos                                    ; 3     67
+        iny                                             ; 2     69
 
-        inx                                             ; 2     70
+        lda TIMINT                                      ; 4     73
+        and #%10000000
+        SLEEP 2
 
-        cpx #63                                         ; 2     72
-        ; nop                                             ; 2     74
-        ; nop                                             ; 2     76
-        SLEEP 4
-        bne DrawGameOverScreenText1Player
+        beq DrawGameOverScreenText1Player
+
+; DrawGameOverScreenText1Player
+;         stx TempXPos                                    ; 3     6
+;         sty TempYPos                                    ; 3     9
+        
+;         ldx Zero_bank1,y                                ; 4     13
+;         stx TempLetterBuffer                            ; 3     16
+        
+;         ldx P0ScoreArr,y                                ; 4     20
+
+;         lda SC,y                                        ; 4     24
+;         sta GRP0                                        ; 3     27       -> [GRP0]
+        
+;         lda OR,y                                        ; 4     31
+;         sta GRP1                                        ; 3     34       -> [GRP1], [GRP0] -> GRP0
+        
+;         lda EColon,y                                    ; 4     38
+;         sta GRP0                                        ; 3     41       -> [GRP0]. [GRP1] -> GRP1
+        
+;         lda Space,y                                     ; 4     45
+;         ldy TempLetterBuffer                            ; 3     48
+;         sta GRP1                                        ; 3     51       -> [GRP1], [GRP0] -> GRP0
+;         stx GRP0                                        ; 3     54       -> [GRP0], [GRP1] -> GRP1
+;         sty GRP1                                        ; 3     57       -> [GRP1], [GRP0] -> GRP0
+;         stx GRP0                                        ; 3     60       ?? -> [GRP0], [GRP1] -> GRP1
+        
+;         ldx TempXPos                                    ; 3     63
+;         ldy TempYPos                                    ; 3     66
+;         iny                                             ; 2     68
+
+;         inx                                             ; 2     70
+;         cpx #63                                         ; 2     72
+;         ; nop                                             ; 2     74
+;         ; nop                                             ; 2     76
+;         SLEEP 4
+;         bne DrawGameOverScreenText1Player
 
         lda #0
         sta GRP0
         sta GRP1
         sta GRP0
-        jmp DrawGameOverScreenMiddle
+        ; jmp DrawGameOverScreenMiddle
 
-TwoPlayerGameOver
+; TwoPlayerGameOver
         
-        ldy #0
-        inx
-        sta WSYNC
+;         ldy #0
+;         ; inx
+;         sta WSYNC
 
-        lda #55
-        sta TIM1T
+;         lda #55
+;         sta TIM1T
 
-        lda P0Score
-        cmp P1Score
-        beq DrawGameOverScreenText2PlayerTieGame
+;         lda P0Score
+;         cmp P1Score
+;         beq DrawGameOverScreenText2PlayerTieGame
 
-TwoPlayerGameOverTextDelay
-        lda TIMINT
-        ; and #%10000000
-        beq TwoPlayerGameOverTextDelay
-        SLEEP 4  
+; TwoPlayerGameOverTextDelay
+;         lda TIMINT
+;         ; and #%10000000
+;         beq TwoPlayerGameOverTextDelay
+;         SLEEP 4  
 
-        ;inx
-DrawGameOverScreenText2Player
-        stx TempXPos                                    ; 3     6
-        sty TempYPos                                    ; 3     9
+;         ;inx
+; DrawGameOverScreenText2Player
+;         stx TempXPos                                    ; 3     6
+;         sty TempYPos                                    ; 3     9
         
-        ldx IN,y                                        ; 4     13
-        stx TempLetterBuffer                            ; 3     16
+;         ldx IN,y                                        ; 4     13
+;         stx TempLetterBuffer                            ; 3     16
         
-        ldx _W,y                                        ; 4     20
+;         ldx _W,y                                        ; 4     20
 
-        lda PL,y                                        ; 4     24
-        sta GRP0                                        ; 3     27       -> [GRP0]
+;         lda PL,y                                        ; 4     24
+;         sta GRP0                                        ; 3     27       -> [GRP0]
         
-        lda AY,y                                        ; 4     31
-        sta GRP1                                        ; 3     34       -> [GRP1], [GRP0] -> GRP0
+;         lda AY,y                                        ; 4     31
+;         sta GRP1                                        ; 3     34       -> [GRP1], [GRP0] -> GRP0
         
-        lda ER,y                                        ; 4     38
-        sta GRP0                                        ; 3     41       -> [GRP0]. [GRP1] -> GRP1
+;         lda ER,y                                        ; 4     38
+;         sta GRP0                                        ; 3     41       -> [GRP0]. [GRP1] -> GRP1
         
-        lda Winner,y                                    ; 4     45
-        ldy TempLetterBuffer                            ; 3     48
-        sta GRP1                                        ; 3     51       -> [GRP1], [GRP0] -> GRP0
-        stx GRP0                                        ; 3     54       -> [GRP0], [GRP1] -> GRP1
-        sty GRP1                                        ; 3     57       -> [GRP1], [GRP0] -> GRP0
-        stx GRP0                                        ; 3     60       ?? -> [GRP0], [GRP1] -> GRP1
+;         lda Winner,y                                    ; 4     45
+;         ldy TempLetterBuffer                            ; 3     48
+;         sta GRP1                                        ; 3     51       -> [GRP1], [GRP0] -> GRP0
+;         stx GRP0                                        ; 3     54       -> [GRP0], [GRP1] -> GRP1
+;         sty GRP1                                        ; 3     57       -> [GRP1], [GRP0] -> GRP0
+;         stx GRP0                                        ; 3     60       ?? -> [GRP0], [GRP1] -> GRP1
         
-        ldx TempXPos                                    ; 3     63
-        ldy TempYPos                                    ; 3     66
-        iny                                             ; 2     68
+;         ldx TempXPos                                    ; 3     63
+;         ldy TempYPos                                    ; 3     66
+;         iny                                             ; 2     68
 
-        inx                                             ; 2     70
+;         inx                                             ; 2     70
 
-        cpx #64                                         ; 2     72
-        nop                                             ; 2     74
-        nop                                             ; 2     76
-        bne DrawGameOverScreenText2Player
+;         cpx #64                                         ; 2     72
+;         nop                                             ; 2     74
+;         nop                                             ; 2     76
+;         bne DrawGameOverScreenText2Player
 
-        jmp DrawGameOverScreenMiddle
+;         jmp DrawGameOverScreenMiddle
 
-DrawGameOverScreenText2PlayerTieGame
+; DrawGameOverScreenText2PlayerTieGame
 
-TwoPlayerGameOverTieGameTextDelay
-        lda TIMINT
-        and #%10000000
-        beq TwoPlayerGameOverTieGameTextDelay
-        SLEEP 4 
+; TwoPlayerGameOverTieGameTextDelay
+;         lda TIMINT
+;         and #%10000000
+;         beq TwoPlayerGameOverTieGameTextDelay
+;         SLEEP 4 
 
-DrawGameOverScreenTieGameText2Player
-        stx TempXPos                                    ; 3     6
-        sty TempYPos                                    ; 3     9
+; DrawGameOverScreenTieGameText2Player
+;         stx TempXPos                                    ; 3     6
+;         sty TempYPos                                    ; 3     9
         
-        ldx Space,y                                     ; 4     13
-        stx TempLetterBuffer                            ; 3     16
+;         ldx Space,y                                     ; 4     13
+;         stx TempLetterBuffer                            ; 3     16
         
-        ldx ME,y                                        ; 4     20
+;         ldx ME,y                                        ; 4     20
 
-        lda _T,y                                        ; 4     24
-        sta GRP0                                        ; 3     27       -> [GRP0]
+;         lda _T,y                                        ; 4     24
+;         sta GRP0                                        ; 3     27       -> [GRP0]
         
-        lda IE,y                                        ; 4     31
-        sta GRP1                                        ; 3     34       -> [GRP1], [GRP0] -> GRP0
+;         lda IE,y                                        ; 4     31
+;         sta GRP1                                        ; 3     34       -> [GRP1], [GRP0] -> GRP0
         
-        lda Space,y                                     ; 4     38
-        sta GRP0                                        ; 3     41       -> [GRP0]. [GRP1] -> GRP1
+;         lda Space,y                                     ; 4     38
+;         sta GRP0                                        ; 3     41       -> [GRP0]. [GRP1] -> GRP1
         
-        lda GA,y                                        ; 4     45
-        ldy TempLetterBuffer                            ; 3     48
-        sta GRP1                                        ; 3     51       -> [GRP1], [GRP0] -> GRP0
-        stx GRP0                                        ; 3     54       -> [GRP0], [GRP1] -> GRP1
-        sty GRP1                                        ; 3     57       -> [GRP1], [GRP0] -> GRP0
-        stx GRP0                                        ; 3     60       ?? -> [GRP0], [GRP1] -> GRP1
+;         lda GA,y                                        ; 4     45
+;         ldy TempLetterBuffer                            ; 3     48
+;         sta GRP1                                        ; 3     51       -> [GRP1], [GRP0] -> GRP0
+;         stx GRP0                                        ; 3     54       -> [GRP0], [GRP1] -> GRP1
+;         sty GRP1                                        ; 3     57       -> [GRP1], [GRP0] -> GRP0
+;         stx GRP0                                        ; 3     60       ?? -> [GRP0], [GRP1] -> GRP1
         
-        ldx TempXPos                                    ; 3     63
-        ldy TempYPos                                    ; 3     66
-        iny                                             ; 2     68
+;         ldx TempXPos                                    ; 3     63
+;         ldy TempYPos                                    ; 3     66
+;         iny                                             ; 2     68
 
-        inx                                             ; 2     70
+;         inx                                             ; 2     70
 
-        cpx #64                                         ; 2     72
-        nop                                             ; 2     74
-        nop                                             ; 2     76
-        bne DrawGameOverScreenTieGameText2Player
+;         cpx #64                                         ; 2     72
+;         nop                                             ; 2     74
+;         nop                                             ; 2     76
+;         bne DrawGameOverScreenTieGameText2Player
 
+        ldx #64
 DrawGameOverScreenMiddle
         inx
         cpx #101
         sta WSYNC
         bne DrawGameOverScreenMiddle
 
-        ldy #0        
+        ldy #0
         lda #55
         sta TIM1T
 GameOverTextDelay
@@ -6683,13 +6785,6 @@ O_         .byte  #%01000000
            .byte  #%01000000
            .byte  #0
 
-TW         .byte  #%11101010
-           .byte  #%01001010
-           .byte  #%01001110
-           .byte  #%01001110
-           .byte  #%01001010
-           .byte  #0
-
 GA         .byte  #%01100100
            .byte  #%10001010
            .byte  #%10101110
@@ -6729,18 +6824,11 @@ _P         .byte  #%00001110
            .byte  #%00001000
            .byte  #0
 
-RE_bank1   .byte  #%11101110
+RE_bank1   .byte  #%11001110
            .byte  #%10101000
            .byte  #%11101100
            .byte  #%11001000
            .byte  #%10101110
-           .byte  #0
-
-IR         .byte  #%11101110
-           .byte  #%01001010
-           .byte  #%01001110
-           .byte  #%01001100
-           .byte  #%11101010
            .byte  #0
 
 SS         .byte  #%01100110
@@ -6843,8 +6931,92 @@ Nine_bank1 .byte  #%11101110
            .byte  #%10101010
            .byte  #%11101110
            .byte  #%00100010
+IE         .byte  #%11101110
+           .byte  #%01001000
+           .byte  #%01001100
+           .byte  #%01001000
            .byte  #%11101110
-        
+           .byte  #0
+
+OR         .byte  #%01001100
+           .byte  #%10101010
+           .byte  #%10101110
+           .byte  #%10101100
+           .byte  #%01001010
+
+TW         .byte  #%11101010
+           .byte  #%01001010
+           .byte  #%01001110
+           .byte  #%01001110
+           .byte  #%01001010
+           .byte  #0
+
+_E         .byte  #%00001110
+           .byte  #%00001000
+           .byte  #%00001100
+           .byte  #%00001000
+_T         .byte  #%00001110
+           .byte  #%00000100
+           .byte  #%00000100
+           .byte  #%00000100
+           .byte  #%00000100
+           .byte  #0
+           
+SL         .byte  #%01101000
+           .byte  #%10001000
+           .byte  #%11101000
+           .byte  #%00101000
+NE         .byte  #%11001110
+           .byte  #%10101000
+           .byte  #%10101100
+           .byte  #%10101000   
+MI         .byte  #%10101110
+           .byte  #%11100100
+           .byte  #%10100100
+           .byte  #%10100100
+WI         .byte  #%10101110
+           .byte  #%10100100
+           .byte  #%10100100
+           .byte  #%11100100
+ME         .byte  #%10101110
+           .byte  #%11101000
+           .byte  #%10101100
+           .byte  #%10101000
+           .byte  #%10101110
+           .byte  #0
+           
+ES         .byte  #%11100110
+           .byte  #%10001000
+           .byte  #%11001110
+           .byte  #%10000010
+IR         .byte  #%11101100
+           .byte  #%01001010
+           .byte  #%01001110
+           .byte  #%01001100
+           .byte  #%11101010
+           .byte  #0
+           
+FA         .byte  #%11100100
+           .byte  #%10001010
+           .byte  #%11001110
+           .byte  #%10001010
+           .byte  #%10001010
+           
+TA         .byte  #%11100100
+           .byte  #%01001010
+           .byte  #%01001110
+           .byte  #%01001010
+OW         .byte  #%01001010
+           .byte  #%10101010
+           .byte  #%10101110
+           .byte  #%10101110
+AY         .byte  #%01001010
+           .byte  #%10101010
+           .byte  #%11100100
+           .byte  #%10100100
+           .byte  #%10100100
+           .byte  #0
+
 AT         .byte  #%01001110
            .byte  #%10100100
            .byte  #%11100100
@@ -6866,6 +7038,10 @@ I_         .byte  #%11100000
            .byte  #%11100000
            .byte  #0
 
+ST         .byte  #%01101110
+           .byte  #%10000100
+           .byte  #%11100100
+           .byte  #%00100100
 PA         .byte  #%11000100
            .byte  #%10101010
            .byte  #%11101110
@@ -6873,13 +7049,21 @@ PA         .byte  #%11000100
            .byte  #%10001010
            .byte  #0
 
+LD         .byte  #%10001100
+           .byte  #%10001010
+           .byte  #%10001010
+           .byte  #%10001010
 IN         .byte  #%11101100
            .byte  #%01001010
            .byte  #%01001010
            .byte  #%01001010
            .byte  #%11101010
            .byte  #0
-
+           
+EColon     .byte  #%11100000
+           .byte  #%10000100
+           .byte  #%11000000
+           .byte  #%10000100
 T_         .byte  #%11100000
            .byte  #%01000000
            .byte  #%01000000
@@ -6894,14 +7078,7 @@ PL         .byte  #%11101000
            .byte  #%10001110
            .byte  #0
 
-AY         .byte  #%01001010
-           .byte  #%10101010
-           .byte  #%11100100
-           .byte  #%10100100
-           .byte  #%10100100
-           .byte  #0
-
-ER         .byte  #%11101110
+ER         .byte  #%11101100
            .byte  #%10001010
            .byte  #%11001110
            .byte  #%10001100
@@ -6915,23 +7092,11 @@ _W         .byte  #%00001010
            .byte  #%00001010
            .byte  #0
 
-SC         .byte  #%11101110
+SC         .byte  #%01100110
            .byte  #%10001000
            .byte  #%11101000
            .byte  #%00101000
-           .byte  #%11101110
-
-OR         .byte  #%11101110
-           .byte  #%10101010
-           .byte  #%10101110
-           .byte  #%10101100
-           .byte  #%11101010
-
-EColon     .byte  #%11100000
-           .byte  #%10000100
-           .byte  #%11000000
-           .byte  #%10000100
-           .byte  #%11100000
+           .byte  #%11000110
 
 CanvasSelectTable       .byte #%00000001
                         .byte #%00000010
@@ -6940,8 +7105,6 @@ CanvasSelectTable       .byte #%00000001
                         .byte #%00010000
                         .byte #%00100000
                         .byte #%01000000
-                        .byte #%10000000
-
 CanvasSelectTableR      .byte #%10000000
                         .byte #%01000000
                         .byte #%00100000
@@ -6950,20 +7113,6 @@ CanvasSelectTableR      .byte #%10000000
                         .byte #%00000100
                         .byte #%00000010
                         .byte #%00000001
-
-_T         .byte  #%00001110
-           .byte  #%00000100
-           .byte  #%00000100
-           .byte  #%00000100
-           .byte  #%00000100
-           .byte  #0
-
-IE         .byte  #%11101110
-           .byte  #%01001000
-           .byte  #%01001100
-           .byte  #%01001000
-           .byte  #%11101110
-           .byte  #0
 
 P0JoyStickUp                    .byte #P0_JOYSTICK_UP
 P1JoyStickUp                    .byte #P1_JOYSTICK_UP
@@ -6980,78 +7129,7 @@ FlyGameTitleTrack1   .byte 0,0,0,0,255
 FlyGameTrack0   .byte 0,0,0,0,255
 FlyGameTrack1   .byte 0,0,0,0,255
 
-ME         .byte  #%10101110
-           .byte  #%11101000
-           .byte  #%10101100
-           .byte  #%10101000
-           .byte  #%10101110
-           .byte  #0
 
-_E         .byte  #%00001110
-           .byte  #%00001000
-           .byte  #%00001100
-           .byte  #%00001000
-           .byte  #%00001110
-           
-NE         .byte  #%11001110
-           .byte  #%10101000
-           .byte  #%10101100
-           .byte  #%10101000
-           .byte  #%10101110
-           
-MI         .byte  #%10101110
-           .byte  #%11100100
-           .byte  #%10100100
-           .byte  #%10100100
-           .byte  #%10101110
-           
-ES         .byte  #%11100110
-           .byte  #%10001000
-           .byte  #%11001110
-           .byte  #%10000010
-           .byte  #%11101100
-           
-SL         .byte  #%01101000
-           .byte  #%10001000
-           .byte  #%11101000
-           .byte  #%00101000
-           .byte  #%11001110
-           
-OW         .byte  #%01001010
-           .byte  #%10101010
-           .byte  #%10101110
-           .byte  #%10101110
-           .byte  #%01001010
-           
-FA         .byte  #%11100100
-           .byte  #%10001010
-           .byte  #%11001110
-           .byte  #%10001010
-           .byte  #%10001010
-           
-ST         .byte  #%01101110
-           .byte  #%10000100
-           .byte  #%11100100
-           .byte  #%00100100
-           .byte  #%11000100
-           
-TA         .byte  #%11100100
-           .byte  #%01001010
-           .byte  #%01001110
-           .byte  #%01001010
-           .byte  #%01001010
-
-WI         .byte  #%10101110
-           .byte  #%10100100
-           .byte  #%10100100
-           .byte  #%11100100
-           .byte  #%10101110
-
-LD         .byte  #%10001100
-           .byte  #%10001010
-           .byte  #%10001010
-           .byte  #%10001010
-           .byte  #%11101100
 
 
         echo "----"
