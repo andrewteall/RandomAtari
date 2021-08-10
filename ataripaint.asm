@@ -4615,13 +4615,12 @@ DrawGameOverScreenTop
         cpx #57
         sta WSYNC
         bne DrawGameOverScreenTop
-
+        
+        ldy #0
         inx
         lda GameSelectFlag
         bne TwoPlayerGameOver
 
-        ldy #0
-        
         sta WSYNC
 
         ; lda #51
@@ -4629,9 +4628,7 @@ DrawGameOverScreenTop
         sta TIM1T
 OnePlayerGameOverTextDelay
         lda TIMINT
-        ; and #%10000000
         beq OnePlayerGameOverTextDelay
-        ; SLEEP 2
         SLEEP 4
 
 DrawGameOverScreenText1Player
@@ -4678,9 +4675,7 @@ DrawGameOverScreenText1Player
         jmp DrawGameOverScreenMiddle
 
 TwoPlayerGameOver
-        
-        ldy #0
-        ; inx
+
         sta WSYNC
 
         lda #55
@@ -4690,13 +4685,11 @@ TwoPlayerGameOver
         cmp P1Score
         beq DrawGameOverScreenText2PlayerTieGame
 
-TwoPlayerGameOverTextDelay
+TwoPlayerGameOverTextAlignDelay
         lda TIMINT
-        ; and #%10000000
-        beq TwoPlayerGameOverTextDelay
-        SLEEP 4  
+        beq TwoPlayerGameOverTextAlignDelay
+        SLEEP 4
 
-        ;inx
 DrawGameOverScreenText2Player
         stx TempXPos                                    ; 3     6
         sty TempYPos                                    ; 3     9
@@ -4729,18 +4722,19 @@ DrawGameOverScreenText2Player
         inx                                             ; 2     70
 
         cpx #64                                         ; 2     72
-        nop                                             ; 2     74
-        nop                                             ; 2     76
+        ; nop                                             ; 2     74
+        ; nop                                             ; 2     76
+        SLEEP 3
         bne DrawGameOverScreenText2Player
 
         jmp DrawGameOverScreenMiddle
 
 DrawGameOverScreenText2PlayerTieGame
 
-TwoPlayerGameOverTieGameTextDelay
+TwoPlayerGameOverTieGameTextAlignDelay
         lda TIMINT
         and #%10000000
-        beq TwoPlayerGameOverTieGameTextDelay
+        beq TwoPlayerGameOverTieGameTextAlignDelay
         SLEEP 4 
 
 DrawGameOverScreenTieGameText2Player
@@ -4788,12 +4782,13 @@ DrawGameOverScreenMiddle
         ldy #0
         lda #55
         sta TIM1T
-GameOverTextDelay
+GameOverBottomTextAlignDelay
         lda TIMINT
-        beq GameOverTextDelay
+        beq GameOverBottomTextAlignDelay
 
 DrawGameOverScreenBottomText
-        stx TempXPos                                    ; 3     6
+        ; stx TempXPos                                    ; 3     6
+        SLEEP 3                                         ; 3     6
         sty TempYPos                                    ; 3     9
         
         ldx E_,y                                        ; 4     13
@@ -4817,19 +4812,21 @@ DrawGameOverScreenBottomText
         sty GRP1                                        ; 3     57       -> [GRP1], [GRP0] -> GRP0
         stx GRP0                                        ; 3     60       ?? -> [GRP0], [GRP1] -> GRP1
         
-        ldx TempXPos                                    ; 3     63
-        ldy TempYPos                                    ; 3     66
-        iny                                             ; 2     68
-
-        inx                                             ; 2     70
-        cpx #107                                        ; 2     72
-        nop                                             ; 2     74
-        nop                                             ; 2     76
+        ldy TempYPos                                    ; 3     63
+        iny                                             ; 2     65
+        ; ldx TempXPos                                    ; 3     63
+        ; inx                                             ; 2     70
+        ; cpx #107                                        ; 2     72
+        
+        ; nop                                             ; 2     74
+        ; nop                                             ; 2     76
+        cmp #0                                          ; 2     67
+        SLEEP 9                                         ; 9     76
         bne DrawGameOverScreenBottomText
 
+        ldx #85
 DrawGameOverScreenBottom
-        inx                                             ; 2
-        cpx #192                                        ; 2
+        dex
         sta WSYNC
         bne DrawGameOverScreenBottom
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
