@@ -3749,17 +3749,17 @@ FlyGameTitleInit
         sty COLUP0                      ;
         sty COLUP1                      ;
 
-        ldx #0                          ; Horizontally position the player
-        lda #FLY_GAME_TITLE_HPOS        ; sprites to draw the Start Menu
-        jsr CalcXPos_bank1              ; on the Title Screen
-        sta WSYNC                       ; Player 0 is positioned according to
-        sta HMOVE                       ; FLY_GAME_TITLE_HPOS
-        
         ldx #1                          ; and Player 1 is positioned 8 pixels
         lda #FLY_GAME_TITLE_HPOS+8      ; to the right of Player 0 since our
         jsr CalcXPos_bank1              ; font is 8 pixels wide
         sta WSYNC                       ;
         sta HMOVE                       ;
+
+        ldx #0                          ; Horizontally position the player
+        lda #FLY_GAME_TITLE_HPOS        ; sprites to draw the Start Menu
+        jsr CalcXPos_bank1              ; on the Title Screen
+        sta WSYNC                       ; Player 0 is positioned according to
+        sta HMOVE                       ; FLY_GAME_TITLE_HPOS
 
         lda #<Cursor                    ; Set the Start Menu Cursor to default
         sta Game1SelectionGfx           ; to a One player Game
