@@ -40,6 +40,11 @@ P0_JOYSTICK_UP                  = #%00010000
 P0_JOYSTICK_DOWN                = #%00100000
 P0_JOYSTICK_LEFT                = #%01000000
 P0_JOYSTICK_RIGHT               = #%10000000
+
+DURATION_MASK                   = #%00000111
+FREQUENCY_MASK                  = #%11111000
+VOLUME_MASK                     = #%11110000
+CONTROL_MASK                    = #%00001111
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Global Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -57,10 +62,6 @@ ADD_NOTE_FLAG                   = #32
 REMOVE_NOTE_FLAG                = #64
 PLAY_TRACK_FLAG                 = #128
 
-DURATION_MASK                   = #%00000111
-FREQUENCY_MASK                  = #%11111000
-VOLUME_MASK                     = #%11110000
-CONTROL_MASK                    = #%00001111
 SELECTION_MASK                  = #%00001111
 PLAY_NOTE_FLAG_MASK             = #%11101111
 
@@ -3570,6 +3571,7 @@ FLY_GAME_P1_JOIN_FLASH_RATE             = #52
 
 TempXPos                ds 1
 TempYPos                ds 1
+PlayerScoreTmp
 TempLetterBuffer        ds 1
 
 GameSelectFlag          ds 1
@@ -3585,8 +3587,8 @@ Game2SelectionGfx       ds 2
 EnemyOptionGfx1         ds 2
 EnemyOptionGfx2         ds 2
 
-BlockP0Swat             ds 1
-BlockP1Fire             ds 1
+BlockP0SwatCtr          ds 1
+BlockP1SwatCtr          ds 1
 FlasherCtr              ds 1
 Winner                  ds 5
 CountdownTimer          ds 1
@@ -3630,14 +3632,8 @@ Enemy1VWayPoint         ds 1
 
 P0Score                 ds 1
 P1Score                 ds 1
-P0Score1                ds 1
-P1Score1                ds 1
-P0Score2                ds 1
-P1Score2                ds 1
 P0Score1idx             ds 1
 P1Score1idx             ds 1
-P0ScoreTmp              ds 1
-P1ScoreTmp              ds 1
 P0Score2idx             ds 1
 P1Score2idx             ds 1
 P0ScoreArr              ds 5
@@ -3811,14 +3807,19 @@ FlyGameVBLANKProcessing
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 CalcPlayerScoreIdx
-        lda P0Score1,y
+        lda P0Score,y
+        and #$0F
         sta P0Score1idx,y
         asl
         asl
         adc P0Score1idx,y
         sta P0Score1idx,y
 
-        lda P0Score2,y
+        lda P0Score,y
+        lsr
+        lsr
+        lsr
+        lsr
         sta P0Score2idx,y
         asl
         asl
@@ -3838,7 +3839,7 @@ CalcScoreGraphics
         tay
         lda Zero_bank1,y
         and #$0F
-        sta P0ScoreTmp
+        sta PlayerScoreTmp
 
         txa
         adc P0Score2idx
@@ -3846,7 +3847,7 @@ CalcScoreGraphics
         lda Zero_bank1,y
         and #$F0
 
-        ora P0ScoreTmp
+        ora PlayerScoreTmp
         sta P0ScoreArr,x
 
         ;P1
@@ -3855,7 +3856,7 @@ CalcScoreGraphics
         tay
         lda Zero_bank1,y
         and #$0F
-        sta P1ScoreTmp
+        sta PlayerScoreTmp
 
         txa
         adc P1Score2idx
@@ -3863,7 +3864,7 @@ CalcScoreGraphics
         lda Zero_bank1,y
         and #$F0
 
-        ora P1ScoreTmp
+        ora PlayerScoreTmp
         sta P1ScoreArr,x
 
         inx
@@ -3939,9 +3940,7 @@ BuildCountdownTimerGraphics
         sta CountdownTimerTmp1
         asl
         asl
-        ; clc
         adc CountdownTimerTmp1
-        ; clc
         adc CountdownTimerIdx
         tay 
         lda Zero_bank1,y 
@@ -3958,9 +3957,7 @@ BuildCountdownTimerGraphics
         sta CountdownTimerTmp2
         asl
         asl
-        ; clc
         adc CountdownTimerTmp2
-        ; clc
         adc CountdownTimerIdx
         tay 
         lda Zero_bank1,y 
@@ -3975,6 +3972,10 @@ BuildCountdownTimerGraphics
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Build Countdown Timer Graphics ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Fly Game Game Values Reset ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ldx #1
         lda #FLY_GAME_P1_JOIN_HPOS+8
@@ -4001,13 +4002,15 @@ BuildCountdownTimerGraphics
 
         lda #FLY_GAME_SCORE_COLOR
         sta COLUPF
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Fly Game Game Values Reset ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 FlyGameVerticalBlankEndWaitLoop
         lda TIMINT
         and #%10000000
         beq FlyGameVerticalBlankEndWaitLoop
         sta WSYNC
-        ; lda #0
         stx VBLANK
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End VBLANK ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4022,7 +4025,7 @@ FlyGameVerticalBlankEndWaitLoop
         lda GameOverFlag
         bne SkipSetGameOverRestartDelay
         ldy #FLY_GAME_GAME_OVER_RESTART_DELAY
-        sty BlockP0Swat
+        sty BlockP0SwatCtr
 SkipSetGameOverRestartDelay
         lda #1
         sta GameOverFlag
@@ -4032,7 +4035,6 @@ SkipFlyGameGameoverScreen
         sty VDELP0
         sty VDELP1
 
-        ; ldx #0
 SkipFlyGameScreenSelect
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4049,12 +4051,12 @@ SkipFlyGameScreenSelect
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Fly Game Title Screen ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-FlyGameTitleScreen
-        ; lda #FLY_GAME_TITLE_BACKGROUND_COLOR
-        ; sta COLUBK
-        ldy #0
-        ; ldx #0
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Fly Game Title Screen Draw Title ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+FlyGameTitleScreen
+        ldy #0
 FlyGameTitleLine1
         cpx #FLY_GAME_TITLE_VPOS
         bmi SkipFlyGameTitleLine1
@@ -4107,11 +4109,14 @@ SkipFlyGameTitleLine2
         cpx #FLY_GAME_TITLE_VPOS+46
         sta WSYNC
         bmi FlyGameTitleLine2
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Fly Game Title Screen Draw Title ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-;;;;;;;;;;;;;;; End Draw Playfield ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Fly Game Title Screen Draw Menu ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 FlyGameNumPlayersSelectLine1 
         cpx #FLY_GAME_TITLE_MENU_VPOS
         bmi SkipFlyGameNumPlayersSelectLine1
@@ -4146,9 +4151,10 @@ FlyGameNumPlayersSelectLine2
         lda TW,y                                        ; 4
         sta GRP1                                        ; 3
 
-        SLEEP 8                                        ; 12
+        SLEEP 6                                        ; 12
 
-        lda O_,y                                        ; 4
+        lda ON,y                                        ; 4
+        and #$F0
         sta GRP0                                        ; 3
 SkipFlyGameNumPlayersSelectLine2
         inx
@@ -4216,10 +4222,10 @@ FlyGameOptionsLine
         SLEEP 2
         sty TempYPos                    ; 3     9
         
-        ldx ES,y                        ; 4     13
+        ldx Space,y                        ; 4     13
         stx.w TempLetterBuffer          ; 3     16
         
-        ldx MI,y                        ; 4     20
+        ldx ES,y                        ; 4     20
 
         lda (EnemyOptionGfx1),y         ; 4     24
         sta GRP0                        ; 3     27 -> [GRP0]
@@ -4227,10 +4233,10 @@ FlyGameOptionsLine
         lda (EnemyOptionGfx2),y         ; 4     31
         sta GRP1                        ; 3     34 -> [GRP1], [GRP0] -> GRP0
         
-        lda _E,y                        ; 4     38
+        lda _F,y                        ; 4     38
         sta GRP0                        ; 3     41 -> [GRP0]. [GRP1] -> GRP1
         
-        lda NE,y                        ; 4     45
+        lda LI,y                        ; 4     45
         ldy TempLetterBuffer            ; 3     48
         sta GRP1                        ; 3     51 -> [GRP1], [GRP0] -> GRP0
         stx GRP0                        ; 3     54 -> [GRP0], [GRP1] -> GRP1
@@ -4274,7 +4280,10 @@ TameEnemies
         lda OptionsLoopCtr
         cmp #2
         bne DrawOptions
-        
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Fly Game Title Screen Draw Menu ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
         ldx #21+(#135-#FLY_GAME_TITLE_MENU_VPOS)
 FlyGameTitleScreenBottomBuffer
         dex
@@ -4388,7 +4397,6 @@ Player2Buffer
         lda #FLY_GAME_TIMER_COLOR
         sta COLUP0
 
-        ; inx
         sta WSYNC
 
 ; Align Countdown Timer 
@@ -4398,10 +4406,8 @@ PositionCountdownTimer
         lda TIMINT
         beq PositionCountdownTimer
         SLEEP 4
-
         sta RESP0
 
-        ; inx
         sta WSYNC
 ; End Align Countdown Timer
 
@@ -4787,7 +4793,6 @@ GameOverBottomTextAlignDelay
         beq GameOverBottomTextAlignDelay
 
 DrawGameOverScreenBottomText
-        ; stx TempXPos                                    ; 3     6
         SLEEP 3                                         ; 3     6
         sty TempYPos                                    ; 3     9
         
@@ -4814,12 +4819,6 @@ DrawGameOverScreenBottomText
         
         ldy TempYPos                                    ; 3     63
         iny                                             ; 2     65
-        ; ldx TempXPos                                    ; 3     63
-        ; inx                                             ; 2     70
-        ; cpx #107                                        ; 2     72
-        
-        ; nop                                             ; 2     74
-        ; nop                                             ; 2     76
         cmp #0                                          ; 2     67
         SLEEP 9                                         ; 9     76
         bne DrawGameOverScreenBottomText
@@ -4898,7 +4897,6 @@ FlyGameTitleOverscan
 
         lda DebounceCtr
         bne DontStartGame
-SkipDecDebounceCtr_Bank1
         lda INPT4
         bmi DontStartGame
         sta StartGameFlag
@@ -4972,19 +4970,18 @@ SkipFlasher
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda DebounceCtr
         bne SkipRestartFlyGame
-        lda GameOverFlag
-        cmp #1
-        bne SkipRestartFlyGame
         
-        lda BlockP0Swat
-        bne DecrementP0BlockFire
+        lda GameOverFlag
+        beq SkipRestartFlyGame
+        
+        lda BlockP0SwatCtr
+        bne DecrementP0BlockFireCtr
 
         lda INPT4
         bmi SkipRestartFlyGame
         jmp Reset
-DecrementP0BlockFire
-        
-        dec BlockP0Swat
+DecrementP0BlockFireCtr
+        dec BlockP0SwatCtr
 SkipRestartFlyGame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Restart Fly Game ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5105,7 +5102,7 @@ PlayerDetectHit
         jmp PlayerSkipSwat
 PlayerSwatOk1
 
-        lda BlockP0Swat,x
+        lda BlockP0SwatCtr,x
         beq PlayerSwatOk2
         jmp SkipP0HitDetection
 PlayerSwatOk2
@@ -5115,7 +5112,7 @@ PlayerSwatOk2
         jmp PlayerNotSwat1 
 PlayerSwatOk3
         lda #1
-        sta BlockP0Swat,x
+        sta BlockP0SwatCtr,x
 
         lda #8
         sta DebounceCtr,x
@@ -5163,14 +5160,12 @@ CheckEnemyHit
         lda #FLY_GAME_ENEMY_GENERATION_DELAY
         sta Enemy0GenTimer,y
 
-        inc P0Score,x
-        inc P0Score1,x
-        lda P0Score1,x
-        cmp #10
-        bne SkipPlayerEnemyHit
-        lda #0
-        sta P0Score1,x
-        inc P0Score2,x
+        sed
+        lda P0Score,x
+        clc
+        adc #1
+        sta P0Score,x
+        cld
 SkipPlayerEnemyHit
 
         iny 
@@ -5185,7 +5180,7 @@ PlayerNotSwat1
         lda INPT4,x
         bpl PlayerNotSwat2
         lda #0
-        sta BlockP0Swat,x
+        sta BlockP0SwatCtr,x
 PlayerNotSwat2
         lda DebounceCtr,x
         bne PlayerSkipSwat
@@ -5448,20 +5443,24 @@ FlyGameRomMusicPlayer
 ; Track 0
         ldy #0                          ; 2     Initialize Y-Index to 0
         lda (FlyGameNotePtrCh0),y       ; 5     Load first note duration to A
+        and #DURATION_MASK              ; 2     Mask so we only have the note duration
+        tay                             ; 2     Make A the y index
+        lda FlyGameNoteDurations,y      ; 4     Get the actual duration based on the duration settin
         cmp FlyGameFrameCtrTrk0         ; 3     See if it equals the Frame Counter
         bne FlyGameTrack0NextNote       ; 2/3   If so move the NotePtr to the next note
 
         lda FlyGameNotePtrCh0           ; 3     Load the Note Pointer to A
         clc                             ; 2     Clear the carry 
-        adc #4                          ; 2     Add 4 to move the Note pointer to the next note
+        adc #2                          ; 2     Add 4 to move the Note pointer to the next note
         sta FlyGameNotePtrCh0           ; 3     Store the new note pointer
 
         lda #0                          ; 2     Load Zero to
         sta FlyGameFrameCtrTrk0         ; 3     Reset the Frame counter
 FlyGameTrack0NextNote
-
+        ldy #0
         lda (FlyGameNotePtrCh0),y       ; 5     Load first note duration to A
-        cmp #255                        ; 2     See if the notes duration equals 255
+        and #DURATION_MASK              ; 2     Mask so we only have the note duration
+        cmp #0                          ; 2     See if the notes duration equals 0
         bne FlyGameSkipResetTrack0      ; 2/3   If so go back to the beginning of the track
 
         lda #<FlyGameTrack0             ; 4     Store the low byte of the track to 
@@ -5470,34 +5469,47 @@ FlyGameTrack0NextNote
         sta FlyGameNotePtrCh0+1         ; 3     the Note Pointer + 1
 FlyGameSkipResetTrack0
 
-        iny                             ; 2     Increment Y (Y=1) to point to the Note Volume
         lda (FlyGameNotePtrCh0),y       ; 5     Load Volume to A
-        sta AUDV0                       ; 3     and set the Note Volume
-        iny                             ; 2     Increment Y (Y=2) to point to the Note Frequency
-        lda (FlyGameNotePtrCh0),y       ; 5     Load Frequency to A
+        and #FREQUENCY_MASK             ; 2     Mask so we only have the note frequency
+        lsr                             ; 2     Shift right to get the correct placement
+        lsr                             ; 2     Shift right to get the correct placement
+        lsr                             ; 2     Shift right to get the correct placement
         sta AUDF0                       ; 3     and set the Note Frequency
-        iny                             ; 2     Increment Y (Y=3) to point to the Note Control
+        iny                             ; 2     Increment Y (Y=1) to point to the Note Frequency
+        lda (FlyGameNotePtrCh0),y       ; 5     Load Frequency to A
+        and #VOLUME_MASK                ; 2     Mask so we only have the note Volume
+        lsr                             ; 2     Shift right to get the correct placement
+        lsr                             ; 2     Shift right to get the correct placement
+        lsr                             ; 2     Shift right to get the correct placement
+        lsr                             ; 2     Shift right to get the correct placement
+        sta AUDV0                       ; 3     and set the Note Volume
+        
         lda (FlyGameNotePtrCh0),y       ; 5     Load Control to A
+        and #CONTROL_MASK               ; 2     Mask so we only have the note Control
         sta AUDC0                       ; 3     and set the Note Control
         inc FlyGameFrameCtrTrk0         ; 5     Increment the Frame Counter to duration compare later
 
 ; Track 1
         ldy #0                          ; 2     Initialize Y-Index to 0
         lda (FlyGameNotePtrCh1),y       ; 5     Load first note duration to A
+        and #DURATION_MASK              ; 2     Mask so we only have the note duration
+        tay                             ; 2     Make A the y index
+        lda FlyGameNoteDurations,y      ; 4     Get the actual duration based on the duration settin
         cmp FlyGameFrameCtrTrk1         ; 3     See if it equals the Frame Counter
         bne FlyGameTrack1NextNote       ; 2/3   If so move the NotePtr to the next note
 
         lda FlyGameNotePtrCh1           ; 3     Load the Note Pointer to A
         clc                             ; 2     Clear the carry 
-        adc #4                          ; 2     Add 4 to move the Notep pointer to the next note
+        adc #2                          ; 2     Add 4 to move the Note pointer to the next note
         sta FlyGameNotePtrCh1           ; 3     Store the new note pointer
 
         lda #0                          ; 2     Load Zero to
         sta FlyGameFrameCtrTrk1         ; 3     Reset the Frame counter
 FlyGameTrack1NextNote
-
-        lda (FlyGameNotePtrCh1),y
-        cmp #255                        ; 2     See if the notes duration equals 255
+        ldy #0
+        lda (FlyGameNotePtrCh1),y       ; 5     Load first note duration to A
+        and #DURATION_MASK              ; 2     Mask so we only have the note duration
+        cmp #0                          ; 2     See if the notes duration equals 0
         bne FlyGameSkipResetTrack1      ; 2/3   If so go back to the beginning of the track
 
         lda #<FlyGameTrack1             ; 4     Store the low byte of the track to 
@@ -5506,14 +5518,23 @@ FlyGameTrack1NextNote
         sta FlyGameNotePtrCh1+1         ; 3     the Note Pointer + 1
 FlyGameSkipResetTrack1
 
-        iny                             ; 2     Increment Y (Y=1) to point to the Note Volume
         lda (FlyGameNotePtrCh1),y       ; 5     Load Volume to A
-        sta AUDV1                       ; 3     and set the Note Volume
-        iny                             ; 2     Increment Y (Y=2) to point to the Note Frequency
-        lda (FlyGameNotePtrCh1),y       ; 5     Load Frequency to A
+        and #FREQUENCY_MASK             ; 2     Mask so we only have the note frequency
+        lsr                             ; 2     Shift right to get the correct placement
+        lsr                             ; 2     Shift right to get the correct placement
+        lsr                             ; 2     Shift right to get the correct placement
         sta AUDF1                       ; 3     and set the Note Frequency
-        iny                             ; 2     Increment Y (Y=3) to point to the Note Control
+        iny                             ; 2     Increment Y (Y=1) to point to the Note Frequency
+        lda (FlyGameNotePtrCh1),y       ; 5     Load Frequency to A
+        and #VOLUME_MASK                ; 2     Mask so we only have the note Volume
+        lsr                             ; 2     Shift right to get the correct placement
+        lsr                             ; 2     Shift right to get the correct placement
+        lsr                             ; 2     Shift right to get the correct placement
+        lsr                             ; 2     Shift right to get the correct placement
+        sta AUDV1                       ; 3     and set the Note Volume
+        
         lda (FlyGameNotePtrCh1),y       ; 5     Load Control to A
+        and #CONTROL_MASK               ; 2     Mask so we only have the note Control
         sta AUDC1                       ; 3     and set the Note Control
         inc FlyGameFrameCtrTrk1         ; 5     Increment the Frame Counter to duration compare later
 
@@ -6038,16 +6059,14 @@ SkipResetMultiColorCanvasRowLineCtr
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; End Multi Color Canvas
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 EndOfCanvas
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Setup Overscan  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #2
-        sta VBLANK
+        ldy #2
+        sty VBLANK
 
-        lda #0
         sta PF1
         
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -6182,9 +6201,9 @@ PaintTileButtonPressed
         jmp SkipPaintTile
 CalculateTilePosition
 
-        sec
+        ; sec
         sbc #36
-        sec
+        ; sec
 DivideBy6
         inx
         sbc #ATARI_PAINT_CANVAS_ROW_HEIGHT
@@ -6287,11 +6306,15 @@ SkipSetCanvasIdx2
         eor #$FF
 LoadTableErasePF11
         and #%00001111
-        clc
-        rol
-        rol
-        rol
-        rol
+        ; clc
+        ; rol
+        ; rol
+        ; rol
+        ; rol
+        asl
+        asl
+        asl
+        asl
         
         sta CanvasByteBuffer
 
@@ -6305,10 +6328,14 @@ LoadTableErasePF12
 
         and #%11110000
         
-        ror
-        ror
-        ror
-        ror
+        ; ror
+        ; ror
+        ; ror
+        ; ror
+        lsr
+        lsr
+        lsr
+        lsr
         
         ora CanvasByteBuffer
         sta CanvasByteMask
@@ -6616,383 +6643,369 @@ Skipeor:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Rom Data ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ;align 256
-PlayerGfx  .byte #%01111110
-           .byte #%11111111
-           .byte #%10000001
-           .byte #%10000001
-           .byte #%10000001
-           .byte #%10000001
-           .byte #%10000001
-           .byte #%10000001
-           .byte #%10000001
-           .byte #%11111111
-           .byte #%01111110
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00011000
 
+PlayerGfx               .byte  #%01111110
+                        .byte  #%11111111
+                        .byte  #%10000001
+                        .byte  #%10000001
+                        .byte  #%10000001
+                        .byte  #%10000001
+                        .byte  #%10000001
+                        .byte  #%10000001
+                        .byte  #%10000001
+                        .byte  #%11111111
+                        .byte  #%01111110
+                        .byte  #%00011000
+                        .byte  #%00011000
+                        .byte  #%00011000
+                        .byte  #%00011000
+                        .byte  #%00011000
+                        .byte  #%00011000
+                        .byte  #%00011000
+                        .byte  #%00011000
+                        .byte  #%00011000
+                        .byte  #%00011000
+                        .byte  #%00011000
+PlayerSwatGfx           .byte  #%00000000
+                        .byte  #%00000000
+                        .byte  #%00000000
+                        .byte  #%00000000
+                        .byte  #%00000000
+                        .byte  #%11111111
+                        .byte  #%10000001
+                        .byte  #%10000001
+                        .byte  #%10000001
+                        .byte  #%11111111
+                        .byte  #%00011000
+                        .byte  #%00011000
+                        .byte  #%00011000
+                        .byte  #%00011000
+                        .byte  #%00011000
+                        .byte  #%00011000
+                        .byte  #%00011000
+                        .byte  #%00011000
+Space                   .byte  #%00000000
+                        .byte  #%00000000
+                        .byte  #%00000000
+                        .byte  #%00000000     ; (22)
+                        .byte  #%00000000
+                        .byte  #%00000000     ; (24)
 
-PlayerSwatGfx  
-           .byte #%00000000
-           .byte #%00000000
-           .byte #%00000000
-           .byte #%00000000
-           .byte #%00000000
-           .byte #%11111111
-           .byte #%10000001
-           .byte #%10000001
-           .byte #%10000001
-           .byte #%11111111
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00011000
-           .byte #%00011000
-Space      .byte #%00000000
-           .byte #%00000000
-           .byte #%00000000
-           .byte #%00000000     ; (22)
-           .byte #%00000000
-           .byte #%00000000     ; (24)
-        
-ON         .byte  #%01001100
-           .byte  #%10101010
-           .byte  #%10101010
-           .byte  #%10101010
-           .byte  #%01001010
-           .byte  #0
+ON                      .byte  #%01001100
+                        .byte  #%10101010
+                        .byte  #%10101010
+                        .byte  #%10101010
+                        .byte  #%01001010
+                        .byte  #0
 
-O_         .byte  #%01000000
-           .byte  #%10100000
-           .byte  #%10100000
-           .byte  #%10100000
-           .byte  #%01000000
-           .byte  #0
+GA                      .byte  #%01100100
+                        .byte  #%10001010
+                        .byte  #%10101110
+                        .byte  #%10101010
+                        .byte  #%01101010
+                        .byte  #0
 
-GA         .byte  #%01100100
-           .byte  #%10001010
-           .byte  #%10101110
-           .byte  #%10101010
-           .byte  #%01101010
-           .byte  #0
+MER                     .byte  #%01110101
+                        .byte  #%00010111
+                        .byte  #%00110101
+                        .byte  #%00010101
+                        .byte  #%01110101
 
-MER        .byte  #%01110101
-           .byte  #%00010111
-           .byte  #%00110101
-           .byte  #%00010101
-           .byte  #%01110101
+FL                      .byte  #%11101000
+                        .byte  #%10001000
+                        .byte  #%11001000
+                        .byte  #%10001000
+                        .byte  #%10001110
 
-FL         .byte  #%11101000
-           .byte  #%10001000
-           .byte  #%11001000
-           .byte  #%10001000
-           .byte  #%10001110
+Y_                      .byte  #%00000101
+                        .byte  #%00000101
+                        .byte  #%00000010
+                        .byte  #%00000010
+                        .byte  #%00000010
 
-Y_         .byte  #%00000101
-           .byte  #%00000101
-           .byte  #%00000010
-           .byte  #%00000010
-           .byte  #%00000010
+E_                      .byte  #%11100000
+                        .byte  #%10000000
+                        .byte  #%11000000
+                        .byte  #%10000000
+                        .byte  #%11100000
+                        .byte  #0
 
-E_         .byte  #%11100000
-           .byte  #%10000000
-           .byte  #%11000000
-           .byte  #%10000000
-           .byte  #%11100000
-           .byte  #0
+_P                      .byte  #%00001110
+                        .byte  #%00001010
+                        .byte  #%00001110
+                        .byte  #%00001000
+                        .byte  #%00001000
+                        .byte  #0
 
-_P         .byte  #%00001110
-           .byte  #%00001010
-           .byte  #%00001110
-           .byte  #%00001000
-           .byte  #%00001000
-           .byte  #0
+RE_bank1                .byte  #%11001110
+                        .byte  #%10101000
+                        .byte  #%11101100
+                        .byte  #%11001000
+                        .byte  #%10101110
+                        .byte  #0
 
-RE_bank1   .byte  #%11001110
-           .byte  #%10101000
-           .byte  #%11101100
-           .byte  #%11001000
-           .byte  #%10101110
-           .byte  #0
+SS                      .byte  #%01100110
+                        .byte  #%10001000
+                        .byte  #%11101110
+                        .byte  #%00100010
+                        .byte  #%11001100
+                        .byte  #0
 
-SS         .byte  #%01100110
-           .byte  #%10001000
-           .byte  #%11101110
-           .byte  #%00100010
-           .byte  #%11001100
-           .byte  #0
+_F                      .byte  #%00001110
+                        .byte  #%00001000
+                        .byte  #%00001100
+                        .byte  #%00001000
+                        .byte  #%00001000
+                        .byte  #0
 
-_F         .byte  #%00001110
-           .byte  #%00001000
-           .byte  #%00001100
-           .byte  #%00001000
-           .byte  #%00001000
-           .byte  #0
+F_                      .byte  #%11100000
+                        .byte  #%10000000
+                        .byte  #%11000000
+                        .byte  #%10000000
+                        .byte  #%10000000
+                        .byte  #0
 
-F_         .byte  #%11100000
-           .byte  #%10000000
-           .byte  #%11000000
-           .byte  #%10000000
-           .byte  #%10000000
-           .byte  #0
+B_                      .byte  #%11000000
+                        .byte  #%10100000
+                        .byte  #%11000000
+                        .byte  #%10100000
+                        .byte  #%11000000
+                        .byte  #0
 
-B_         .byte  #%11000000
-           .byte  #%10100000
-           .byte  #%11000000
-           .byte  #%10100000
-           .byte  #%11000000
-           .byte  #0
+C_                      .byte  #%01100000
+                        .byte  #%10000000
+                        .byte  #%10000000
+                        .byte  #%10000000
+                        .byte  #%01100000
+                        .byte  #0
 
-C_         .byte  #%11100000
-           .byte  #%10000000
-           .byte  #%10000000
-           .byte  #%10000000
-           .byte  #%11100000
-           .byte  #0
+Cursor                  .byte  #%00001000
+                        .byte  #%00001100
+                        .byte  #%00001110
+                        .byte  #%00001100
+                        .byte  #%00001000
+                        .byte  #0
 
-Cursor     .byte  #%00001000
-           .byte  #%00001100
-           .byte  #%00001110
-           .byte  #%00001100
-           .byte  #%00001000
-           .byte  #0
+Zero_bank1              .byte  #%11101110
+                        .byte  #%10101010
+                        .byte  #%10101010
+                        .byte  #%10101010
+                        .byte  #%11101110
 
-Zero_bank1 .byte  #%11101110
-           .byte  #%10101010
-           .byte  #%10101010
-           .byte  #%10101010
-           .byte  #%11101110
+One_bank1               .byte  #%00100010
+                        .byte  #%00100010
+                        .byte  #%00100010
+                        .byte  #%00100010
+                        .byte  #%00100010
 
-One_bank1  .byte  #%00100010
-           .byte  #%00100010
-           .byte  #%00100010
-           .byte  #%00100010
-           .byte  #%00100010
+Two_bank1               .byte  #%11101110
+                        .byte  #%00100010
+                        .byte  #%11101110
+                        .byte  #%10001000
+                        .byte  #%11101110
 
-Two_bank1  .byte  #%11101110
-           .byte  #%00100010
-           .byte  #%11101110
-           .byte  #%10001000
-           .byte  #%11101110
+Three_bank1             .byte  #%11101110
+                        .byte  #%00100010
+                        .byte  #%11101110
+                        .byte  #%00100010
+                        .byte  #%11101110
 
-Three_bank1 .byte  #%11101110
-           .byte  #%00100010
-           .byte  #%11101110
-           .byte  #%00100010
-           .byte  #%11101110
+Four_bank1              .byte  #%10101010
+                        .byte  #%10101010
+                        .byte  #%11101110
+                        .byte  #%00100010
+                        .byte  #%00100010
 
-Four_bank1 .byte  #%10101010
-           .byte  #%10101010
-           .byte  #%11101110
-           .byte  #%00100010
-           .byte  #%00100010
+Five_bank1              .byte  #%11101110
+                        .byte  #%10001000
+                        .byte  #%11101110
+                        .byte  #%00100010
+                        .byte  #%11101110
 
-Five_bank1 .byte  #%11101110
-           .byte  #%10001000
-           .byte  #%11101110
-           .byte  #%00100010
-           .byte  #%11101110
+Six_bank1               .byte  #%11101110
+                        .byte  #%10001000
+                        .byte  #%11101110
+                        .byte  #%10101010
+                        .byte  #%11101110
 
-Six_bank1  .byte  #%11101110
-           .byte  #%10001000
-           .byte  #%11101110
-           .byte  #%10101010
-           .byte  #%11101110
+Seven_bank1             .byte  #%11101110
+                        .byte  #%00100010
+                        .byte  #%00100010
+                        .byte  #%00100010
+                        .byte  #%00100010
 
-Seven_bank1 .byte  #%11101110
-           .byte  #%00100010
-           .byte  #%00100010
-           .byte  #%00100010
-           .byte  #%00100010
+Eight_bank1             .byte  #%11101110
+                        .byte  #%10101010
+                        .byte  #%11101110
+                        .byte  #%10101010
+                        .byte  #%11101110
 
-Eight_bank1 .byte  #%11101110
-           .byte  #%10101010
-           .byte  #%11101110
-           .byte  #%10101010
-           .byte  #%11101110
+Nine_bank1              .byte  #%11101110
+                        .byte  #%10101010
+                        .byte  #%11101110
+                        .byte  #%00100010
+IE                      .byte  #%11101110
+                        .byte  #%01001000
+                        .byte  #%01001100
+                        .byte  #%01001000
+                        .byte  #%11101110
+                        .byte  #0
 
-Nine_bank1 .byte  #%11101110
-           .byte  #%10101010
-           .byte  #%11101110
-           .byte  #%00100010
-IE         .byte  #%11101110
-           .byte  #%01001000
-           .byte  #%01001100
-           .byte  #%01001000
-           .byte  #%11101110
-           .byte  #0
+OR                      .byte  #%01001100
+                        .byte  #%10101010
+                        .byte  #%10101110
+                        .byte  #%10101100
+                        .byte  #%01001010
 
-OR         .byte  #%01001100
-           .byte  #%10101010
-           .byte  #%10101110
-           .byte  #%10101100
-           .byte  #%01001010
+TW                      .byte  #%11101010
+                        .byte  #%01001010
+                        .byte  #%01001110
+                        .byte  #%01001110
+                        .byte  #%01001010
+                        .byte  #0
 
-TW         .byte  #%11101010
-           .byte  #%01001010
-           .byte  #%01001110
-           .byte  #%01001110
-           .byte  #%01001010
-           .byte  #0
+_T                      .byte  #%00001110
+                        .byte  #%00000100
+                        .byte  #%00000100
+                        .byte  #%00000100
+                        .byte  #%00000100
+                        .byte  #0
 
-_E         .byte  #%00001110
-           .byte  #%00001000
-           .byte  #%00001100
-           .byte  #%00001000
-_T         .byte  #%00001110
-           .byte  #%00000100
-           .byte  #%00000100
-           .byte  #%00000100
-           .byte  #%00000100
-           .byte  #0
+LI                      .byte  #%10001110
+                        .byte  #%10000100
+                        .byte  #%10000100
+                        .byte  #%10000100
+                        .byte  #%11101110                      
+
+SL                      .byte  #%01101000
+                        .byte  #%10001000
+                        .byte  #%11101000
+                        .byte  #%00101000
+                        .byte  #%11001110
+
+WI                      .byte  #%10101110
+                        .byte  #%10100100
+                        .byte  #%10100100
+                        .byte  #%11100100
+ME                      .byte  #%10101110
+                        .byte  #%11101000
+                        .byte  #%10101100
+                        .byte  #%10101000
+                        .byte  #%10101110
+                        .byte  #0
            
-SL         .byte  #%01101000
-           .byte  #%10001000
-           .byte  #%11101000
-           .byte  #%00101000
-NE         .byte  #%11001110
-           .byte  #%10101000
-           .byte  #%10101100
-           .byte  #%10101000   
-MI         .byte  #%10101110
-           .byte  #%11100100
-           .byte  #%10100100
-           .byte  #%10100100
-WI         .byte  #%10101110
-           .byte  #%10100100
-           .byte  #%10100100
-           .byte  #%11100100
-ME         .byte  #%10101110
-           .byte  #%11101000
-           .byte  #%10101100
-           .byte  #%10101000
-           .byte  #%10101110
-           .byte  #0
+ES                      .byte  #%11100110
+                        .byte  #%10001000
+                        .byte  #%11001110
+                        .byte  #%10000010
+IR                      .byte  #%11101100
+                        .byte  #%01001010
+                        .byte  #%01001110
+                        .byte  #%01001100
+                        .byte  #%11101010
+                        .byte  #0
            
-ES         .byte  #%11100110
-           .byte  #%10001000
-           .byte  #%11001110
-           .byte  #%10000010
-IR         .byte  #%11101100
-           .byte  #%01001010
-           .byte  #%01001110
-           .byte  #%01001100
-           .byte  #%11101010
-           .byte  #0
+FA                      .byte  #%11100100
+                        .byte  #%10001010
+                        .byte  #%11001110
+                        .byte  #%10001010
+                        .byte  #%10001010
            
-FA         .byte  #%11100100
-           .byte  #%10001010
-           .byte  #%11001110
-           .byte  #%10001010
-           .byte  #%10001010
+TA                      .byte  #%11100100
+                        .byte  #%01001010
+                        .byte  #%01001110
+                        .byte  #%01001010
+OW                      .byte  #%01001010
+                        .byte  #%10101010
+                        .byte  #%10101110
+                        .byte  #%10101110
+AY                      .byte  #%01001010
+                        .byte  #%10101010
+                        .byte  #%11100100
+                        .byte  #%10100100
+                        .byte  #%10100100
+                        .byte  #0
+
+AT                      .byte  #%01001110
+                        .byte  #%10100100
+                        .byte  #%11100100
+                        .byte  #%10100100
+                        .byte  #%10100100
+                        .byte  #0
+
+AR                      .byte  #%01001100
+                        .byte  #%10101010
+                        .byte  #%11101110
+                        .byte  #%10101100
+                        .byte  #%10101010
+                        .byte  #0
+
+I_                      .byte  #%11100000
+                        .byte  #%01000000
+                        .byte  #%01000000
+                        .byte  #%01000000
+                        .byte  #%11100000
+                        .byte  #0
+
+ST                      .byte  #%01101110
+                        .byte  #%10000100
+                        .byte  #%11100100
+                        .byte  #%00100100
+PA                      .byte  #%11000100
+                        .byte  #%10101010
+                        .byte  #%11101110
+                        .byte  #%10001010
+                        .byte  #%10001010
+                        .byte  #0
+
+LD                      .byte  #%10001100
+                        .byte  #%10001010
+                        .byte  #%10001010
+                        .byte  #%10001010
+IN                      .byte  #%11101100
+                        .byte  #%01001010
+                        .byte  #%01001010
+                        .byte  #%01001010
+                        .byte  #%11101010
+                        .byte  #0
            
-TA         .byte  #%11100100
-           .byte  #%01001010
-           .byte  #%01001110
-           .byte  #%01001010
-OW         .byte  #%01001010
-           .byte  #%10101010
-           .byte  #%10101110
-           .byte  #%10101110
-AY         .byte  #%01001010
-           .byte  #%10101010
-           .byte  #%11100100
-           .byte  #%10100100
-           .byte  #%10100100
-           .byte  #0
+EColon                  .byte  #%11100000
+                        .byte  #%10000100
+                        .byte  #%11000000
+                        .byte  #%10000100
+T_                      .byte  #%11100000
+                        .byte  #%01000000
+                        .byte  #%01000000
+                        .byte  #%01000000
+                        .byte  #%01000000
+                        .byte  #0
 
-AT         .byte  #%01001110
-           .byte  #%10100100
-           .byte  #%11100100
-           .byte  #%10100100
-           .byte  #%10100100
-           .byte  #0
+PL                      .byte  #%11101000
+                        .byte  #%10101000
+                        .byte  #%11101000
+                        .byte  #%10001000
+                        .byte  #%10001110
+                        .byte  #0
 
-AR         .byte  #%01001100
-           .byte  #%10101010
-           .byte  #%11101110
-           .byte  #%10101100
-           .byte  #%10101010
-           .byte  #0
+ER                      .byte  #%11101100
+                        .byte  #%10001010
+                        .byte  #%11001110
+                        .byte  #%10001100
+                        .byte  #%11101010
+                        .byte  #0
 
-I_         .byte  #%11100000
-           .byte  #%01000000
-           .byte  #%01000000
-           .byte  #%01000000
-           .byte  #%11100000
-           .byte  #0
+_W                      .byte  #%00001010
+                        .byte  #%00001010
+                        .byte  #%00001110
+                        .byte  #%00001110
+                        .byte  #%00001010
+                        .byte  #0
 
-ST         .byte  #%01101110
-           .byte  #%10000100
-           .byte  #%11100100
-           .byte  #%00100100
-PA         .byte  #%11000100
-           .byte  #%10101010
-           .byte  #%11101110
-           .byte  #%10001010
-           .byte  #%10001010
-           .byte  #0
-
-LD         .byte  #%10001100
-           .byte  #%10001010
-           .byte  #%10001010
-           .byte  #%10001010
-IN         .byte  #%11101100
-           .byte  #%01001010
-           .byte  #%01001010
-           .byte  #%01001010
-           .byte  #%11101010
-           .byte  #0
-           
-EColon     .byte  #%11100000
-           .byte  #%10000100
-           .byte  #%11000000
-           .byte  #%10000100
-T_         .byte  #%11100000
-           .byte  #%01000000
-           .byte  #%01000000
-           .byte  #%01000000
-           .byte  #%01000000
-           .byte  #0
-
-PL         .byte  #%11101000
-           .byte  #%10101000
-           .byte  #%11101000
-           .byte  #%10001000
-           .byte  #%10001110
-           .byte  #0
-
-ER         .byte  #%11101100
-           .byte  #%10001010
-           .byte  #%11001110
-           .byte  #%10001100
-           .byte  #%11101010
-           .byte  #0
-
-_W         .byte  #%00001010
-           .byte  #%00001010
-           .byte  #%00001110
-           .byte  #%00001110
-           .byte  #%00001010
-           .byte  #0
-
-SC         .byte  #%01100110
-           .byte  #%10001000
-           .byte  #%11101000
-           .byte  #%00101000
-           .byte  #%11000110
+SC                      .byte  #%01100110
+                        .byte  #%10001000
+                        .byte  #%11101000
+                        .byte  #%00101000
+                        .byte  #%11000110
 
 CanvasSelectTable       .byte #%00000001
                         .byte #%00000010
@@ -7010,23 +7023,29 @@ CanvasSelectTableR      .byte #%10000000
                         .byte #%00000010
                         .byte #%00000001
 
-P0JoyStickUp                    .byte #P0_JOYSTICK_UP
-P1JoyStickUp                    .byte #P1_JOYSTICK_UP
-P0JoyStickDown                  .byte #P0_JOYSTICK_DOWN
-P1JoyStickDown                  .byte #P1_JOYSTICK_DOWN
-P0JoyStickLeft                  .byte #P0_JOYSTICK_LEFT
-P1JoyStickLeft                  .byte #P1_JOYSTICK_LEFT
-P0JoyStickRight                 .byte #P0_JOYSTICK_RIGHT
-P1JoyStickRight                 .byte #P1_JOYSTICK_RIGHT
+P0JoyStickUp            .byte #P0_JOYSTICK_UP
+P1JoyStickUp            .byte #P1_JOYSTICK_UP
+P0JoyStickDown          .byte #P0_JOYSTICK_DOWN
+P1JoyStickDown          .byte #P1_JOYSTICK_DOWN
+P0JoyStickLeft          .byte #P0_JOYSTICK_LEFT
+P1JoyStickLeft          .byte #P1_JOYSTICK_LEFT
+P0JoyStickRight         .byte #P0_JOYSTICK_RIGHT
+P1JoyStickRight         .byte #P1_JOYSTICK_RIGHT
 
-FlyGameTitleTrack0   .byte 0,0,0,0,255
-FlyGameTitleTrack1   .byte 0,0,0,0,255
+FlyGameNoteDurations    .byte 0         ; control note - 0
+                        .byte 3
+                        .byte 9         ; 32nd note 
+                        .byte 18        ; 16th note 
+                        .byte 36        ; eighth note 
+                        .byte 48        ; triplet note 
+                        .byte 72        ; quarter note 
+                        .byte 144       ; half note
 
-FlyGameTrack0   .byte 0,0,0,0,255
-FlyGameTrack1   .byte 0,0,0,0,255
+FlyGameTitleTrack0      .byte 0,0,0
+FlyGameTitleTrack1      .byte 0,0,0
 
-
-
+FlyGameTrack0           .byte 0,0,0
+FlyGameTrack1           .byte 0,0,0
 
         echo "----"
         echo "Rom Total Bank1:"
