@@ -5467,6 +5467,14 @@ FlyGameTrack0NextNote
         sta FlyGameNotePtrCh0           ; 3     the Note Pointer
         lda #>FlyGameTrack0             ; 4     Store the High byte of the track to
         sta FlyGameNotePtrCh0+1         ; 3     the Note Pointer + 1
+        
+        lda StartGameFlag               ; 3     Check to see if the game has started
+        bne SkipLoadGameTitleTrack0     ; 2/3   If so then don't load the title track
+        lda #<FlyGameTitleTrack0        ; 4     Store the low byte of the track to 
+        sta FlyGameNotePtrCh0           ; 3     the Note Pointer
+        lda #>FlyGameTitleTrack0        ; 4     Store the High byte of the track to
+        sta FlyGameNotePtrCh0+1         ; 3     the Note Pointer + 1
+SkipLoadGameTitleTrack0
 FlyGameSkipResetTrack0
 
         lda (FlyGameNotePtrCh0),y       ; 5     Load Volume to A
@@ -5516,6 +5524,14 @@ FlyGameTrack1NextNote
         sta FlyGameNotePtrCh1           ; 3     the Note Pointer
         lda #>FlyGameTrack1             ; 4     Store the High byte of the track to
         sta FlyGameNotePtrCh1+1         ; 3     the Note Pointer + 1
+        
+        lda StartGameFlag               ; 3     Check to see if the game has started
+        bne SkipLoadGameTitleTrack1     ; 2/3   If so then don't load the title track
+        lda #<FlyGameTitleTrack1        ; 4     Store the low byte of the track to 
+        sta FlyGameNotePtrCh1           ; 3     the Note Pointer
+        lda #>FlyGameTitleTrack1        ; 4     Store the High byte of the track to
+        sta FlyGameNotePtrCh1+1         ; 3     the Note Pointer + 1
+SkipLoadGameTitleTrack1
 FlyGameSkipResetTrack1
 
         lda (FlyGameNotePtrCh1),y       ; 5     Load Volume to A
