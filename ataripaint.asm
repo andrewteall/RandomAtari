@@ -7062,7 +7062,7 @@ FlyGameNoteDurations    .byte 0         ; control note - 0
 FlyGameTitleTrack0      .byte 0,0,0
 FlyGameTitleTrack1      .byte 0,0,0
 
-FlyGameTrack0           .byte 0,0,0
+FlyGameTrack0           .byte $A2,$46,$01,$06,$D2,$46,$01,$06,$B2,$46,$01,$06,$D2,$46,$01,$06,$A2,$46,$01,$06,$A1,$46,$01,$06,$D2,$46,$01,$06,$B2,$46,$01,$06,$D2,$46,$01,$06,0
 FlyGameTrack1           .byte 0,0,0
 
         echo "----"
