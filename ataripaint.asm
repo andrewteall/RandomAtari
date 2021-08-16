@@ -5870,7 +5870,7 @@ HMOVECountdown
         
         lda SWCHB
         and #SWITCH_COLOR_TV
-        bne SkipColorCanvas
+        beq SkipColorCanvas
         lda #255
         sta GRP1
 SkipColorCanvas
@@ -5966,7 +5966,7 @@ PaletteDrawBrush
         
         lda SWCHB
         and #SWITCH_COLOR_TV
-        beq SkipSingleColorCanvas
+        bne SkipSingleColorCanvas
         lda #MISSLE_BALL_DISABLE
         sta WSYNC
 
@@ -6371,7 +6371,7 @@ LoadEraseCanvasByteMask
 
         lda SWCHB
         and #SWITCH_COLOR_TV
-        bne SkipPaintTile
+        beq SkipPaintTile
         lda DrawOrEraseFlag
         bne SkipPaintTile
         ldy CanvasColorIdx
@@ -6535,7 +6535,7 @@ SkipSetBrushColor
         ldy #ATARI_PAINT_TITLE_COLOR    ; Set the colors for the title
         lda SWCHB                       ; Check to see if the TV switch
         and #SWITCH_COLOR_TV            ; is in Color or B/W mode to 
-        bne BrushColorIndicatior        ; determine is the tile is the
+        beq BrushColorIndicatior        ; determine is the tile is the
         ldy BrushColor                  ; default color or the selected
 BrushColorIndicatior
         sty COLUP0                      ; color from the palette
