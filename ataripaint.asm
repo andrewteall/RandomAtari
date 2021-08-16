@@ -5592,6 +5592,8 @@ ATARI_PAINT_CANVAS_SIZE                     = #104
 ATARI_PAINT_CANVAS_OVERFLOW_MASK_POS        = #127
 ATARI_PAINT_CANVAS_ROW_HEIGHT               = #6
 
+ATARI_PAINT_PALETTE_START_POS               = #14
+
 BLACK                                       = #$00
 WHITE                                       = #$0F
 RED                                         = #$42
@@ -5897,8 +5899,8 @@ PaletteSkipDrawBrush
         nop
 PaletteDrawBrush
 
-        ; sta.w ENAM0
-        sta ENAM0
+        sta.w ENAM0
+        ; sta ENAM0
 
         lda #WHITE
         sta COLUPF
@@ -6456,52 +6458,52 @@ SkipSetCanvasControl
         bmi SkipSetBrushColor           ; is pressed
 
         lda BrushXPos                   ; If it is then check to see where the
-        cmp #13                         ; Horizontal Position of the Brush is
-        bcs SkipSetColorGray            ; located and detemine what color 
+        cmp #ATARI_PAINT_PALETTE_START_POS ; Horizontal Position of the Brush
+        bcs SkipSetColorGray            ; is located and detemine what color 
         lda #GRAY                       ; should be loaded into the Brush or
         jmp SetBrushColor               ; Background color
 SkipSetColorGray                        ; Once the Color is loaded into the
-        cmp #25                         ; Accumulator, jump to the 
+        cmp #ATARI_PAINT_PALETTE_START_POS+13 ; Accumulator, jump to the 
         bcs SkipSetColorWhite           ; SetBrushColor Label
         lda #WHITE
         jmp SetBrushColor
 SkipSetColorWhite
-        cmp #41
+        cmp #ATARI_PAINT_PALETTE_START_POS+29
         bcs SkipSetColorRed
         lda #RED
         jmp SetBrushColor
 SkipSetColorRed
-        cmp #57
+        cmp #ATARI_PAINT_PALETTE_START_POS+45
         bcs SkipSetColorPurple
         lda #PURPLE
         jmp SetBrushColor
 SkipSetColorPurple
-        cmp #71
+        cmp #ATARI_PAINT_PALETTE_START_POS+59
         bcs SkipSetColorBlue
         lda #BLUE
         jmp SetBrushColor
 SkipSetColorBlue
-        cmp #85
+        cmp #ATARI_PAINT_PALETTE_START_POS+73
         bcs SkipSetColorSky
         lda #SKY
         jmp SetBrushColor
 SkipSetColorSky
-        cmp #101
+        cmp #ATARI_PAINT_PALETTE_START_POS+89
         bcs SkipSetColorGreen
         lda #GREEN
         jmp SetBrushColor
 SkipSetColorGreen
-        cmp #117
+        cmp #ATARI_PAINT_PALETTE_START_POS+105
         bcs SkipSetColorYellow
         lda #YELLOW
         jmp SetBrushColor
 SkipSetColorYellow
-        cmp #132
+        cmp #ATARI_PAINT_PALETTE_START_POS+119
         bcs SkipSetColorOrange
         lda #ORANGE
         jmp SetBrushColor
 SkipSetColorOrange
-        cmp #146
+        cmp #ATARI_PAINT_PALETTE_START_POS+134
         bcs SkipSetColorBrown
         lda #BROWN
         jmp SetBrushColor
