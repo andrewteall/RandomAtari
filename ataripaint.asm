@@ -6436,12 +6436,11 @@ SkipSetErase
         cmp #98                         ; If the Brush H Pos is 98 and fire
         bne SkipClearCanvas             ; then set all canvas array values to 0
         
-        ldy #0                          ; Initialize Y to zero
+        lda #0
+        ldy #ATARI_PAINT_CANVAS_SIZE    ; Initialize Y to zero
 ClearCanvasArray
-        lda #0                          ; While Y is less than the Canvas size
-        sta Canvas,y                    ; Use Y as the index to store 0 to each 
-        iny                             ; canvas array element then
-        cpy #ATARI_PAINT_CANVAS_SIZE    ; increment Y
+        dey
+        sta Canvas,y
         bne ClearCanvasArray            ; Once Y equal the Cnavas size
 SkipClearCanvas
 
