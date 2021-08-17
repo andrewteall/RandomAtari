@@ -5843,8 +5843,9 @@ SkipControlRow
         sta NUSIZ0
 
         lda #MISSLE_BALL_DISABLE
-        ldy BrushYPos
-        cpy #21
+        ; ldy BrushYPos
+        ; cpy #21
+        cpx BrushYPos                   ; X=21
         bne ControlSkipDrawBrush
         lda #MISSLE_BALL_ENABLE
 ControlSkipDrawBrush
@@ -6969,6 +6970,8 @@ LD                      .byte  #%10001100
                         .byte  #%10001010
                         .byte  #%10001010
                         .byte  #%10001010
+                        .byte  #%11101100
+                        
 IN                      .byte  #%11101100
                         .byte  #%01001010
                         .byte  #%01001010
