@@ -6279,7 +6279,7 @@ LoadTableErasePF10
         sta CanvasByteMask
 
         ldx #0
-        stx CanvasIdx
+        ; stx CanvasIdx
         jmp CanvasIdxSet
 SkipSetCanvasIdx0
         cmp #82
@@ -6295,7 +6295,7 @@ LoadTableErasePF20
         sta CanvasByteMask
 
         ldx #1
-        stx CanvasIdx
+        ; stx CanvasIdx
         jmp CanvasIdxSet
 SkipSetCanvasIdx1
         cmp #98
@@ -6314,7 +6314,7 @@ LoadTableErasePF00
         sta CanvasByteMask
 
         ldx #2
-        stx CanvasIdx
+        ; stx CanvasIdx
         jmp CanvasIdxSet
 SkipSetCanvasIdx2
         ldy CanvasByteIdx
@@ -6324,11 +6324,6 @@ SkipSetCanvasIdx2
         eor #$FF
 LoadTableErasePF11
         and #%00001111
-        ; clc
-        ; rol
-        ; rol
-        ; rol
-        ; rol
         asl
         asl
         asl
@@ -6345,11 +6340,6 @@ LoadTableErasePF11
 LoadTableErasePF12
 
         and #%11110000
-        
-        ; ror
-        ; ror
-        ; ror
-        ; ror
         lsr
         lsr
         lsr
@@ -6359,7 +6349,7 @@ LoadTableErasePF12
         sta CanvasByteMask
 
         ldx #3
-        stx CanvasIdx
+        ; stx CanvasIdx
 CanvasIdxSet
         stx CanvasColorIdx
         
