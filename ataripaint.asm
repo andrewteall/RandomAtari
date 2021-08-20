@@ -5593,7 +5593,7 @@ FlyGameOverscanWaitLoop
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ATARI_PAINT_TITLE_H_POS                     = #57
 ATARI_PAINT_TITLE_COLOR                     = #$02
-ATARI_PAINT_TITLE_ALIGNMENT_TIMER           = #48
+ATARI_PAINT_TITLE_ALIGNMENT_TIMER           = #56;48
 
 ATARI_PAINT_BACKGROUND_COLOR                = #$0F
 ATARI_PAINT_FOREGROUND_SELECTED_COLOR       = #$88
@@ -5614,12 +5614,12 @@ BLACK                                       = #$00
 WHITE                                       = #$0F
 RED                                         = #$42
 BLUE                                        = #$86
-YELLOW                                      = #$1E
+YELLOW                                      = #$1D;$1E
 GREEN                                       = #$B2
 ORANGE                                      = #$36
-GRAY                                        = #$0A
+GRAY                                        = #$09;$0A
 BROWN                                       = #$F0
-SKY                                         = #$9C
+SKY                                         = #$9B;$9C
 PURPLE                                      = #$64
 
 
@@ -5748,11 +5748,12 @@ AtariPaintTitleWaitLoop                 ; screen
         lda TIMINT                      ; Load the values into the built in  
         and #%10000000                  ; then wait until it has expired
         beq AtariPaintTitleWaitLoop     ;
-        SLEEP 5
+        ; SLEEP 8
                 
         inx                             ; Increment the line counter for timer
 AtariPaintDrawTitle
-        stx TempXPos                    ; 3     6       Store X Register so we can use it again
+        ; stx TempXPos                    ; 3     6       Store X Register so we can use it again
+        ; SLEEP 3
         sty TempYPos                    ; 3     9       Store Y Register so we can use it again
         
         ldx T_,y                        ; 4     13      Load Graphics into the Y Register and
@@ -5777,14 +5778,18 @@ AtariPaintDrawTitle
         sty GRP1                        ; 3     57      T  -> [GRP1], [GRP0] -> GRP0
         stx GRP0                        ; 3     60      ?? -> [GRP0], [GRP1] -> GRP1
         
-        ldx TempXPos                    ; 3     63      Restore X Register to previous value
+        ; ldx TempXPos                    ; 3     63      Restore X Register to previous value
         ldy TempYPos                    ; 3     66      Restore Y Register to previous value
         iny                             ; 2     68      Increment Y for graphics index
 
-        inx                             ; 2     70      Increment X for the line counter
-        cpx #10                         ; 2     72      Check if we're on line 10
-        nop                             ; 2     74      Waste 2 cycles
-        nop                             ; 2     76      Waste 2 cycles to get 76 cycle alignment
+        ; inx                             ; 2     70      Increment X for the line counter
+        ; cpx #10                         ; 2     72      Check if we're on line 10
+        cpy #6                          ; 2     72      Check if we're on line 10
+        ; nop                             ; 2     74      Waste 2 cycles
+        ; nop                             ; 2     76      Waste 2 cycles to get 76 cycle alignment
+        SLEEP 6
+        sty COLUP0
+        sty COLUP1
         bne AtariPaintDrawTitle         ; 2/3   2/3     If not to line 10 cont drawing the letters
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Title Text ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5796,7 +5801,26 @@ AtariPaintDrawTitle
         lda #MISSLE_SIZE_FOUR_CLOCKS | #TWO_COPIES_MEDIUM ; Set the player
         sta NUSIZ0                      ; graphics to two copies and the
         sta NUSIZ1                      ; missle graphics to be 4x wide
-
+        lda ControlsColor
+        cmp #GRAY
+        bne AdjustGrayColor
+        sec
+        sbc #3
+        sta ControlsColor
+AdjustGrayColor
+        cmp #WHITE
+        bne AdjustWhiteColor
+        sec
+        sbc #6
+        sta ControlsColor
+AdjustWhiteColor
+        cmp #YELLOW
+        bne AdjustYellowColor
+        dec ControlsColor
+        dec ControlsColor
+AdjustYellowColor
+        
+        ldx #10
         ldy #0                          ; Initialize the graphics index to 0
 AtariPaintControlRow
         cpx #15                         ; Check to see if we're on line 15
@@ -5828,6 +5852,11 @@ AtariPaintControlRow
                                         ; have time to do this before the next
                                         ; section
 SkipControlRow
+        ; lda ControlsColor
+        ; cmp #YELLOW+1
+        ; bne SkipColorReset
+        ; dec ControlsColor
+SkipColorReset
         inx                             ; Increment the line counter
         sta WSYNC                       ; and check to see if we're on line 21
         cpx #21                         ; If not then repeat if so then move
@@ -6532,20 +6561,23 @@ SkipSetBrushColor
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Reset For Next Frame ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #0                          ; Reset or Diable Player
-        sta ENAM1                       ; Grpahics, the Playfield
-        sta COLUPF                      ; color, and Missle 1 used for
-        sta GRP1                        ; masking the right canvas side
-        sta GRP0                        ; overflow
+        ldx #0                          ; Reset or Diable Player
+        stx ENAM1                       ; Grpahics, the Playfield
+        stx COLUPF                      ; color, and Missle 1 used for
+        stx GRP1                        ; masking the right canvas side
+        stx GRP0                        ; overflow
 
-        ldy #ATARI_PAINT_TITLE_COLOR    ; Set the colors for the title
-        lda SWCHB                       ; Check to see if the TV switch
-        and #SWITCH_COLOR_TV            ; is in Color or B/W mode to 
-        beq BrushColorIndicatior        ; determine is the tile is the
-        ldy BrushColor                  ; default color or the selected
-BrushColorIndicatior
-        sty COLUP0                      ; color from the palette
-        sty COLUP1                      ; 
+        ; ldy #ATARI_PAINT_TITLE_COLOR    ; Set the colors for the title
+        ; lda SWCHB                       ; Check to see if the TV switch
+        ; and #SWITCH_COLOR_TV            ; is in Color or B/W mode to 
+        ; beq BrushColorIndicatior        ; determine is the tile is the
+        ; ldy BrushColor                  ; default color or the selected
+        ; ldy #0
+; BrushColorIndicatior
+        ; sty COLUP0                      ; color from the palette
+        ; sty COLUP1                      ;
+        stx COLUP0                      ; color from the palette
+        stx COLUP1                      ;
 
         lda #ATARI_PAINT_BACKGROUND_COLOR ; Set the Background Color back to 
         sta COLUBK                      ; the default for the top of the screen
@@ -6553,14 +6585,16 @@ BrushColorIndicatior
         lda #ATARI_PAINT_CANVAS_ROW_HEIGHT ; Reset the Canavs Row Line Counter
         sta CanvasRowLineCtr            ; To the Row Height
 
-        lda #ATARI_PAINT_FOREGROUND_SELECTED_COLOR ; Reset the Control Row
+        ; lda #ATARI_PAINT_FOREGROUND_SELECTED_COLOR ; Reset the Control Row
+        lda BrushColor
         sta ControlsColor                ; Color back to the line height
 
         lda #THREE_COPIES_CLOSE         ; Reset the players to have
         sta NUSIZ0                      ; 3 copies close for the
         sta NUSIZ1                      ; title
 
-        ldx #1                          ; Enable Vertical Delay on both
+        ; ldx #1                          ; Enable Vertical Delay on both
+        inx                               ; Enable Vertical Delay on both
         stx VDELP0                      ; Players for the title
         stx VDELP1                      ; 
 
@@ -6965,9 +6999,13 @@ PA                      .byte  #%11000100
                         .byte  #%10001010
                         .byte  #%10001010
                         .byte  #0
+PL                      .byte  #%11101000
+                        .byte  #%10101000
+                        .byte  #%11101000
+                        .byte  #%10001000
+                        .byte  #%10001110
+                        .byte  #0
 
-
-                        
 IN                      .byte  #%11101100
                         .byte  #%01001010
                         .byte  #%01001010
@@ -6984,13 +7022,6 @@ T_                      .byte  #%11100000
                         .byte  #%01000000
                         .byte  #%01000000
                         .byte  #%01000000
-                        .byte  #0
-
-PL                      .byte  #%11101000
-                        .byte  #%10101000
-                        .byte  #%11101000
-                        .byte  #%10001000
-                        .byte  #%10001110
                         .byte  #0
 
 LD                      .byte  #%10001100
