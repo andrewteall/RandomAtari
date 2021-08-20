@@ -5748,12 +5748,9 @@ AtariPaintTitleWaitLoop                 ; screen
         lda TIMINT                      ; Load the values into the built in  
         and #%10000000                  ; then wait until it has expired
         beq AtariPaintTitleWaitLoop     ;
-        ; SLEEP 8
                 
         inx                             ; Increment the line counter for timer
 AtariPaintDrawTitle
-        ; stx TempXPos                    ; 3     6       Store X Register so we can use it again
-        ; SLEEP 3
         sty TempYPos                    ; 3     9       Store Y Register so we can use it again
         
         ldx T_,y                        ; 4     13      Load Graphics into the Y Register and
@@ -5778,15 +5775,10 @@ AtariPaintDrawTitle
         sty GRP1                        ; 3     57      T  -> [GRP1], [GRP0] -> GRP0
         stx GRP0                        ; 3     60      ?? -> [GRP0], [GRP1] -> GRP1
         
-        ; ldx TempXPos                    ; 3     63      Restore X Register to previous value
+
         ldy TempYPos                    ; 3     66      Restore Y Register to previous value
         iny                             ; 2     68      Increment Y for graphics index
-
-        ; inx                             ; 2     70      Increment X for the line counter
-        ; cpx #10                         ; 2     72      Check if we're on line 10
         cpy #6                          ; 2     72      Check if we're on line 10
-        ; nop                             ; 2     74      Waste 2 cycles
-        ; nop                             ; 2     76      Waste 2 cycles to get 76 cycle alignment
         SLEEP 6
         sty COLUP0
         sty COLUP1
@@ -5852,11 +5844,7 @@ AtariPaintControlRow
                                         ; have time to do this before the next
                                         ; section
 SkipControlRow
-        ; lda ControlsColor
-        ; cmp #YELLOW+1
-        ; bne SkipColorReset
-        ; dec ControlsColor
-SkipColorReset
+        
         inx                             ; Increment the line counter
         sta WSYNC                       ; and check to see if we're on line 21
         cpx #21                         ; If not then repeat if so then move
@@ -5872,8 +5860,6 @@ SkipColorReset
         sta NUSIZ0
 
         lda #MISSLE_BALL_DISABLE
-        ; ldy BrushYPos
-        ; cpy #21
         cpx BrushYPos                   ; X=21
         bne ControlSkipDrawBrush
         lda #MISSLE_BALL_ENABLE
@@ -5992,7 +5978,6 @@ PaletteDrawBrush
         lda BackgroundColor
         sta COLUBK
         sta WSYNC
-        ; lda #0
         sty PF0
         sty PF1
         sty PF2
@@ -6309,7 +6294,6 @@ LoadTableErasePF10
         sta CanvasByteMask
 
         ldx #0
-        ; stx CanvasIdx
         jmp CanvasIdxSet
 SkipSetCanvasIdx0
         cmp #82
@@ -6325,7 +6309,6 @@ LoadTableErasePF20
         sta CanvasByteMask
 
         ldx #1
-        ; stx CanvasIdx
         jmp CanvasIdxSet
 SkipSetCanvasIdx1
         cmp #98
@@ -6344,7 +6327,6 @@ LoadTableErasePF00
         sta CanvasByteMask
 
         ldx #2
-        ; stx CanvasIdx
         jmp CanvasIdxSet
 SkipSetCanvasIdx2
         ldy CanvasByteIdx
@@ -6379,7 +6361,6 @@ LoadTableErasePF12
         sta CanvasByteMask
 
         ldx #3
-        ; stx CanvasIdx
 CanvasIdxSet
         stx CanvasColorIdx
         
@@ -6566,17 +6547,6 @@ SkipSetBrushColor
         stx COLUPF                      ; color, and Missle 1 used for
         stx GRP1                        ; masking the right canvas side
         stx GRP0                        ; overflow
-
-        ; ldy #ATARI_PAINT_TITLE_COLOR    ; Set the colors for the title
-        ; lda SWCHB                       ; Check to see if the TV switch
-        ; and #SWITCH_COLOR_TV            ; is in Color or B/W mode to 
-        ; beq BrushColorIndicatior        ; determine is the tile is the
-        ; ldy BrushColor                  ; default color or the selected
-        ; ldy #0
-; BrushColorIndicatior
-        ; sty COLUP0                      ; color from the palette
-        ; sty COLUP1                      ;
-        stx COLUP0                      ; color from the palette
         stx COLUP1                      ;
 
         lda #ATARI_PAINT_BACKGROUND_COLOR ; Set the Background Color back to 
@@ -6585,7 +6555,6 @@ SkipSetBrushColor
         lda #ATARI_PAINT_CANVAS_ROW_HEIGHT ; Reset the Canavs Row Line Counter
         sta CanvasRowLineCtr            ; To the Row Height
 
-        ; lda #ATARI_PAINT_FOREGROUND_SELECTED_COLOR ; Reset the Control Row
         lda BrushColor
         sta ControlsColor                ; Color back to the line height
 
@@ -6593,7 +6562,6 @@ SkipSetBrushColor
         sta NUSIZ0                      ; 3 copies close for the
         sta NUSIZ1                      ; title
 
-        ; ldx #1                          ; Enable Vertical Delay on both
         inx                               ; Enable Vertical Delay on both
         stx VDELP0                      ; Players for the title
         stx VDELP1                      ; 
