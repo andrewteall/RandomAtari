@@ -5748,8 +5748,8 @@ AtariPaintTitleWaitLoop                 ; screen
         lda TIMINT                      ; Load the values into the built in  
         and #%10000000                  ; then wait until it has expired
         beq AtariPaintTitleWaitLoop     ;
-                
-        inx                             ; Increment the line counter for timer
+        nop   
+        ; inx                             ; Increment the line counter for timer
 AtariPaintDrawTitle
         sty TempYPos                    ; 3     9       Store Y Register so we can use it again
         
@@ -5893,20 +5893,17 @@ HMOVECountdown
 
         sta HMOVE
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #255
-        sta PF0
-        sta PF1
-        sta PF2
+        ldy #255
+        sty PF0
+        sty PF1
+        sty PF2
         
         lda SWCHB
         and #SWITCH_COLOR_TV
         beq SkipColorCanvas
-        lda #255
-        sta GRP1
+        sty GRP1
 SkipColorCanvas
-
         ldx #25
-        
         sta WSYNC
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Brush Control Selection Row ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5968,20 +5965,20 @@ PaletteDrawBrush
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Color Palette ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-        ldy #MISSLE_BALL_DISABLE
+        ; ldy #MISSLE_BALL_DISABLE
         inx 
-        
+        iny                             ; Wrap Y around to #MISSLE_BALL_DISABLE
         sty ENAM0
         lda BackgroundColor
         sta COLUBK
         sta WSYNC
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         sty PF0
         sty PF1
         sty PF2
         sty GRP0
         
-        lda BackgroundColor
+        ; lda BackgroundColor
         sta COLUP1
         lda #MISSLE_SIZE_FOUR_CLOCKS | #QUAD_SIZED_PLAYER
         sta NUSIZ1
