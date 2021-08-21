@@ -5791,12 +5791,13 @@ AtariPaintDrawTitle
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Brush Control Row ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         lda #MISSLE_SIZE_FOUR_CLOCKS | #TWO_COPIES_MEDIUM ; Set the player
-        sta NUSIZ0                      ; graphics to two copies and the
-        sta NUSIZ1                      ; missle graphics to be 4x wide
-        lda ControlsColor
-        cmp #GRAY
-        bne AdjustGrayColor
-        sec
+        sta NUSIZ1                      ; graphics to two copies and the
+                                        ; missle graphics to be 4x wide
+
+        lda ControlsColor               ; Adjust Colors shown for controls text
+        cmp #GRAY                       ; because the way the gradient works,
+        bne AdjustGrayColor             ; it forces it to change to a different
+        sec                             ; color.
         sbc #3
         sta ControlsColor
 AdjustGrayColor
@@ -5817,7 +5818,8 @@ AdjustYellowColor
 AtariPaintControlRow
         cpx #15                         ; Check to see if we're on line 15
         bmi SkipControlRow              ; yet, if so then
-
+        lda #MISSLE_SIZE_FOUR_CLOCKS | #TWO_COPIES_MEDIUM ; Reset Player and
+        sta NUSIZ0                      ; missle size and number
         lda ControlsColor               ; Set the new color for each of the 
         sta COLUP0                      ; players to make the gradient for
         sta COLUP1                      ; the Controls Text
@@ -5844,7 +5846,10 @@ AtariPaintControlRow
                                         ; have time to do this before the next
                                         ; section
 SkipControlRow
-        
+        lda #MISSLE_SIZE_FOUR_CLOCKS | #MISSLE_BALL_DISABLE ; Change the ball
+        sta NUSIZ0                      ; a line before you want it or else
+                                        ; there will be a delay in change
+
         inx                             ; Increment the line counter
         sta WSYNC                       ; and check to see if we're on line 21
         cpx #21                         ; If not then repeat if so then move
@@ -5855,11 +5860,7 @@ SkipControlRow
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Brush Control Selection Row ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #MISSLE_SIZE_FOUR_CLOCKS
-        sta NUSIZ0
-
-        lda #MISSLE_BALL_DISABLE
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
         cpx BrushYPos                   ; X=21
         bne ControlSkipDrawBrush
         lda #MISSLE_BALL_ENABLE
@@ -5870,13 +5871,10 @@ ControlSkipDrawBrush
         sta ENABL
         sta WSYNC
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #MISSLE_BALL_DISABLE
+        lda #MISSLE_BALL_DISABLE | #MISSLE_SIZE_TWO_CLOCKS
         sta ENABL
         sta ENAM0
-
-        lda #MISSLE_SIZE_TWO_CLOCKS
         sta NUSIZ0
-
         sta WSYNC
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
         ldy #4
@@ -6957,6 +6955,13 @@ I_                      .byte  #%11100000
                         .byte  #%11100000
                         .byte  #0
 
+PL                      .byte  #%11101000
+                        .byte  #%10101000
+                        .byte  #%11101000
+                        .byte  #%10001000
+                        .byte  #%10001110
+                        .byte  #0
+
 ST                      .byte  #%01101110
                         .byte  #%10000100
                         .byte  #%11100100
@@ -6966,12 +6971,6 @@ PA                      .byte  #%11000100
                         .byte  #%11101110
                         .byte  #%10001010
                         .byte  #%10001010
-                        .byte  #0
-PL                      .byte  #%11101000
-                        .byte  #%10101000
-                        .byte  #%11101000
-                        .byte  #%10001000
-                        .byte  #%10001110
                         .byte  #0
 
 IN                      .byte  #%11101100
