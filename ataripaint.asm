@@ -6448,14 +6448,8 @@ SkipSetCanvasControl
         ldx #0
 ColorSelectionLoop    
         lda PaletteColorTable,x
-      
-        ldy ForegroundBackgroundFlag    ; With the color loaded into
-        bne SetBackGroundColor          ; the Accumulator, check the
-        sta BrushColor                  ; ForegroundBackgroundFlag to
-        jmp SkipSetBrushColor           ; see if we if we should set
-SetBackGroundColor                      ; the Brush or Background
-        sta BackgroundColor             ; color
-SkipSetBrushColor
+        ldy ForegroundBackgroundFlag    ; Store Color to Brush or Background
+        sta BrushColor,y                ; Color based on flag
 
         inx
         lda PaletteColorOffset
@@ -6710,13 +6704,6 @@ F_                      .byte  #%11100000
                         .byte  #%10000000
                         .byte  #0
 
-Cursor                  .byte  #%00001000
-                        .byte  #%00001100
-                        .byte  #%00001110
-                        .byte  #%00001100
-                        .byte  #%00001000
-                        .byte  #0
-
 B_                      .byte  #%11000000
                         .byte  #%10100000
                         .byte  #%11000000
@@ -6729,6 +6716,13 @@ C_                      .byte  #%01100000
                         .byte  #%10000000
                         .byte  #%10000000
                         .byte  #%01100000
+                        .byte  #0
+
+Cursor                  .byte  #%00001000
+                        .byte  #%00001100
+                        .byte  #%00001110
+                        .byte  #%00001100
+                        .byte  #%00001000
                         .byte  #0
 
 Zero_bank1              .byte  #%11101110
