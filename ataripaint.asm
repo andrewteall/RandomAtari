@@ -6228,22 +6228,20 @@ PaintTileButtonPressed
         bcs CalculateTilePosition
         jmp SkipPaintTile
 CalculateTilePosition
-
-        ; sec
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         sbc #36
-        ; sec
 DivideBy6
         inx
         sbc #ATARI_PAINT_CANVAS_ROW_HEIGHT
         bcs DivideBy6
         dex
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MultiplyBy4                     ; Multiply X by 4 to find canvas row
         txa
         asl
         asl
         sta CanvasRow
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Determine Canvas Column
         lda BrushXPos           ; Load the Brush X Position
         cmp #18                 ; If it's less than 18 then
@@ -6254,7 +6252,7 @@ PaintTileMinXPosCorrect
         bmi PaintTileMaxXPosCorrect 
         jmp SkipPaintTile       ; Skip over the routine
 PaintTileMaxXPosCorrect
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         sec                     ; Subtract 18 so that the "canvas" is
         sbc #18                 ; aligned to the left side of the screen
         ldx #0                  ; Set X to 0 to count our divisions
@@ -6264,7 +6262,7 @@ DivideBy4
         sbc #4
         bcs DivideBy4           
         dex
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         txa
         sec
 Modulo8        
@@ -6273,43 +6271,38 @@ Modulo8
         clc
         adc #8
         sta CanvasByteIdx
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         tay
         lda BrushXPos
         cmp #50
         bpl SkipSetCanvasIdx0
-
-        ; ldy CanvasByteIdx
         
         lda CanvasSelectTableR,y
         ldx DrawOrEraseFlag
         beq LoadTableErasePF10
         eor #$FF
 LoadTableErasePF10
-
         sta CanvasByteMask
-
-        ldx #0
+        lda #0
         jmp CanvasIdxSet
+
 SkipSetCanvasIdx0
         cmp #82
         bpl SkipSetCanvasIdx1
 
-        ; ldy CanvasByteIdx
         lda CanvasSelectTable,y
         ldx DrawOrEraseFlag
         beq LoadTableErasePF20
         eor #$FF
 LoadTableErasePF20
         sta CanvasByteMask
-
-        ldx #1
+        lda #1
         jmp CanvasIdxSet
+
 SkipSetCanvasIdx1
         cmp #98
         bpl SkipSetCanvasIdx2
 
-        ; ldy CanvasByteIdx
         lda CanvasSelectTable,y
         ldx DrawOrEraseFlag
         beq LoadTableErasePF00
@@ -6320,46 +6313,36 @@ LoadTableErasePF00
         asl
         asl
         sta CanvasByteMask
-
-        ldx #2
+        lda #2
         jmp CanvasIdxSet
+
 SkipSetCanvasIdx2
-        ; ldy CanvasByteIdx
         lda CanvasSelectTableR,y
         ldx DrawOrEraseFlag
         beq LoadTableErasePF11
         eor #$FF
 LoadTableErasePF11
-        ; and #%00001111
         asl
         asl
         asl
         asl
-        
         sta CanvasByteBuffer
-
-        ; ldy CanvasByteIdx
-
         lda CanvasSelectTableR,y
         ldx DrawOrEraseFlag
         beq LoadTableErasePF12
         eor #$FF
 LoadTableErasePF12
-
-        ; and #%11110000
         lsr
         lsr
         lsr
         lsr
-        
         ora CanvasByteBuffer
         sta CanvasByteMask
-
-        ldx #3
-CanvasIdxSet
-        stx CanvasColorIdx
+        lda #3
         
-        txa
+CanvasIdxSet
+        sta CanvasColorIdx
+        
         clc
         adc CanvasRow
         sta CanvasIdx
@@ -6409,11 +6392,8 @@ SkipPaintTile
         bne SkipSetFGColor
 
         lda #0
-        sta DrawOrEraseFlag
         sta ForegroundBackgroundFlag
-        lda BrushXPos
-        sta BrushSelectedXPos
-        jmp SkipSetCanvasControl
+        jmp SkipClearCanvas
 
 SkipSetFGColor
 
@@ -6423,24 +6403,18 @@ SkipSetFGColor
         lda #1
         sta ForegroundBackgroundFlag
         lda #0
-        sta DrawOrEraseFlag
-        lda BrushXPos
-        sta BrushSelectedXPos
-        jmp SkipSetCanvasControl
+        jmp SkipClearCanvas
 SkipSetBGColor
 
         cmp #90
         bne SkipSetErase
 
         lda #1
-        sta DrawOrEraseFlag
-        lda BrushXPos
-        sta BrushSelectedXPos
-        jmp SkipSetCanvasControl
+        jmp SkipClearCanvas
 SkipSetErase
 
         cmp #98                         ; If the Brush H Pos is 98 and fire
-        bne SkipClearCanvas             ; then set all canvas array values to 0
+        bne SkipSetCanvasControl        ; then set all canvas array values to 0
         
         lda #0
         ldy #ATARI_PAINT_CANVAS_SIZE    ; Initialize Y to zero
@@ -6448,8 +6422,11 @@ ClearCanvasArray
         dey
         sta Canvas,y
         bne ClearCanvasArray            ; Once Y equal the Cnavas size
+        jmp SkipSetCanvasControl
 SkipClearCanvas
-
+        sta DrawOrEraseFlag
+        lda BrushXPos
+        sta BrushSelectedXPos
 SkipSetCanvasControl
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Set Playfield Control ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -6557,7 +6534,7 @@ SkipSetBrushColor
         sta NUSIZ0                      ; 3 copies close for the
         sta NUSIZ1                      ; title
 
-        inx                               ; Enable Vertical Delay on both
+        inx                             ; Enable Vertical Delay on both
         stx VDELP0                      ; Players for the title
         stx VDELP1                      ; 
 
