@@ -6274,11 +6274,12 @@ Modulo8
         adc #8
         sta CanvasByteIdx
 
+        tay
         lda BrushXPos
         cmp #50
         bpl SkipSetCanvasIdx0
 
-        ldy CanvasByteIdx
+        ; ldy CanvasByteIdx
         
         lda CanvasSelectTableR,y
         ldx DrawOrEraseFlag
@@ -6294,12 +6295,11 @@ SkipSetCanvasIdx0
         cmp #82
         bpl SkipSetCanvasIdx1
 
-        ldy CanvasByteIdx
+        ; ldy CanvasByteIdx
         lda CanvasSelectTable,y
         ldx DrawOrEraseFlag
         beq LoadTableErasePF20
         eor #$FF
-
 LoadTableErasePF20
         sta CanvasByteMask
 
@@ -6309,7 +6309,7 @@ SkipSetCanvasIdx1
         cmp #98
         bpl SkipSetCanvasIdx2
 
-        ldy CanvasByteIdx
+        ; ldy CanvasByteIdx
         lda CanvasSelectTable,y
         ldx DrawOrEraseFlag
         beq LoadTableErasePF00
@@ -6324,13 +6324,13 @@ LoadTableErasePF00
         ldx #2
         jmp CanvasIdxSet
 SkipSetCanvasIdx2
-        ldy CanvasByteIdx
+        ; ldy CanvasByteIdx
         lda CanvasSelectTableR,y
         ldx DrawOrEraseFlag
         beq LoadTableErasePF11
         eor #$FF
 LoadTableErasePF11
-        and #%00001111
+        ; and #%00001111
         asl
         asl
         asl
@@ -6338,7 +6338,7 @@ LoadTableErasePF11
         
         sta CanvasByteBuffer
 
-        ldy CanvasByteIdx
+        ; ldy CanvasByteIdx
 
         lda CanvasSelectTableR,y
         ldx DrawOrEraseFlag
@@ -6346,7 +6346,7 @@ LoadTableErasePF11
         eor #$FF
 LoadTableErasePF12
 
-        and #%11110000
+        ; and #%11110000
         lsr
         lsr
         lsr
