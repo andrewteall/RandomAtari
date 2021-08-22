@@ -5644,7 +5644,7 @@ CanvasByteBuffer                ds 1
 CanvasIdx                       ds 1
 CanvasByteIdx                   ds 1
 
-BackgroundColor                 ds 1
+PaletteColorOffset              ds 1
 
 DebounceCtr                     ds 1
 
@@ -5655,7 +5655,7 @@ BrushXPos                       ds 1
 BrushYPos                       ds 1
 BrushSelectedXPos               ds 1
 BrushColor                      ds 1
-
+BackgroundColor                 ds 1
 Canvas                          ds ATARI_PAINT_CANVAS_SIZE
 
         echo "----"
@@ -6438,67 +6438,17 @@ SkipSetCanvasControl
 
         lda BrushYPos                   ; Make sure the Vertial Brush Position
         cmp #24                         ; is inbetween the upper and lower
-        bcc SkipSetBrushColor           ; limits of the Palette section
+        bcc SkipColorSelection          ; limits of the Palette section
         cmp #34                         ; 
-        bcs SkipSetBrushColor           ; If so then
+        bcs SkipColorSelection          ; If so then
         
         lda INPT4                       ; Check to see is the fire button
-        bmi SkipSetBrushColor           ; is pressed
-
-        lda BrushXPos                   ; If it is then check to see where the
-        cmp #ATARI_PAINT_PALETTE_START_POS ; Horizontal Position of the Brush
-        bcs SkipSetColorGray            ; is located and detemine what color 
-        lda #GRAY                       ; should be loaded into the Brush or
-        jmp SetBrushColor               ; Background color
-SkipSetColorGray                        ; Once the Color is loaded into the
-        cmp #ATARI_PAINT_PALETTE_START_POS+13 ; Accumulator, jump to the 
-        bcs SkipSetColorWhite           ; SetBrushColor Label
-        lda #WHITE
-        jmp SetBrushColor
-SkipSetColorWhite
-        cmp #ATARI_PAINT_PALETTE_START_POS+29
-        bcs SkipSetColorRed
-        lda #RED
-        jmp SetBrushColor
-SkipSetColorRed
-        cmp #ATARI_PAINT_PALETTE_START_POS+45
-        bcs SkipSetColorPurple
-        lda #PURPLE
-        jmp SetBrushColor
-SkipSetColorPurple
-        cmp #ATARI_PAINT_PALETTE_START_POS+59
-        bcs SkipSetColorBlue
-        lda #BLUE
-        jmp SetBrushColor
-SkipSetColorBlue
-        cmp #ATARI_PAINT_PALETTE_START_POS+73
-        bcs SkipSetColorSky
-        lda #SKY
-        jmp SetBrushColor
-SkipSetColorSky
-        cmp #ATARI_PAINT_PALETTE_START_POS+89
-        bcs SkipSetColorGreen
-        lda #GREEN
-        jmp SetBrushColor
-SkipSetColorGreen
-        cmp #ATARI_PAINT_PALETTE_START_POS+105
-        bcs SkipSetColorYellow
-        lda #YELLOW
-        jmp SetBrushColor
-SkipSetColorYellow
-        cmp #ATARI_PAINT_PALETTE_START_POS+119
-        bcs SkipSetColorOrange
-        lda #ORANGE
-        jmp SetBrushColor
-SkipSetColorOrange
-        cmp #ATARI_PAINT_PALETTE_START_POS+134
-        bcs SkipSetColorBrown
-        lda #BROWN
-        jmp SetBrushColor
-SkipSetColorBrown
-        lda #BLACK                      ; Default to Black
-
-SetBrushColor
+        bmi SkipColorSelection          ; is pressed
+        
+        ldx #0
+ColorSelectionLoop    
+        lda PaletteColorTable,x
+      
         ldy ForegroundBackgroundFlag    ; With the color loaded into
         bne SetBackGroundColor          ; the Accumulator, check the
         sta BrushColor                  ; ForegroundBackgroundFlag to
@@ -6506,7 +6456,17 @@ SetBrushColor
 SetBackGroundColor                      ; the Brush or Background
         sta BackgroundColor             ; color
 SkipSetBrushColor
+
+        inx
+        lda PaletteColorOffset
+        adc #14
+        sta PaletteColorOffset
         
+        lda BrushXPos
+        cmp PaletteColorOffset
+        bcs ColorSelectionLoop
+
+SkipColorSelection        
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Set Brush or Background Color ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -6529,6 +6489,9 @@ SkipSetBrushColor
 
         lda BrushColor
         sta ControlsColor                ; Color back to the line height
+
+        lda ATARI_PAINT_PALETTE_START_POS-17
+        sta PaletteColorOffset
 
         lda #THREE_COPIES_CLOSE         ; Reset the players to have
         sta NUSIZ0                      ; 3 copies close for the
@@ -6747,6 +6710,13 @@ F_                      .byte  #%11100000
                         .byte  #%10000000
                         .byte  #0
 
+Cursor                  .byte  #%00001000
+                        .byte  #%00001100
+                        .byte  #%00001110
+                        .byte  #%00001100
+                        .byte  #%00001000
+                        .byte  #0
+
 B_                      .byte  #%11000000
                         .byte  #%10100000
                         .byte  #%11000000
@@ -6759,13 +6729,6 @@ C_                      .byte  #%01100000
                         .byte  #%10000000
                         .byte  #%10000000
                         .byte  #%01100000
-                        .byte  #0
-
-Cursor                  .byte  #%00001000
-                        .byte  #%00001100
-                        .byte  #%00001110
-                        .byte  #%00001100
-                        .byte  #%00001000
                         .byte  #0
 
 Zero_bank1              .byte  #%11101110
@@ -7028,6 +6991,18 @@ FlyGameTitleTrack1      .byte 0,0,0
 
 FlyGameTrack0           .byte $A2,$46,$01,$06,$D2,$46,$01,$06,$B2,$46,$01,$06,$D2,$46,$01,$06,$A2,$46,$01,$06,$A1,$46,$01,$06,$D2,$46,$01,$06,$B2,$46,$01,$06,$D2,$46,$01,$06,0
 FlyGameTrack1           .byte $92,$44,$01,$06,$C2,$44,$01,$06,$A2,$44,$01,$06,$C2,$44,$01,$06,$92,$44,$01,$06,$91,$44,$01,$06,$C2,$44,$01,$06,$A2,$44,$01,$06,$C2,$44,$01,$06,0
+
+PaletteColorTable                   .byte #GRAY
+                                .byte #WHITE
+                                .byte #RED
+                                .byte #PURPLE
+                                .byte #BLUE
+                                .byte #SKY
+                                .byte #GREEN
+                                .byte #YELLOW
+                                .byte #ORANGE
+                                .byte #BROWN
+                                .byte #BLACK
 
         echo "----"
         echo "Rom Total Bank1:"
