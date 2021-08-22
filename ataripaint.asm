@@ -6386,47 +6386,40 @@ SkipPaintTile
         lda INPT4
         bmi SkipSetCanvasControl
 
-        lda BrushXPos
-
-        cmp #58
-        bne SkipSetFGColor
-
+        ldx BrushXPos
         lda #0
+
+        cpx #58
+        bne SkipSetFGColor
         sta ForegroundBackgroundFlag
         jmp SkipClearCanvas
-
 SkipSetFGColor
 
-        cmp #66
+        cpx #66
         bne SkipSetBGColor
-
-        lda #1
-        sta ForegroundBackgroundFlag
-        lda #0
+        ldy #1
+        sty ForegroundBackgroundFlag
         jmp SkipClearCanvas
 SkipSetBGColor
 
-        cmp #90
+        cpx #90
         bne SkipSetErase
-
         lda #1
         jmp SkipClearCanvas
 SkipSetErase
 
-        cmp #98                         ; If the Brush H Pos is 98 and fire
+        cpx #98                         ; If the Brush H Pos is 98 and fire
         bne SkipSetCanvasControl        ; then set all canvas array values to 0
-        
-        lda #0
         ldy #ATARI_PAINT_CANVAS_SIZE    ; Initialize Y to zero
 ClearCanvasArray
         dey
         sta Canvas,y
         bne ClearCanvasArray            ; Once Y equal the Cnavas size
         jmp SkipSetCanvasControl
+
 SkipClearCanvas
         sta DrawOrEraseFlag
-        lda BrushXPos
-        sta BrushSelectedXPos
+        stx BrushSelectedXPos
 SkipSetCanvasControl
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Set Playfield Control ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
