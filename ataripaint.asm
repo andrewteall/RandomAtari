@@ -5633,16 +5633,12 @@ PURPLE                                      = #$64
 TempXPos                        ds 1
 TempYPos                        ds 1
 TempLetterBuffer                ds 1
-CanvasRowLineCtr                ds 1
 ControlsColor                   ds 1
+CanvasRowLineCtr                ds 1
 
         ORG Overlay
 CanvasByteMask                  ds 1
-CanvasRow                       ds 1
-CanvasColorIdx
-CanvasByteBuffer                ds 1
-CanvasIdx                       ds 1
-CanvasByteIdx                   ds 1
+CanvasRow                       ds 4
 
 PaletteColorOffset              ds 1
 
@@ -6222,17 +6218,17 @@ SkipMoveBrush
 PaintTileButtonPressed
 
 ; Determine Canvas Row
-        ldx #0
         lda BrushYPos
         cmp #36
         bcs CalculateTilePosition
         jmp SkipPaintTile
 CalculateTilePosition
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        sbc #36
+        ldx #0
 DivideBy6
         inx
         sbc #ATARI_PAINT_CANVAS_ROW_HEIGHT
+        cmp #36
         bcs DivideBy6
         dex
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -6245,21 +6241,16 @@ MultiplyBy4                     ; Multiply X by 4 to find canvas row
 ; Determine Canvas Column
         lda BrushXPos           ; Load the Brush X Position
         cmp #18                 ; If it's less than 18 then
-        bpl PaintTileMinXPosCorrect 
-        jmp SkipPaintTile       ; Skip over the routine
-PaintTileMinXPosCorrect
+        bmi SkipPaintTile 
         cmp #130                ; If it's more than 130 then
-        bmi PaintTileMaxXPosCorrect 
-        jmp SkipPaintTile       ; Skip over the routine
-PaintTileMaxXPosCorrect
+        bpl SkipPaintTile 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        sec                     ; Subtract 18 so that the "canvas" is
-        sbc #18                 ; aligned to the left side of the screen
         ldx #0                  ; Set X to 0 to count our divisions
         sec
 DivideBy4
         inx                     ; increment x by 1
         sbc #4
+        cmp #18                 ; Offset by 18 to align the canvas to the left
         bcs DivideBy4           
         dex
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -6267,91 +6258,48 @@ DivideBy4
         sec
 Modulo8        
         sbc #8
+        cmp #8
         bcs Modulo8
-        clc
-        adc #8
-        sta CanvasByteIdx
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         tay
-        lda BrushXPos
-        cmp #50
+
+        ldx BrushXPos
+
+        cpx #50
         bpl SkipSetCanvasIdx0
-        
         lda CanvasSelectTableR,y
-        ldx DrawOrEraseFlag
-        beq LoadTableErasePF10
-        eor #$FF
-LoadTableErasePF10
-        sta CanvasByteMask
-        lda #0
+        ldx #0
         jmp CanvasIdxSet
 
 SkipSetCanvasIdx0
-        cmp #82
+        cpx #82
         bpl SkipSetCanvasIdx1
-
         lda CanvasSelectTable,y
-        ldx DrawOrEraseFlag
-        beq LoadTableErasePF20
-        eor #$FF
-LoadTableErasePF20
-        sta CanvasByteMask
-        lda #1
+        ldx #1
         jmp CanvasIdxSet
 
 SkipSetCanvasIdx1
-        cmp #98
+        cpx #98
         bpl SkipSetCanvasIdx2
-
-        lda CanvasSelectTable,y
-        ldx DrawOrEraseFlag
-        beq LoadTableErasePF00
-        eor #$FF
-LoadTableErasePF00
-        asl
-        asl
-        asl
-        asl
-        sta CanvasByteMask
-        lda #2
+        lda CanvasSelectTableH,y
+        ldx #2
         jmp CanvasIdxSet
 
 SkipSetCanvasIdx2
-        lda CanvasSelectTableR,y
-        ldx DrawOrEraseFlag
-        beq LoadTableErasePF11
-        eor #$FF
-LoadTableErasePF11
-        asl
-        asl
-        asl
-        asl
-        sta CanvasByteBuffer
-        lda CanvasSelectTableR,y
-        ldx DrawOrEraseFlag
-        beq LoadTableErasePF12
-        eor #$FF
-LoadTableErasePF12
-        lsr
-        lsr
-        lsr
-        lsr
-        ora CanvasByteBuffer
-        sta CanvasByteMask
-        lda #3
+        lda CanvasSelectTableS,y
+        ldx #3
         
 CanvasIdxSet
-        sta CanvasColorIdx
+        ldy DrawOrEraseFlag
+        beq SkipLoadTableEraseMask
+        lda #$FF
+SkipLoadTableEraseMask
+        sta CanvasByteMask
         
+        txa
         clc
         adc CanvasRow
-        sta CanvasIdx
-        
-        sec
-        sbc CanvasColorIdx
-        sta CanvasColorIdx
-        
-        ldy CanvasIdx
+        tay
         lda Canvas,y
         
         ldx DrawOrEraseFlag
@@ -6369,7 +6317,7 @@ LoadEraseCanvasByteMask
         beq SkipPaintTile
         lda DrawOrEraseFlag
         bne SkipPaintTile
-        ldy CanvasColorIdx
+        ldy CanvasRow
         lda BrushColor
         sta Canvas,y
 SkipPaintTile
@@ -6943,17 +6891,22 @@ CanvasSelectTable       .byte #%00000001
                         .byte #%00000010
                         .byte #%00000100
                         .byte #%00001000
-                        .byte #%00010000
+CanvasSelectTableH      .byte #%00010000
                         .byte #%00100000
                         .byte #%01000000
 CanvasSelectTableR      .byte #%10000000
                         .byte #%01000000
                         .byte #%00100000
                         .byte #%00010000
-                        .byte #%00001000
+CanvasSelectTableS      .byte #%00001000
                         .byte #%00000100
                         .byte #%00000010
                         .byte #%00000001
+                        .byte #%10000000
+                        .byte #%01000000
+                        .byte #%00100000
+                        .byte #%00010000
+                        
 
 P0JoyStickUp            .byte #P0_JOYSTICK_UP
 P1JoyStickUp            .byte #P1_JOYSTICK_UP
