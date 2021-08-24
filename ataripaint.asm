@@ -6290,9 +6290,10 @@ SkipSetCanvasIdx2
         ldx #3
         
 CanvasIdxSet
+        
         ldy DrawOrEraseFlag
         beq SkipLoadTableEraseMask
-        lda #$FF
+        eor #$FF
 SkipLoadTableEraseMask
         sta CanvasByteMask
         
