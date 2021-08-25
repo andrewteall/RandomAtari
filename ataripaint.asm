@@ -5690,22 +5690,6 @@ ClearRam
         lda #ATARI_PAINT_BRUSH_START_YPOS
         sta BrushYPos
 
-        ; ldx #0                                  ; Set Player 0 Position
-        ; lda #ATARI_PAINT_TITLE_H_POS
-        ; jsr CalcXPos_bank1
-        ; sta WSYNC
-        ; sta HMOVE
-
-        ; ldx #3                                  ; Set Missle 1 Position
-        ; lda #ATARI_PAINT_CANVAS_OVERFLOW_MASK_POS
-        ; jsr CalcXPos_bank1
-        ; sta WSYNC
-        ; sta HMOVE
-
-        ; lda #$F0
-        ; sta HMM1
-        ; sta WSYNC
-        ; sta HMOVE
 AtariPaintFrame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Start VBLANK ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5747,7 +5731,7 @@ AtariPaintTitleWaitLoop                 ; screen
         and #%10000000                  ; then wait until it has expired
         beq AtariPaintTitleWaitLoop     ;
         nop   
-        ; inx                             ; Increment the line counter for timer
+
 AtariPaintDrawTitle
         sty TempYPos                    ; 3     9       Store Y Register so we can use it again
         
@@ -5967,8 +5951,7 @@ PaletteDrawBrush
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Color Palette ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ; ldy #MISSLE_BALL_DISABLE
-        ; inx 
+
         iny                             ; Wrap Y around to #MISSLE_BALL_DISABLE
         sty ENAM0
         lda BackgroundColor
@@ -5980,19 +5963,13 @@ PaletteDrawBrush
         sty PF2
         sty GRP0
         
-        ; lda BackgroundColor
         sta COLUP1
         lda #MISSLE_SIZE_FOUR_CLOCKS | #QUAD_SIZED_PLAYER
         sta NUSIZ1
-        ; lda #MISSLE_BALL_ENABLE
-        ; sta ENAM1
         
         lda BrushColor
         sta COLUPF
         
-        ; lda #7
-        ; sta TIM64T
-        ; inx
         ldx #0
         lda SWCHB
         and #SWITCH_COLOR_TV
@@ -6000,7 +5977,6 @@ PaletteDrawBrush
         ldx #6
 SkipSingleColorCanvas
         lda #MISSLE_BALL_DISABLE
-        ; sta WSYNC
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Single Color Canvas
@@ -6021,9 +5997,6 @@ SkipDrawBrush
         sta PF0                                         ; 3
         lda Canvas+3,y                                  ; 4
         sta PF1                                         ; 3     (29)
-        
-        ; lda TIMINT                                      ; 4 Check to see if our timer has expired
-        ; beq SkipResetCanvasRowLineCtr                   ; 2/3
 
         dec CanvasRowLineCtr                            ; 5
         bne SkipResetCanvasRowLineCtr                   ; 2/3
@@ -6033,8 +6006,6 @@ SkipDrawBrush
         iny                                             ; 2 
         iny                                             ; 2
 
-        ; lda #6                                          ; 2
-        ; sta TIM64T                                      ; 4
         lda #ATARI_PAINT_CANVAS_ROW_HEIGHT              ; 2
         sta CanvasRowLineCtr                            ; 3     (20)
 SkipResetCanvasRowLineCtr
@@ -6046,59 +6017,9 @@ SkipResetCanvasRowLineCtr
         cpy #104                                        ; 2
         bne AtariPaintCanvas                            ; 2/3   (5)    (75)
         sty CanvasRow                                   ; Set Canvas Row outside of drawble space
-        ; jmp EndOfCanvas
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; End Single Color Canvas
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Multi Color Canvas
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; SkipSingleColorCanvas
-;         lda #MISSLE_BALL_DISABLE
-;         sta WSYNC
-; AtariPaintMultiColorCanvas
-        
-;         cpx BrushYPos                                   ; 3
-;         bne SkipDrawMultiColorBrush                     ; 2/3
-;         lda #MISSLE_BALL_ENABLE                         ; 2
-; SkipDrawMultiColorBrush
-;         sta ENAM0                                       ; 3     (10)
-        
-;         lda Canvas,y                                    ; 4
-;         sta COLUPF                                      ; 3
-;         lda Canvas+1,y                                  ; 4
-;         sta PF2                                         ; 3
-;         lda Canvas+2,y                                  ; 4
-;         sta PF0                                         ; 3
-;         lda Canvas+3,y                                  ; 4
-;         sta PF1                                         ; 3     (28)
-        
-;         dec CanvasRowLineCtr                            ; 5
-;         bne SkipResetMultiColorCanvasRowLineCtr         ; 2/3
-        
-;         iny                                             ; 2
-;         iny                                             ; 2
-;         iny                                             ; 2 
-;         iny                                             ; 2
-
-;         lda #ATARI_PAINT_CANVAS_ROW_HEIGHT              ; 2
-;         sta CanvasRowLineCtr                            ; 3     (20)
-; SkipResetMultiColorCanvasRowLineCtr
-
-;         lda #MISSLE_BALL_DISABLE                        ; 2
-;         sta PF2                                         ; 3
-;         sta PF0                                         ; 3     (8)
-
-;         inx                                             ; 2
-;         cpx #192                                        ; 2
-;         sta WSYNC                                       ; 3
-;         bne AtariPaintMultiColorCanvas                  ; 2/3   (10)    (76)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; End Multi Color Canvas
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-EndOfCanvas
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Setup Overscan  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
