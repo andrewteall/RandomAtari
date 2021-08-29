@@ -5663,6 +5663,10 @@ Canvas                          ds ATARI_PAINT_CANVAS_SIZE
         SEG
         
 ; TODO: Atari Paint
+; TODO: Fix brush color select to be the same size as the tile select
+; TODO: Make the Logo and Name Better
+; TODO: Use the whole width of the screen for the canvas
+; TODO: Optimize Ram
 AtariPaint
         ldx #0
         txa
@@ -5772,10 +5776,6 @@ AtariPaintDrawTitle
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Brush Control Row ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        lda #MISSLE_SIZE_FOUR_CLOCKS | #TWO_COPIES_MEDIUM ; Set the player
-        sta NUSIZ1                      ; graphics to two copies and the
-                                        ; missle graphics to be 4x wide
-
         lda ControlsColor               ; Adjust Colors shown for controls text
         cmp #GRAY                       ; because the way the gradient works,
         bne AdjustGrayColor             ; it forces it to change to a different
@@ -5795,17 +5795,16 @@ AdjustWhiteColor
         dec ControlsColor
 AdjustYellowColor
 
-        ldx #10
-        ldy #0                          ; Initialize the graphics index to 0
+        ldy #5                          ; Initialize the graphics index to 5
 AtariPaintControlRowBuffer
-        inx
-        cpx #15                         ; Check to see if we're on line 15
+        dey                             ; Check to see if moved 5 lines
         sta WSYNC
-        bmi AtariPaintControlRowBuffer              ; yet, if so then
+        bne AtariPaintControlRowBuffer  ; if so then
 
 AtariPaintControlRow
-        lda #MISSLE_SIZE_FOUR_CLOCKS | #TWO_COPIES_MEDIUM ; Reset Player and
+        lda #TWO_COPIES_MEDIUM          ; Reset Player and
         sta NUSIZ0                      ; missle size and number
+        sta NUSIZ1
         lda ControlsColor               ; Set the new color for each of the 
         sta COLUP0                      ; players to make the gradient for
         sta COLUP1                      ; the Controls Text
@@ -5836,7 +5835,7 @@ SkipControlRow
         sta NUSIZ0                      ; a line before you want it or else
                                         ; there will be a delay in change
 
-        inx                             ; Increment the line counter
+        ; inx                             ; Increment the line counter
         sta WSYNC                       ; and check to see if we're on line 21
         cpy #6                         ; If not then repeat if so then move
         bne AtariPaintControlRow        ; on to the next section
@@ -5847,6 +5846,7 @@ SkipControlRow
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Brush Control Selection Row ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        ldx #21
         cpx BrushYPos                   ; X=21
         bne ControlSkipDrawBrush
         lda #MISSLE_BALL_ENABLE
@@ -5879,7 +5879,7 @@ HMOVECountdown
 
         sta HMOVE
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        ldy #255
+        dey
         sty PF0
         sty PF1
         sty PF2
@@ -5906,10 +5906,14 @@ AtariPaintPalette
         cpx BrushYPos
         bne PaletteSkipDrawBrush
         lda #MISSLE_BALL_ENABLE
+        ; sta.w ENAM0
         jmp PaletteDrawBrush
 PaletteSkipDrawBrush
         lda #MISSLE_BALL_DISABLE
         nop
+        ; nop
+        ; nop
+        ; nop
 PaletteDrawBrush
 
         sta.w ENAM0
@@ -5964,7 +5968,7 @@ PaletteDrawBrush
         sty GRP0
         
         sta COLUP1
-        lda #MISSLE_SIZE_FOUR_CLOCKS | #QUAD_SIZED_PLAYER
+        lda #QUAD_SIZED_PLAYER
         sta NUSIZ1
         
         lda BrushColor
@@ -5979,7 +5983,7 @@ SkipSingleColorCanvas
         lda #MISSLE_BALL_DISABLE
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Single Color Canvas
+; Canvas
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 AtariPaintCanvas
         sta WSYNC                                       ; 3
@@ -6018,7 +6022,7 @@ SkipResetCanvasRowLineCtr
         bne AtariPaintCanvas                            ; 2/3   (5)    (75)
         sty CanvasRow                                   ; Set Canvas Row outside of drawble space
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; End Single Color Canvas
+; End Canvas
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
