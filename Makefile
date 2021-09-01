@@ -4,6 +4,8 @@ all: formatTrack
 
 formatTrack: formatTrack.c
 	gcc -o $@ $< -lX11 -Wall
+	mkdir -p bin
+	mv $@ bin/
 
 clean:
 	rm -f formatTrack
