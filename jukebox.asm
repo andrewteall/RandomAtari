@@ -41,10 +41,10 @@ P0_JOYSTICK_DOWN                = #%00100000
 P0_JOYSTICK_LEFT                = #%01000000
 P0_JOYSTICK_RIGHT               = #%10000000
 
-DURATION_MASK                   = #%00000111
+DURATION_MASK                   = #%00001111
 FREQUENCY_MASK                  = #%11111000
-VOLUME_MASK                     = #%11110000
-CONTROL_MASK                    = #%00001111
+VOLUME_MASK                     = #%00000111
+CONTROL_MASK                    = #%11110000
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Global Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -162,20 +162,20 @@ EndofViewableScreen
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Note format
 ;
-; Byte 0 - %XXXXX000 - Note Duration 0-7. Used to select values from a table
-; Byte 0 - %00000XXX - Note Frequency 0-31
-; Byte 1 - %XXXX0000 - Note Control 0-15
-; Byte 1 - %0000XXXX - Note Volume 0-15
+; Byte 0 - %XXXX0000 - Note Duration 0-15. Used to select values from a table
+; Byte 0 - %0000XXXX - Note Control 0-15
+; Byte 1 - %00000XXX - Note Frequency 0-31
+; Byte 1 - %XXXXX000 - Note Volume 0-7. Doubled so that only even volumes are allowed
 
 
 ; Note controls
 ; Repeat Track 0,0
 ;
 ; Repeat N Num notes
-; Byte 0 - %XXXXX000 - Signifies Control Note
-; Byte 0 - %00000XXX - Number of Notes back to Repeat(limit 31 right now)
-; Byte 1 - %XXXX0000 - How many times to Repeat ( Total times you want it played -1 )
-; Byte 1 - %0001XXXX - This Value signifies that this is a repeat control note
+; Byte 0 - %XXXX0000 - Signifies Control Note
+; Byte 0 - %0000XXXX - How many times to Repeat ( Total times you want it played -1 )
+; Byte 1 - %00000XXX - Number of Notes back to Repeat(limit 31 right now)
+; Byte 1 - %XXXXX001 - This Value signifies that this is a repeat control note
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 JukeboxRomMusicPlayer
@@ -236,17 +236,21 @@ SkipJukeboxMuteTrack0NoteGap
         and #VOLUME_MASK
         ; cmp #0
         ; beq SkipRepeatTrack0
-        cmp #16
+        cmp #1
         bne SkipRepeatTrack0
 
         ; If Duration is equal to 0 Volume is equal to 1 then check the control
         ; value to see if it's equal to the repeat counter for the respective
         ; track. If it's equal then set the repeat counter to 0 and move to the
         ; next not to play by jumping back above
-        iny
+        ; iny
         lda (JukeboxNotePtrCh0),y
-        dey
+        ; dey
         and #CONTROL_MASK
+        lsr
+        lsr
+        lsr
+        lsr
         cmp JukeboxRepeatCtrTrk0
         bne JukeboxTrack0Repeat
         lda #0
@@ -257,7 +261,9 @@ SkipJukeboxMuteTrack0NoteGap
         ; the repeat counter and jump back the specified number of notes
 JukeboxTrack0Repeat
         inc JukeboxRepeatCtrTrk0
+        iny
         lda (JukeboxNotePtrCh0),y
+        dey                             ; Possibly can remove
         and #FREQUENCY_MASK
         lsr                             ; Shift right 2 times to effectively multiply the value
         lsr                             ; of the frequency by 2 since each note takes 2 bytes
@@ -290,24 +296,25 @@ SkipRepeatTrack0
 JukeboxSkipResetTrack0
         ldy #0                          ; 2     Load 0 to the Y register(maybe not needed)
         lda (JukeboxNotePtrCh0),y       ; 5     Load Volume to A
-        and #FREQUENCY_MASK             ; 2     Mask so we only have the note frequency
+        and #CONTROL_MASK               ; 2     Mask so we only have the note frequency
         lsr                             ; 2     Shift right to get the correct placement
         lsr                             ; 2     Shift right to get the correct placement
         lsr                             ; 2     Shift right to get the correct placement
-        sta AUDF0                       ; 3     and set the Note Frequency
+        lsr                             ; 2     Shift right to get the correct placement
+        sta AUDC0                       ; 3     and set the Note Frequency
 
         iny                             ; 2     Increment Y (Y=1) to point to the Note Frequency
         lda (JukeboxNotePtrCh0),y       ; 5     Load Frequency to A
-        and #VOLUME_MASK                ; 2     Mask so we only have the note Volume
+        and #FREQUENCY_MASK             ; 2     Mask so we only have the note Volume
         lsr                             ; 2     Shift right to get the correct placement
         lsr                             ; 2     Shift right to get the correct placement
         lsr                             ; 2     Shift right to get the correct placement
-        lsr                             ; 2     Shift right to get the correct placement
-        sta AUDV0                       ; 3     and set the Note Volume
+        sta AUDF0                       ; 3     and set the Note Volume
 
         lda (JukeboxNotePtrCh0),y       ; 5     Load Control to A
-        and #CONTROL_MASK               ; 2     Mask so we only have the note Control
-        sta AUDC0                       ; 3     and set the Note Control
+        and #VOLUME_MASK                ; 2     Mask so we only have the note Control
+        asl                             ; 2     Shift left to get wider range of volume
+        sta AUDV0                       ; 3     and set the Note Control
 
         ; Each Frame we need to increment the FrameCounter by 1 to continue to
         ; count the duration of each note
@@ -389,6 +396,7 @@ JukeboxNoteDurations    ; .byte 0         ; control note - 0
                         ; .byte 48        ; triplet note 
                         ; .byte 72        ; quarter note 
                         ; .byte 144       ; half note
+                        .byte $0
                         .byte $3
                         .byte $b1
                         .byte $f
@@ -396,10 +404,12 @@ JukeboxNoteDurations    ; .byte 0         ; control note - 0
                         .byte $87
                         .byte $8
                         .byte $7
-                        .byte $0
         align 256
-JukeboxTrack0           .byte $a8,$84,$1,$0,$9a,$84,$7b,$84,$4,$0,$a5,$86,$6,$0,$dd,$86,$6,$0,$b6,$86,$5,$0
-                        .byte $de,$86,$a5,$86,$6,$0,$a5,$86,$dd,$86,$6,$0,$b5,$86,$6,$0,$dd,$86,$6,$0,%10000000,%00011000,$0,$0;
+JukeboxTrack0           .byte $41,$ac,$2,$0,$43,$9c,$44,$7c,$5,$0,$66,$a4,$7,$0,$66,$dc,$7,$0,$67,$b4,$6,$0
+                        .byte $67,$dc,$66,$a4,$7,$0,$66,$a4,$66,$dc,$7,$0,$66,$b4,$7,$0,$66,$dc,$7,$0,%10000000,%10000001,$0,$0
+
+                        ; .byte $a8,$84,$1,$0,$9a,$84,$7b,$84,$4,$0,$a5,$86,$6,$0,$dd,$86,$6,$0,$b6,$86,$5,$0
+                        ; .byte $de,$86,$a5,$86,$6,$0,$a5,$86,$dd,$86,$6,$0,$b5,$86,$6,$0,$dd,$86,$6,$0,%10000000,%00011000,$0,$0;
 JukeboxTrack1           ;.byte $a3,$86,$3,$0,$db,$86,$3,$0,$b3,$86,$3,$0,$db,$86,$a3,$86,$3,$0,$a3,$86,$db,$86
                         ;.byte $3,$0,$b3,$86,$3,$0,$db,$86,$3,$0,$3,$0,$0,$0
 
