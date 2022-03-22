@@ -381,17 +381,27 @@ CalcXPos:
 
 
 
-JukeboxNoteDurations    .byte 0         ; control note - 0
-                        .byte 3
-                        .byte 9         ; 32nd note 
-                        .byte 18        ; 16th note 
-                        .byte 36        ; eighth note 
-                        .byte 48        ; triplet note 
-                        .byte 72        ; quarter note 
-                        .byte 144       ; half note
+JukeboxNoteDurations    ; .byte 0         ; control note - 0
+                        ; .byte 3
+                        ; .byte 9         ; 32nd note 
+                        ; .byte 18        ; 16th note 
+                        ; .byte 36        ; eighth note 
+                        ; .byte 48        ; triplet note 
+                        ; .byte 72        ; quarter note 
+                        ; .byte 144       ; half note
+                        .byte $3
+                        .byte $b1
+                        .byte $f
+                        .byte $1e
+                        .byte $87
+                        .byte $8
+                        .byte $7
+                        .byte $0
         align 256
-JukeboxTrack0           .byte $A2,$86,$08,$15,$2,$0,$A2,$86,$2,$0,$A2,$86,$2,$0,$A2,$86,$A2,$86,$2,$0,$A2,$86,$A2,$86,$2,$0,$A2,$86,$2,$0,$A2,$86,$2,$0,$0,$0
-JukeboxTrack1           ;.byte $a3,$86,$3,$0,$db,$86,$3,$0,$b3,$86,$3,$0,$db,$86,$a3,$86,$3,$0,$a3,$86,$db,$86,$3,$0,$b3,$86,$3,$0,$db,$86,$3,$0,$3,$0,$0,$0
+JukeboxTrack0           .byte $a8,$84,$1,$0,$9a,$84,$7b,$84,$4,$0,$a5,$86,$6,$0,$dd,$86,$6,$0,$b6,$86,$5,$0
+                        .byte $de,$86,$a5,$86,$6,$0,$a5,$86,$dd,$86,$6,$0,$b5,$86,$6,$0,$dd,$86,$6,$0,%10000000,%00011000,$0,$0;
+JukeboxTrack1           ;.byte $a3,$86,$3,$0,$db,$86,$3,$0,$b3,$86,$3,$0,$db,$86,$a3,$86,$3,$0,$a3,$86,$db,$86
+                        ;.byte $3,$0,$b3,$86,$3,$0,$db,$86,$3,$0,$3,$0,$0,$0
 
         echo "----"
         echo "Rom Total Bank1:"
