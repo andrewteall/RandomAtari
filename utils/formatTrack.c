@@ -1,12 +1,12 @@
 #include <stdio.h>
 #include <string.h>
 
-int durationList[8];
-int durationIdx = 0;
+int durationList[16];
+int durationIdx = 1;
 
 int lookupDuration(int duration){
     int durationIndex = -1;
-    for (int i=0; i < 8; i++){
+    for (int i=0; i < 16; i++){
         if (durationList[i] == duration){
             durationIndex = i;
             break;
@@ -16,7 +16,7 @@ int lookupDuration(int duration){
 }
 
 void insertDuration(int duration){
-    if (durationIdx < 8 && lookupDuration(duration) == -1){
+    if (durationIdx < 16 && lookupDuration(duration) == -1){
         durationList[durationIdx++] = duration;
     }
 }
@@ -102,19 +102,20 @@ int main(int argc, char *argv[]) {
                         noteIdx = 0;
                         insertDuration(note[3]);
                         // printf("\nDuration: %d\n",note[3]);
-                        tmp1 = lookupDuration(note[3]) & 7;
-                        tmp2 = note[2] << 3;
+                        tmp1 = lookupDuration(note[3]) & 15;
+                        tmp2 = note[1] << 4;
+                        
                         tmp1 = tmp2 | tmp1;
                         printf("$%x,",tmp1);
 
-                        tmp1 = note[0] << 4;
-                        tmp2 = note[1] & 15;
+                        tmp1 = note[2] << 3;
+                        tmp2 = ((note[0] + (note[0] % 2)) / 2) & 7;
                         tmp1 = tmp2 | tmp1;
                         printf("$%x,",tmp1);
                     }
                 }
                 printf("\nNote Durations:\n");
-                for(int i=0; i<8;i++){
+                for(int i=0; i<16;i++){
                     printf(".byte $%x\n",durationList[i]);
                 }
             }
