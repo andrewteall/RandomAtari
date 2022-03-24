@@ -177,7 +177,10 @@ EndofViewableScreen
 ; Byte 1 - %00000XXX - Number of Notes back to Repeat(limit 31 right now)
 ; Byte 1 - %XXXXX001 - This Value signifies that this is a repeat control note
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+; TODO: Repeatable Repeats
+; TODO: Standardize Rest Notes
+; TODO: Track 1
+; TODO: Optimize
 JukeboxRomMusicPlayer
 ; Track 0
         ; Each frame check if the duration of the current note playing
