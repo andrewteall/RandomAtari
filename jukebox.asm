@@ -199,6 +199,11 @@ JukeboxTrack0NextNote
         clc                             ; 2     Clear the carry 
         adc #2                          ; 2     Add 2 to move the Note pointer to the next note
         sta JukeboxNotePtrCh0           ; 3     Store the new note pointer
+        bcc SkipIncNotePtrCh0HighByte
+        lda JukeboxNotePtrCh0+1
+        adc #0
+        sta JukeboxNotePtrCh0+1
+SkipIncNotePtrCh0HighByte
         lda #0                          ; 2     Load Zero to
         sta JukeboxFrameCtrTrk0         ; 3     Reset the Frame counter
         jmp SkipJukeboxMuteTrack0NoteGap
@@ -277,7 +282,12 @@ JukeboxTrack0Repeat
         ; sbc JukeboxNotePtrCh0           ; math works out here to save
         ; and $FF                         ; memory
         ; sta JukeboxNotePtrCh0
-
+        bcs SkipDecNotePtrCh0HighByte
+        lda JukeboxNotePtrCh0+1
+        sec
+        sbc #1
+        sta JukeboxNotePtrCh0+1
+SkipDecNotePtrCh0HighByte
         ; If we've repeated a section of track we don't need to jump back to
         ; beginning of the track so we jump over that portion of code
         jmp JukeboxSkipResetTrack0
@@ -372,7 +382,7 @@ CalcXPos:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;; End Calculate Horizontal Sprite Position ;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
- 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Sub-Routines ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -404,10 +414,10 @@ JukeboxNoteDurations    ; .byte 0         ; control note - 0
                         .byte $87
                         .byte $8
                         .byte $7
-        align 256
+        ; align 256
+
 JukeboxTrack0           .byte $41,$ac,$2,$0,$43,$9c,$44,$7c,$5,$0,$66,$a4,$7,$0,$66,$dc,$7,$0,$67,$b4,$6,$0
                         .byte $67,$dc,$66,$a4,$7,$0,$66,$a4,$66,$dc,$7,$0,$66,$b4,$7,$0,$66,$dc,$7,$0,%10000000,%10000001,$0,$0
-
                         ; .byte $a8,$84,$1,$0,$9a,$84,$7b,$84,$4,$0,$a5,$86,$6,$0,$dd,$86,$6,$0,$b6,$86,$5,$0
                         ; .byte $de,$86,$a5,$86,$6,$0,$a5,$86,$dd,$86,$6,$0,$b5,$86,$6,$0,$dd,$86,$6,$0,%10000000,%00011000,$0,$0;
 JukeboxTrack1           ;.byte $a3,$86,$3,$0,$db,$86,$3,$0,$b3,$86,$3,$0,$db,$86,$a3,$86,$3,$0,$a3,$86,$db,$86
