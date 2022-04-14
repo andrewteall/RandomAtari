@@ -178,7 +178,6 @@ EndofViewableScreen
 ; Byte 1 - %XXXXX001 - This Value signifies that this is a repeat control note
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; TODO: Repeatable Repeats
-; TODO: Standardize Rest Notes
 ; TODO: Track 1
 ; TODO: Optimize
 JukeboxRomMusicPlayer

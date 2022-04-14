@@ -99,19 +99,32 @@ int main(int argc, char *argv[]) {
                         }
                     } 
                     if (noteIdx == 4){
+                        int tmpNote;
                         noteIdx = 0;
-                        insertDuration(note[3]);
-                        // printf("\nDuration: %d\n",note[3]);
-                        tmp1 = lookupDuration(note[3]) & 15;
-                        tmp2 = note[1] << 4;
-                        
-                        tmp1 = tmp2 | tmp1;
-                        printf("$%x,",tmp1);
+                        do{    
+                            if (note[3] > 255){
+                                tmpNote = note[3]-255;
+                                note[3] = 255;
+                            } else {
+                                tmpNote = 0;
+                            }
 
-                        tmp1 = note[2] << 3;
-                        tmp2 = ((note[0] + (note[0] % 2)) / 2) & 7;
-                        tmp1 = tmp2 | tmp1;
-                        printf("$%x,",tmp1);
+                            insertDuration(note[3]);
+                            // printf("\nDuration: %d\n",note[3]);
+                            tmp1 = lookupDuration(note[3]) & 15;
+                            tmp2 = note[1] << 4;
+                            
+                            tmp1 = tmp2 | tmp1;
+                            printf("$%x,",tmp1);
+
+                            tmp1 = note[2] << 3;
+                            tmp2 = ((note[0] + (note[0] % 2)) / 2) & 7;
+                            tmp1 = tmp2 | tmp1;
+                            printf("$%x,",tmp1);
+
+                            note[3] = tmpNote;
+
+                        } while(tmpNote != 0);
                     }
                 }
                 printf("\nNote Durations:\n");
