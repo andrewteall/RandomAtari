@@ -176,10 +176,16 @@ EndofViewableScreen
 ; Byte 0 - %0000XXXX - How many times to Repeat ( Total times you want it played -1 )
 ; Byte 1 - %00000XXX - Number of Notes back to Repeat(limit 31 right now)
 ; Byte 1 - %XXXXX001 - This Value signifies that this is a repeat control note
+;
+; Repeat N Num notes with another Repeat
+; Byte 0 - %XXXX0000 - Signifies Control Note
+; Byte 0 - %0000XXXX - How many times to Repeat ( Total times you want it played -1 )
+; Byte 1 - %00000XXX - Number of Notes back to Repeat(limit 31 right now)
+; Byte 1 - %XXXXX010 - This Value signifies that this is a repeatable repeat control note
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; TODO: Repeatable Repeats
-; TODO: Track 1
 ; TODO: Optimize
+; TODO: Track 1
 JukeboxRomMusicPlayer
 ; Track 0
         ; Each frame check if the duration of the current note playing
@@ -243,9 +249,36 @@ SkipJukeboxMuteTrack0NoteGap
         and #VOLUME_MASK
         ; cmp #0
         ; beq SkipRepeatTrack0
-        cmp #1
-        bne SkipRepeatTrack0
 
+RepeatableRepeats
+        cmp #2
+        bne SkipRepeatableRepeatSetup
+        tsx
+        cpx #$FF
+        beq InitRepeatStack
+        jmp SkipRepeatCheck
+InitRepeatStack
+        lda JukeboxRepeatCtrTrk0
+        pha 
+        lda #0
+        sta JukeboxRepeatCtrTrk0
+        jmp SkipRepeatCheck
+SkipRepeatableRepeatSetup
+        cmp #1                  ; Leave these two lines in if you want to remove the 
+        bne SkipRepeatTrack0    ; Repeatable Repeats
+
+        tsx
+        cpx #$FF
+        beq SkipRepeatCheck
+        pla
+        sta JukeboxRepeatCtrTrk0
+
+        ; The Minus 4 is to account for the branch that is still there if we don't support
+        ; Repeatable Repeats
+        echo "----"
+        echo "Rom Total RepeatableRepeats:"
+        echo "----",([(.-Reset)-(RepeatableRepeats-Reset)-4]d), "bytes used for Repeatable Repeats"
+SkipRepeatCheck
         ; If Duration is equal to 0 Volume is equal to 1 then check the control
         ; value to see if it's equal to the repeat counter for the respective
         ; track. If it's equal then set the repeat counter to 0 and move to the
@@ -410,19 +443,28 @@ JukeboxNoteDurations    ; .byte 0         ; control note - 0
                         ; .byte 48        ; triplet note 
                         ; .byte 72        ; quarter note 
                         ; .byte 144       ; half note
+                        ; .byte $0
+                        ; .byte $3
+                        ; .byte $b1
+                        ; .byte $f
+                        ; .byte $1e
+                        ; .byte $87
+                        ; .byte $8
+                        ; .byte $7
                         .byte $0
                         .byte $3
-                        .byte $b1
+                        .byte $4
+                        .byte $8
+                        .byte $96
                         .byte $f
                         .byte $1e
                         .byte $87
-                        .byte $8
                         .byte $7
         ; align 256
 
 JukeboxTrack0           .byte $41,$fc,$42,$d4,$43,$94,$41,$fc,$42,$d4,$43,$ac,$4,$0,$45,$dc,$46,$c4,$7,$0,$43
                         .byte $9c,$8,$0,$43,$d4,$8,$0,$43,$ac,$8,$0,$48,$d4,$43,$9c,$8,$0,$43,$9c,$43,$d4,$8
-                        .byte $0,$43,$ac,$8,$0,$43,$d4,$8,$0,%10000000,%10000001,$0,$0
+                        .byte $0,$43,$ac,$8,$0,$43,$d4,$8,$0,%10000000,%10000010,%00010000,%10001001,$0,$0
 ; JukeboxTrack0           .byte $41,$ac,$2,$0,$43,$9c,$44,$7c,$5,$0,$66,$a4,$7,$0,$66,$dc,$7,$0,$67,$b4,$6,$0
                         ; .byte $67,$dc,$66,$a4,$7,$0,$66,$a4,$66,$dc,$7,$0,$66,$b4,$7,$0,$66,$dc,$7,$0
                         ; .byte %10000000,%10000001,$0,$0
