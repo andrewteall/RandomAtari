@@ -49,6 +49,8 @@ CONTROL_MASK                    = #%11110000
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Global Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+REPEAT_TYPE_MASK                = #%00000111
+
         SEG.U vars
         ORG $80
 
@@ -58,8 +60,8 @@ JukeboxFrameCtrTrk0             ds 1
 JukeboxFrameCtrTrk1             ds 1
 JukeboxRepeatCtrTrk0            ds 1
 JukeboxRepeatCtrTrk1            ds 1
-JukeboxRepeatNumNotesTrk0       ds 1
-JukeboxRepeatNumNotesTrk1       ds 1
+; JukeboxRepeatNumNotesTrk0       ds 1
+; JukeboxRepeatNumNotesTrk1       ds 1
 
         echo "----"
         echo "Ram Jukebox:"
@@ -175,7 +177,7 @@ EndofViewableScreen
 ; Byte 0 - %XXXX0000 - Signifies Control Note
 ; Byte 0 - %0000XXXX - How many times to Repeat ( Total times you want it played -1 )
 ; Byte 1 - %00000XXX - Number of Notes back to Repeat(limit 31 right now)
-; Byte 1 - %XXXXX001 - This Value signifies that this is a repeat control note
+; Byte 1 - %XXXXX011 - This Value signifies that this is a repeat control note
 ;
 ; Repeat N Num notes with another Repeat
 ; Byte 0 - %XXXX0000 - Signifies Control Note
@@ -185,6 +187,7 @@ EndofViewableScreen
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; TODO: Optimize
 ; TODO: Track 1
+; Search String b[e,n,c,s,m,p][e,q,c,s,i,l]|jmp
 JukeboxRomMusicPlayer
 ; Track 0
         ; Each frame check if the duration of the current note playing
@@ -192,52 +195,27 @@ JukeboxRomMusicPlayer
         ldy #0                          ; 2     Initialize Y-Index to 0
         lda (JukeboxNotePtrCh0),y       ; 5     Load first note duration to A
         and #DURATION_MASK              ; 2     Mask so we only have the note duration
+        beq SkipJukeboxMuteTrack0NoteGap; 2/3   If Duration is 0 then jump to repeats 
+        
         tay                             ; 2     Make A the Y index
         lda JukeboxNoteDurations,y      ; 4     Get the actual duration based on the duration setting
-        cmp JukeboxFrameCtrTrk0         ; 3     See if it equals the Frame Counter
-        bne SkipJukeboxTrack0NextNote   ; 2/3   If so move the NotePtr to the next note
+        sec
+        sbc JukeboxFrameCtrTrk0         ; 3     See if it equals the Frame Counter
+        beq JukeboxTrack0NextNote       ; 2/3   If so move the NotePtr to the next note
         
-        ; If the duration of the currently playing is equal to the
-        ; FrameCounter then advance to the next note. After Advancing
-        ; the note we'll skip over seeing if we need to mute the note
-        ; and move to loading all the new note's values to be heard
-JukeboxTrack0NextNote
-        lda JukeboxNotePtrCh0           ; 3     Load the Note Pointer to A
-        clc                             ; 2     Clear the carry 
-        adc #2                          ; 2     Add 2 to move the Note pointer to the next note
-        sta JukeboxNotePtrCh0           ; 3     Store the new note pointer
-        bcc SkipIncNotePtrCh0HighByte
-        lda JukeboxNotePtrCh0+1
-        adc #0
-        sta JukeboxNotePtrCh0+1
-SkipIncNotePtrCh0HighByte
-        lda #0                          ; 2     Load Zero to
-        sta JukeboxFrameCtrTrk0         ; 3     Reset the Frame counter
-        jmp SkipJukeboxMuteTrack0NoteGap
-
         ; If the duration of the currently playing is not equal to the
         ; FrameCounter then check to see if the FrameCounter is equal
         ; to one less than the currently playing note to provide a break
         ; between notes by turning the volume to 0 for the last frame.
-SkipJukeboxTrack0NextNote
-        sec
-        sbc #1
-        cmp JukeboxFrameCtrTrk0
-        bne SkipJukeboxMuteTrack0NoteGap
-        lda #0
-        sta AUDV0
-        jmp IncrementTrack0FrameCounter
+
+        eor #1
+        bne JukeboxTrack0ProcessNote
+        beq JukeboxMuteTrack0NoteSeparation
 
         ; There are certain control notes that can change the flow of the track
         ; We start by checking to see if the duration of a note is 0. If not
         ; We'll jump processing it normally
 SkipJukeboxMuteTrack0NoteGap
-        ldy #0
-        lda (JukeboxNotePtrCh0),y       ; 5     Load first note duration to A
-        and #DURATION_MASK              ; 2     Mask so we only have the note duration
-        cmp #0                          ; 2     See if the notes duration equals 0
-        bne JukeboxSkipResetTrack0      ; 2/3   If so go back to the beginning of the track
-
         ; If Duration is equal to 0 Volume is equal to 1 then we will repeat a
         ; section of notes a certain number of times. Otherwise, if only 
         ; Duration is equal to 0 we will jump back to the beginnging of the
@@ -245,120 +223,131 @@ SkipJukeboxMuteTrack0NoteGap
         iny
         lda (JukeboxNotePtrCh0),y
         dey
-        and #VOLUME_MASK
-        ; cmp #0
-        ; beq SkipRepeatTrack0
+        and #REPEAT_TYPE_MASK
+        bne RepeatableRepeats    ; Leave this line in if you want to remove the repeatable repeats
+
+        ; If the duration of the note is 0 and volume is not set to 1 then we just 
+        ; jump back to the begining of the track and load the rest of the note
+        ; values like normal
+JukeboxRepeatAllTrack0
+        lda #<JukeboxTrack0             ; 4     Store the low byte of the track to 
+        sta JukeboxNotePtrCh0           ; 3     the Note Pointer
+        lda #>JukeboxTrack0             ; 4     Store the High byte of the track to
+        sta JukeboxNotePtrCh0+1         ; 3     the Note Pointer + 1
+        jmp JukeboxTrack0ProcessNote
 
 RepeatableRepeats
         cmp #2
         bne SkipRepeatableRepeatSetup
         tsx
         cpx #$FF
-        beq InitRepeatStack
-        jmp SkipRepeatCheck
+        bne SkipRepeatCheck
 InitRepeatStack
         lda JukeboxRepeatCtrTrk0
         pha 
         lda #0
         sta JukeboxRepeatCtrTrk0
-        jmp SkipRepeatCheck
+        beq SkipRepeatCheck
 SkipRepeatableRepeatSetup
-        cmp #1                  ; Leave these two lines in if you want to remove the 
-        bne SkipRepeatTrack0    ; Repeatable Repeats
-
         tsx
         cpx #$FF
         beq SkipRepeatCheck
         pla
         sta JukeboxRepeatCtrTrk0
 
-        ; The Minus 4 is to account for the branch that is still there if we don't support
         ; Repeatable Repeats
         echo "----"
         echo "Rom Total RepeatableRepeats:"
-        echo "----",([(.-Reset)-(RepeatableRepeats-Reset)-4]d), "bytes used for Repeatable Repeats"
+        echo "----",([(.-Reset)-(RepeatableRepeats-Reset)]d), "bytes used for Repeatable Repeats"
 SkipRepeatCheck
-        ; If Duration is equal to 0 Volume is equal to 1 then check the control
+        ; If Duration is equal to 0 Control is equal to 1 then check the control
         ; value to see if it's equal to the repeat counter for the respective
         ; track. If it's equal then set the repeat counter to 0 and move to the
-        ; next not to play by jumping back above
-        ; iny
+        ; next note to play by jumping back above
         lda (JukeboxNotePtrCh0),y
-        ; dey
-        and #CONTROL_MASK
+        ; and #CONTROL_MASK
         lsr
         lsr
         lsr
         lsr
-        cmp JukeboxRepeatCtrTrk0
-        bne JukeboxTrack0Repeat
-        lda #0
-        sta JukeboxRepeatCtrTrk0
-        jmp JukeboxTrack0NextNote
+
+        sec
+        sbc JukeboxRepeatCtrTrk0
+        bne JukeboxTrack0RepeatNumNotes
+
+        ; If the duration of the currently playing is equal to the
+        ; FrameCounter then advance to the next note. After Advancing
+        ; the note we'll skip over seeing if we need to mute the note
+        ; and move to loading all the new note's values to be heard
+JukeboxTrack0NextNote
+        sta JukeboxFrameCtrTrk0         ; 3     Reset the Frame counter
+
+        inc JukeboxNotePtrCh0
+        inc JukeboxNotePtrCh0
+        bne SkipIncNotePtrCh0HighByte   ; Make track start on an even address
+        inc JukeboxNotePtrCh0+1
+SkipIncNotePtrCh0HighByte
+        jmp JukeboxRomMusicPlayer
 
         ; If the repeat counter isn't equal to the control value then increment
         ; the repeat counter and jump back the specified number of notes
-JukeboxTrack0Repeat
+JukeboxTrack0RepeatNumNotes
         inc JukeboxRepeatCtrTrk0
+        
         iny
-        lda (JukeboxNotePtrCh0),y
-        dey                             ; Possibly can remove
-        and #FREQUENCY_MASK
+        lda (JukeboxNotePtrCh0),y       ; #FREQUENCY_MASK During repeats bit 2 will always be 0
         lsr                             ; Shift right 2 times to effectively multiply the value
         lsr                             ; of the frequency by 2 since each note takes 2 bytes
-        sta JukeboxRepeatNumNotesTrk0
-        ;subtract A from JukeboxNotePtrCh0 TODO: if we cross 0 decrease JukeboxNotePtrCh0+1 by 1
-        lda JukeboxNotePtrCh0
-        sec
-        sbc JukeboxRepeatNumNotesTrk0
+        
+        sbc JukeboxNotePtrCh0           ; During repeats bit 1 will always be 1 so C will be set
+        bcc JukeboxSkipDecNotePtrCh0MSB ; via the lsr's above
+        dec JukeboxNotePtrCh0+1
+JukeboxSkipDecNotePtrCh0MSB
+        eor #$FF
         sta JukeboxNotePtrCh0
-        ; sec                             ; Need to see if the 1's complement
-        ; sbc JukeboxNotePtrCh0           ; math works out here to save
-        ; and $FF                         ; memory
-        ; sta JukeboxNotePtrCh0
-        bcs SkipDecNotePtrCh0HighByte
-        lda JukeboxNotePtrCh0+1
-        sec
-        sbc #1
-        sta JukeboxNotePtrCh0+1
-SkipDecNotePtrCh0HighByte
-        ; If we've repeated a section of track we don't need to jump back to
-        ; beginning of the track so we jump over that portion of code
-        jmp JukeboxSkipResetTrack0
+        inc JukeboxNotePtrCh0
 
-        ; If the duration of the note is 0 and volume is not set to 1 then we just 
-        ; jump back to the begining of the track and load the rest of the note
-        ; values like normal
-SkipRepeatTrack0
-        lda #<JukeboxTrack0             ; 4     Store the low byte of the track to 
-        sta JukeboxNotePtrCh0           ; 3     the Note Pointer
-        lda #>JukeboxTrack0             ; 4     Store the High byte of the track to
-        sta JukeboxNotePtrCh0+1         ; 3     the Note Pointer + 1
+        ; tay
+        ; lda JukeboxNotePtrCh0
+        ; sty JukeboxNotePtrCh0
+        ; sbc JukeboxNotePtrCh0           ; During repeats bit 1 will always be 1 so C will be set
+        ; sta JukeboxNotePtrCh0           ; via the lsr's above
+
+        ; sta JukeboxRepeatNumNotesTrk0
+        ; lda JukeboxNotePtrCh0
+        ; sbc JukeboxRepeatNumNotesTrk0   ; During repeats bit 1 will always be 1 so C will be set
+        ; sta JukeboxNotePtrCh0           ; via the lsr's above
+;         bcs SkipDecNotePtrCh0HighByte
+;         dec JukeboxNotePtrCh0+1
+; SkipDecNotePtrCh0HighByte
 
         ; If the duration of a note is not 0 then continue loading the rest of
         ; the note's values into the correct channel's registers
-JukeboxSkipResetTrack0
+JukeboxTrack0ProcessNote
         ldy #0                          ; 2     Load 0 to the Y register(maybe not needed)
         lda (JukeboxNotePtrCh0),y       ; 5     Load Volume to A
-        and #CONTROL_MASK               ; 2     Mask so we only have the note frequency
+        ; and #CONTROL_MASK               ; 2     Mask so we only have the note Control
         lsr                             ; 2     Shift right to get the correct placement
         lsr                             ; 2     Shift right to get the correct placement
         lsr                             ; 2     Shift right to get the correct placement
         lsr                             ; 2     Shift right to get the correct placement
-        sta AUDC0                       ; 3     and set the Note Frequency
+        sta AUDC0                       ; 3     and set the Note Control
 
         iny                             ; 2     Increment Y (Y=1) to point to the Note Frequency
-        lda (JukeboxNotePtrCh0),y       ; 5     Load Frequency to A
-        and #FREQUENCY_MASK             ; 2     Mask so we only have the note Volume
-        lsr                             ; 2     Shift right to get the correct placement
-        lsr                             ; 2     Shift right to get the correct placement
-        lsr                             ; 2     Shift right to get the correct placement
-        sta AUDF0                       ; 3     and set the Note Volume
 
-        lda (JukeboxNotePtrCh0),y       ; 5     Load Control to A
-        and #VOLUME_MASK                ; 2     Mask so we only have the note Control
-        asl                             ; 2     Shift left to get wider range of volume
+        lda (JukeboxNotePtrCh0),y       ; 5     Load Volume to A
+        ; and #VOLUME_MASK                ; 2     Mask so we only have the note Volume
+        rol                             ; 2     Roll left to get wider range of volume
+JukeboxMuteTrack0NoteSeparation
         sta AUDV0                       ; 3     and set the Note Control
+
+        ; lda (JukeboxNotePtrCh0),y       ; 5     Load Frequency to A
+        ; and #FREQUENCY_MASK             ; 2     Mask so we only have the note Frequency
+        ror                             ; 2     Roll right to get the correct placement
+        lsr                             ; 2     Shift right to get the correct placement
+        lsr                             ; 2     Shift right to get the correct placement
+        lsr                             ; 2     Shift right to get the correct placement
+        sta AUDF0                       ; 3     and set the Note Frequency
 
         ; Each Frame we need to increment the FrameCounter by 1 to continue to
         ; count the duration of each note
@@ -399,22 +388,22 @@ JukeboxOverscanWaitLoop
 ; X - The Object to place
 ; A - X Coordinate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-CalcXPos:
-        sta WSYNC                                       ; 3
-        sta HMCLR                                       ; 3
-        sec                                             ; 2
-.Divide15 
-        sbc #15                                         ; 2
-        bcs .Divide15                                   ; 2/3
-        eor #$07                                        ; 2
-        asl                                             ; 2
-        asl                                             ; 2
-        asl                                             ; 2
-        asl                                             ; 2
-        sta RESP0,x                                     ; 3
-        sta HMP0,x                                      ; 3
+; CalcXPos:
+;         sta WSYNC                                       ; 3
+;         sta HMCLR                                       ; 3
+;         sec                                             ; 2
+; .Divide15 
+;         sbc #15                                         ; 2
+;         bcs .Divide15                                   ; 2/3
+;         eor #$07                                        ; 2
+;         asl                                             ; 2
+;         asl                                             ; 2
+;         asl                                             ; 2
+;         asl                                             ; 2
+;         sta RESP0,x                                     ; 3
+;         sta HMP0,x                                      ; 3
         
-        rts                                             ; 6
+;         rts                                             ; 6
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;; End Calculate Horizontal Sprite Position ;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -460,10 +449,10 @@ JukeboxNoteDurations    ; .byte 0         ; control note - 0
                         .byte $87
                         .byte $7
         ; align 256
-
+        align 2
 JukeboxTrack0           .byte $41,$fc,$42,$d4,$43,$94,$41,$fc,$42,$d4,$43,$ac,$4,$0,$45,$dc,$46,$c4,$7,$0,$43
                         .byte $9c,$8,$0,$43,$d4,$8,$0,$43,$ac,$8,$0,$48,$d4,$43,$9c,$8,$0,$43,$9c,$43,$d4,$8
-                        .byte $0,$43,$ac,$8,$0,$43,$d4,$8,$0,%10000000,%10000010,%00010000,%10001001,$0,$0
+                        .byte $0,$43,$ac,$8,$0,$43,$d4,$8,$0,%10000000,%10000010,%00010000,%10001011,$0,$0
 ; JukeboxTrack0           .byte $41,$ac,$2,$0,$43,$9c,$44,$7c,$5,$0,$66,$a4,$7,$0,$66,$dc,$7,$0,$67,$b4,$6,$0
                         ; .byte $67,$dc,$66,$a4,$7,$0,$66,$a4,$66,$dc,$7,$0,$66,$b4,$7,$0,$66,$dc,$7,$0
                         ; .byte %10000000,%10000001,$0,$0
