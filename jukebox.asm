@@ -41,10 +41,10 @@ P0_JOYSTICK_DOWN                = #%00100000
 P0_JOYSTICK_LEFT                = #%01000000
 P0_JOYSTICK_RIGHT               = #%10000000
 
-DURATION_MASK                   = #%00001111
+CONTROL_MASK                    = #%00001111
 FREQUENCY_MASK                  = #%11111000
 VOLUME_MASK                     = #%00000111
-CONTROL_MASK                    = #%11110000
+DURATION_MASK                   = #%11110000
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Global Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -194,7 +194,10 @@ JukeboxRomMusicPlayer
         ; is equal to the FrameCounter for it's respective track.
         ldy #0                          ; 2     Initialize Y-Index to 0
         lda (JukeboxNotePtrCh0),y       ; 5     Load first note duration to A
-        and #DURATION_MASK              ; 2     Mask so we only have the note duration
+        lsr
+        lsr
+        lsr
+        lsr
         beq SkipJukeboxMuteTrack0NoteGap; 2/3   If Duration is 0 then jump to repeats 
         
         tay                             ; 2     Make A the Y index
@@ -265,12 +268,7 @@ SkipRepeatCheck
         ; track. If it's equal then set the repeat counter to 0 and move to the
         ; next note to play by jumping back above
         lda (JukeboxNotePtrCh0),y
-        ; and #CONTROL_MASK
-        lsr
-        lsr
-        lsr
-        lsr
-
+        and #CONTROL_MASK
         sec
         sbc JukeboxRepeatCtrTrk0
         bne JukeboxTrack0RepeatNumNotes
@@ -307,42 +305,19 @@ JukeboxSkipDecNotePtrCh0MSB
         sta JukeboxNotePtrCh0
         inc JukeboxNotePtrCh0
 
-        ; tay
-        ; lda JukeboxNotePtrCh0
-        ; sty JukeboxNotePtrCh0
-        ; sbc JukeboxNotePtrCh0           ; During repeats bit 1 will always be 1 so C will be set
-        ; sta JukeboxNotePtrCh0           ; via the lsr's above
-
-        ; sta JukeboxRepeatNumNotesTrk0
-        ; lda JukeboxNotePtrCh0
-        ; sbc JukeboxRepeatNumNotesTrk0   ; During repeats bit 1 will always be 1 so C will be set
-        ; sta JukeboxNotePtrCh0           ; via the lsr's above
-;         bcs SkipDecNotePtrCh0HighByte
-;         dec JukeboxNotePtrCh0+1
-; SkipDecNotePtrCh0HighByte
-
         ; If the duration of a note is not 0 then continue loading the rest of
         ; the note's values into the correct channel's registers
 JukeboxTrack0ProcessNote
         ldy #0                          ; 2     Load 0 to the Y register(maybe not needed)
         lda (JukeboxNotePtrCh0),y       ; 5     Load Volume to A
-        ; and #CONTROL_MASK               ; 2     Mask so we only have the note Control
-        lsr                             ; 2     Shift right to get the correct placement
-        lsr                             ; 2     Shift right to get the correct placement
-        lsr                             ; 2     Shift right to get the correct placement
-        lsr                             ; 2     Shift right to get the correct placement
         sta AUDC0                       ; 3     and set the Note Control
 
         iny                             ; 2     Increment Y (Y=1) to point to the Note Frequency
-
         lda (JukeboxNotePtrCh0),y       ; 5     Load Volume to A
-        ; and #VOLUME_MASK                ; 2     Mask so we only have the note Volume
         rol                             ; 2     Roll left to get wider range of volume
 JukeboxMuteTrack0NoteSeparation
         sta AUDV0                       ; 3     and set the Note Control
 
-        ; lda (JukeboxNotePtrCh0),y       ; 5     Load Frequency to A
-        ; and #FREQUENCY_MASK             ; 2     Mask so we only have the note Frequency
         ror                             ; 2     Roll right to get the correct placement
         lsr                             ; 2     Shift right to get the correct placement
         lsr                             ; 2     Shift right to get the correct placement
@@ -450,9 +425,12 @@ JukeboxNoteDurations    ; .byte 0         ; control note - 0
                         .byte $7
         ; align 256
         align 2
-JukeboxTrack0           .byte $41,$fc,$42,$d4,$43,$94,$41,$fc,$42,$d4,$43,$ac,$4,$0,$45,$dc,$46,$c4,$7,$0,$43
-                        .byte $9c,$8,$0,$43,$d4,$8,$0,$43,$ac,$8,$0,$48,$d4,$43,$9c,$8,$0,$43,$9c,$43,$d4,$8
-                        .byte $0,$43,$ac,$8,$0,$43,$d4,$8,$0,%10000000,%10000010,%00010000,%10001011,$0,$0
+JukeboxTrack0           .byte $14,$fc,$24,$d4,$34,$94,$14,$fc,$24,$d4,$34,$ac,$40,$0,$54,$dc,$64,$c4,$70,$0,$34,$9c
+                        .byte $80,$0,$34,$d4,$80,$0,$34,$ac,$80,$0,$84,$d4,$34,$9c,$80,$0,$34,$9c,$34,$d4,$80,$0,$34
+                        .byte $ac,$80,$0,$34,$d4,$80,$0,%00001000,%10000010,%00000001,%10001011,$0,$0
+                        ; .byte $41,$fc,$42,$d4,$43,$94,$41,$fc,$42,$d4,$43,$ac,$4,$0,$45,$dc,$46,$c4,$7,$0,$43
+                        ; .byte $9c,$8,$0,$43,$d4,$8,$0,$43,$ac,$8,$0,$48,$d4,$43,$9c,$8,$0,$43,$9c,$43,$d4,$8
+                        ; .byte $0,$43,$ac,$8,$0,$43,$d4,$8,$0,%10000000,%10000010,%00010000,%10001011,$0,$0
 ; JukeboxTrack0           .byte $41,$ac,$2,$0,$43,$9c,$44,$7c,$5,$0,$66,$a4,$7,$0,$66,$dc,$7,$0,$67,$b4,$6,$0
                         ; .byte $67,$dc,$66,$a4,$7,$0,$66,$a4,$66,$dc,$7,$0,$66,$b4,$7,$0,$66,$dc,$7,$0
                         ; .byte %10000000,%10000001,$0,$0

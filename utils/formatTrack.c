@@ -111,8 +111,8 @@ int main(int argc, char *argv[]) {
 
                             insertDuration(note[3]);
                             // printf("\nDuration: %d\n",note[3]);
-                            tmp1 = lookupDuration(note[3]) & 15;
-                            tmp2 = note[1] << 4;
+                            tmp1 = lookupDuration(note[3]) << 4;
+                            tmp2 = note[1] & 15 ;
                             
                             tmp1 = tmp2 | tmp1;
                             printf("$%x,",tmp1);
