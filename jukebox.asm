@@ -5,14 +5,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-CONTROL_MASK                    = #%00001111
-FREQUENCY_MASK                  = #%11111000
-VOLUME_MASK                     = #%00000111
-DURATION_MASK                   = #%11110000
-
-REPEAT_TYPE_MASK                = #%00000111
 REPEAT_TYPE_TEST_BIT            = #%00000001
-REPEAT_COUNT_MASK               = #%00001111
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -71,29 +64,31 @@ Clear
 Jukebox
 
 JukeBoxSongInit
+        ; tax                             ; A=0
  IF [ ENABLE_MULTIPLE_SONGS ]
         ; Configure which song to play
 JukeboxInitPtrs
-        lda Song0,y                     ; Y=0 
+        lda Song0,x                     ; X=0 
   IF [ !ALL_SONGS_LT_255_BYTES ]
-        sta JukeboxSongPtrTrk0,y
+        sta JukeboxSongPtrTrk0,x
   ENDIF
-        sta JukeboxNotePtrCh0,y
-  IF [ !TRACKS_SHARE_DURATION ]        
-        lda Song0+4,y
-        sta JukeboxNoteDurationsTrk0Ptr,y
+        sta JukeboxNotePtrCh0,x
+  IF [ !TRACKS_SHARE_DURATION ]    
+        lda Song0+4,x
+        sta JukeboxNoteDurationsTrk0Ptr,x
   ENDIF
-        iny
-        cpy #4
+        inx
+        cpx #4
         bne JukeboxInitPtrs
 
-  IF [ ALL_SONGS_LT_255_BYTES ]
+  IF [ !ALL_TRACKS_SAME_LENGTH ]
         lda JukeboxTrack0End-JukeboxTrack0-#2 ; Initialize Note Pointer 0 to the
         sta JukeboxLengthTrk0           ; beginning of Title Music Track 0 in
 
         lda JukeboxTrack1End-JukeboxTrack1-#2 ; Initialize Note Pointer 1 to the
         sta JukeboxLengthTrk1           ; beginning of Title Music Track 1 in
   ENDIF
+        
  ELSE
         lda #<JukeboxTrack0             ; Initialize Note Pointer 0 to the
         sta JukeboxNotePtrCh0           ; beginning of Title Music Track 1 in
@@ -204,21 +199,20 @@ ENABLE_NESTED_REPEATS=  #1      ; Allows for the use of nested repeats inside of
 ENABLE_MULTIPLE_SONGS=  #1
 ALL_SONGS_LT_255_BYTES= #1
 ALL_TRACKS_SAME_LENGTH= #0
-TRACKS_SHARE_DURATION=  #0
+TRACKS_SHARE_DURATION=  #1
 ENABLE_SINGLE_TRACK=    #0
+ENABLE_SONG_END_FLAG=   #0
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; TODO: Optimize
-; TODO: Option Shared Durations between track
 ; TODO: Documentation
-; TODO: Track 1
-; Search String b[e,n,c,s,m,p][e,q,c,s,i,l]|jmp
+; TODO: Configure Options
 
         ldx #1
 JukeboxProcessTracks
-        ; dex
         
         ; 24 cycles + 24 cycles + 6 / 7 cycles
         ; 24 / 40 bytes
+JukeboxSelectTrack
         lda JukeboxNotePtrCh0                   ; 3
         ldy JukeboxNotePtrCh1                   ; 3
         sty JukeboxNotePtrCh0                   ; 3
@@ -228,88 +222,16 @@ JukeboxProcessTracks
         sty JukeboxNotePtrCh0+1                 ; 3
         sta JukeboxNotePtrCh1+1                 ; 3
 
-        ; 32 cycles + 32 cycles + 6/7 cycles
-        ; 13 / 29 bytes
-; JukeboxSelectTrack
-    
-        ; lda JukeboxNotePtrCh0,x                 ; 4
-        ; ldy JukeboxNotePtrCh1,x                 ; 4
-        ; sty JukeboxNotePtrCh0,x                 ; 4
-        ; sta JukeboxNotePtrCh1,x                 ; 4
-
-        ; lda JukeboxNoteDurationsTrk0Ptr,x       ; 4
-        ; ldy JukeboxNoteDurationsTrk1Ptr,x       ; 4
-        ; sty JukeboxNoteDurationsTrk0Ptr,x       ; 4
-        ; sta JukeboxNoteDurationsTrk1Ptr,x       ; 4
- 
-        ; dex                                     ; 2
-        ; bpl JukeboxSelectTrack                  ; 2/3
-
-        ; (31 cycles * 2) + (31 cycles * 2) + 6/7 cycles
-        ; 36 / 57 bytes
-        ; ldy #1                                  ; 2
-; JukeboxSelectTrack
-        ; XOR byte swap so that all operations can work off JukeboxNotePtrCh0
-        ; lda JukeboxNotePtrCh0,y                 ; 4
-        ; eor JukeboxNotePtrCh1,y                 ; 4 
-        ; sta JukeboxNotePtrCh0,y                 ; 5
-        ; eor JukeboxNotePtrCh1,y                 ; 4
-        ; sta JukeboxNotePtrCh1,y                 ; 5
-        ; eor JukeboxNotePtrCh0,y                 ; 4
-        ; sta JukeboxNotePtrCh0,y                 ; 5
-
-        ; lda JukeboxNoteDurationsTrk0Ptr,y       ; 4
-        ; eor JukeboxNoteDurationsTrk1Ptr,y       ; 4 
-        ; sta JukeboxNoteDurationsTrk0Ptr,y       ; 5
-        ; eor JukeboxNoteDurationsTrk1Ptr,y       ; 4
-        ; sta JukeboxNoteDurationsTrk1Ptr,y       ; 5
-        ; eor JukeboxNoteDurationsTrk0Ptr,y       ; 4
-        ; sta JukeboxNoteDurationsTrk0Ptr,y       ; 5
-
-        ; dex                                     ; 2
-        ; bpl JukeboxSelectTrack                  ; 2/3
-
-        ; 53 + (1) cycles
-        ; 71 bytes
-;         beq JukeboxSelectTrack                  ; 2/3
-
-;         lda JukeboxNoteDurationsTrk0Ptr         ; 3
-;         pha                                     ; 3
-;         lda JukeboxNoteDurationsTrk0Ptr+1       ; 3
-;         pha                                     ; 3
-;         lda JukeboxNotePtrCh0                   ; 3
-;         pha                                     ; 3
-;         lda JukeboxNotePtrCh0+1                 ; 3
-;         pha                                     ; 3
-
-;         lda JukeboxNotePtrCh1
-;         sta JukeboxNotePtrCh0
-;         lda JukeboxNotePtrCh1+1
-;         sta JukeboxNotePtrCh0+1
-;         lda JukeboxNoteDurationsTrk1Ptr
-;         sta JukeboxNoteDurationsTrk0Ptr
-;         lda JukeboxNoteDurationsTrk1Ptr+1
-;         sta JukeboxNoteDurationsTrk0Ptr+1
-
-;         jmp JukeboxRomMusicPlayer
-; JukeboxSelectTrack
-;         lda JukeboxNotePtrCh0
-;         sta JukeboxNotePtrCh1
-;         lda JukeboxNotePtrCh0+1
-;         sta JukeboxNotePtrCh1+1
-;         lda JukeboxNoteDurationsTrk0Ptr
-;         sta JukeboxNoteDurationsTrk1Ptr
-;         lda JukeboxNoteDurationsTrk0Ptr+1
-;         sta JukeboxNoteDurationsTrk1Ptr+1
-
-;         pla
-;         sta JukeboxNotePtrCh0+1
-;         pla
-;         sta JukeboxNotePtrCh0 
-;         pla 
-;         sta JukeboxNoteDurationsTrk0Ptr+1
-;         pla 
-;         sta JukeboxNoteDurationsTrk0Ptr
+ IF [ !TRACKS_SHARE_DURATION ]
+        lda JukeboxNoteDurationsTrk0Ptr         ; 3
+        ldy JukeboxNoteDurationsTrk1Ptr         ; 3
+        sty JukeboxNoteDurationsTrk0Ptr         ; 3
+        sta JukeboxNoteDurationsTrk1Ptr         ; 3
+        lda JukeboxNoteDurationsTrk0Ptr+1       ; 3
+        ldy JukeboxNoteDurationsTrk1Ptr+1       ; 3
+        sty JukeboxNoteDurationsTrk0Ptr+1       ; 3
+        sta JukeboxNoteDurationsTrk1Ptr+1       ; 3
+ ENDIF
 
         echo "----"
         echo "Rom Total Handle Both Tracks:"
@@ -329,7 +251,7 @@ JukeboxRomMusicPlayer
         beq JukeboxRepeatNumNotesTrack0 ; 2/3   If Duration is 0 then jump to repeats
  ENDIF
         tay                             ; 2     Make A the Y index
- IF [ ENABLE_MULTIPLE_SONGS ]
+ IF [ ENABLE_MULTIPLE_SONGS && !TRACKS_SHARE_DURATION ]
         lda (JukeboxNoteDurationsTrk0Ptr),y      ; 4     Get the actual duration based on the duration setting
  ELSE
         lda JukeboxNoteDurations,y      ; 4     Get the actual duration based on the duration setting
@@ -357,7 +279,7 @@ JukeboxSetupRepeatAllTrack0
   IF [ !ENABLE_REPEATS ]
         sec
   ENDIF
-  IF [ ENABLE_MULTIPLE_SONGS ]
+  IF [ ENABLE_MULTIPLE_SONGS && !ALL_TRACKS_SAME_LENGTH ]
         lda JukeboxLengthTrk0,x
   ELSE
    IF [ ALL_TRACKS_SAME_LENGTH ]
@@ -596,14 +518,14 @@ JukeboxTrack0           .byte $14,$fc,$24,$d4,$34,$94,$14,$fc,$24,$d4,$34,$ac,$4
                         .byte $80,$0,$34,$d4,$80,$0,$34,$ac,$80,$0,$84,$d4,$34,$9c,$80,$0,$34,$9c,$34,$d4,$80,$0,$34
                         .byte $ac,$80,$0,$34,$d4,$80,$0,%00000010,%10000011,%00000010,%10001010,$0,$0
 JukeboxTrack0End
-
+        align 2
 JukeboxTrack1           .byte $14,$fc,$24,$d4,$34,$94,$14,$fc,$24,$d4,$34,$ac,$40,$0,$54,$dc,$64,$c4,$70,$0,$34,$9c
                         .byte $80,$0,$34,$d4,$80,$0,$34,$ac,$80,$0,$84,$d4,$34,$9c,$80,$0,$34,$9c,$34,$d4,$80,$0,$34
                         .byte $ac,$80,$0,$34,$d4,$80,$0,%00000010,%10000011,%00000010,%10001010,$0,$0
 JukeboxTrack1End
+        
+; JukeboxTrack1           .byte $0,$0,$0,$0
 
-; JukeboxTrack1           .byte $a3,$86,$3,$0,$db,$86,$3,$0,$b3,$86,$3,$0,$db,$86,$a3,$86,$3,$0,$a3,$86,$db,$86
-;                         .byte $3,$0,$b3,$86,$3,$0,$db,$86,$3,$0,$3,$0,$0,$0
 ; JukeboxTrack1End
 
         echo "----"
