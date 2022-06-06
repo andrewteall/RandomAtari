@@ -14,29 +14,43 @@ REPEAT_TYPE_TEST_BIT            = #%00000001
         ORG $80
 
 JukeboxNotePtrCh0               ds 2
+ IF [ !ENABLE_SINGLE_TRACK ]
 JukeboxNotePtrCh1               ds 2
+ ENDIF
 JukeboxFrameCtrTrk0             ds 1
+ IF [ !ENABLE_SINGLE_TRACK ]
 JukeboxFrameCtrTrk1             ds 1
+ ENDIF
  IF [ ENABLE_REPEATS ]
 JukeboxRepeatCtrTrk0            ds 1
+  IF [ !ENABLE_SINGLE_TRACK ]
 JukeboxRepeatCtrTrk1            ds 1
+  ENDIF
   IF [ ENABLE_NESTED_REPEATS ]
 JukeboxNestedRepeatCtrTrk0      ds 1
+   IF [ !ENABLE_SINGLE_TRACK ]
 JukeboxNestedRepeatCtrTrk1      ds 1
+   ENDIF
   ENDIF
  ENDIF
  IF [ ENABLE_MULTIPLE_SONGS ]
   IF [ !ALL_SONGS_LT_255_BYTES ]
 JukeboxSongPtrTrk0              ds 2
+   IF [ !ENABLE_SINGLE_TRACK ]
 JukeboxSongPtrTrk1              ds 2
+   ENDIF
   ENDIF
   IF [ !TRACKS_SHARE_DURATION ]  
 JukeboxNoteDurationsTrk0Ptr     ds 2
+   IF [ !ENABLE_SINGLE_TRACK ]
 JukeboxNoteDurationsTrk1Ptr     ds 2
+   ENDIF
   ENDIF
-  IF [ ALL_SONGS_LT_255_BYTES ]
+  IF [ ALL_SONGS_LT_255_BYTES && !ALL_TRACKS_SAME_LENGTH]
 JukeboxLengthTrk0               ds 1
+   IF [ !ENABLE_SINGLE_TRACK ]
 JukeboxLengthTrk1               ds 1
+   ENDIF
   ENDIF
  ENDIF
         echo "----"
@@ -73,36 +87,46 @@ JukeboxInitPtrs
         sta JukeboxSongPtrTrk0,x
   ENDIF
         sta JukeboxNotePtrCh0,x
-  IF [ !TRACKS_SHARE_DURATION ]    
+  IF [ !TRACKS_SHARE_DURATION ]
+   IF [ ENABLE_SINGLE_TRACK ]
+        lda Song0+2,x
+   ELSE
         lda Song0+4,x
+   ENDIF
         sta JukeboxNoteDurationsTrk0Ptr,x
   ENDIF
         inx
+   IF [ ENABLE_SINGLE_TRACK ]
+        cpx #2
+   ELSE 
         cpx #4
+   ENDIF
         bne JukeboxInitPtrs
 
-  IF [ !ALL_TRACKS_SAME_LENGTH ]
+  IF [ !ALL_TRACKS_SAME_LENGTH && ALL_SONGS_LT_255_BYTES ]
         lda JukeboxTrack0End-JukeboxTrack0-#2 ; Initialize Note Pointer 0 to the
         sta JukeboxLengthTrk0           ; beginning of Title Music Track 0 in
-
+   IF [ !ENABLE_SINGLE_TRACK ]
         lda JukeboxTrack1End-JukeboxTrack1-#2 ; Initialize Note Pointer 1 to the
         sta JukeboxLengthTrk1           ; beginning of Title Music Track 1 in
-  ENDIF
-        
+   ENDIF
+  ENDIF 
  ELSE
         lda #<JukeboxTrack0             ; Initialize Note Pointer 0 to the
         sta JukeboxNotePtrCh0           ; beginning of Title Music Track 1 in
         lda #>JukeboxTrack0             ; Rom for the Music Player
         sta JukeboxNotePtrCh0+1         ;
-
+  IF [ !ENABLE_SINGLE_TRACK ]
         lda #<JukeboxTrack1             ; Initialize Note Pointer 1 to the
         sta JukeboxNotePtrCh1           ; beginning of Title Music Track 1 in
         lda #>JukeboxTrack1             ; Rom for the Music Player
         sta JukeboxNotePtrCh1+1         ;
+  ENDIF
  ENDIF
         echo "----"
         echo "Rom Total for Jukebox Init:"
-        echo "----",([(.-JukeBoxSongInit)+(SongListEnd-SongList)]d), "bytes used for Jukebox Init"
+JukeboxInitBytes=(.-JukeBoxSongInit)+(SongListEnd-SongList)
+        echo "----",([(JukeboxInitBytes)]d), "bytes used for Jukebox Init"
 JukeboxStartOfFrame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Start VBLANK ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -192,21 +216,25 @@ EndofViewableScreen
 ; Byte 1 - %XXXXX011 - This Value signifies that this is a nested repeat control note
 ;
 
-; Jukebox Configuration
-ENABLE_NOTE_SEPARATION= #0      ; Provides spacing between each note by muting the last frame of the note
-ENABLE_REPEATS=         #1      ; Allows for the use of repeating groups of notes
-ENABLE_NESTED_REPEATS=  #1      ; Allows for the use of nested repeats inside of another repeat
-ENABLE_MULTIPLE_SONGS=  #1
-ALL_SONGS_LT_255_BYTES= #1
-ALL_TRACKS_SAME_LENGTH= #0
-TRACKS_SHARE_DURATION=  #1
-ENABLE_SINGLE_TRACK=    #0
-ENABLE_SONG_END_FLAG=   #0
+; Jukebox Configuration Flags
+ALL_SONGS_LT_255_BYTES  = #1    ; Disabled Costs 2 bytes of Ram and Costs 18 bytes of Rom
+ALL_TRACKS_SAME_LENGTH  = #0    ; Enabled Saves 2 bytes of Ram and Saves 6 bytes of Rom
+TRACKS_SHARE_DURATION   = #1    ; Enabled Saves 4 bytes of Ram and Costs 1 byte of Rom
+
+ENABLE_NOTE_SEPARATION  = #0    ; 4 bytes Rom - Provides spacing between each note by muting the last frame of the note
+ENABLE_REPEATS          = #1    ; Disabled Saves 4 bytes Ram 52 bytes Rom - Allows for the use of repeating groups of notes
+ENABLE_NESTED_REPEATS   = #1    ; 2 bytes Ram 25 bytes Rom - Allows for the use of nested repeats inside of another repeat
+ENABLE_MULTIPLE_SONGS   = #1    ; Disabled Saves 2 bytes Ram 9 bytes Rom - 
+ENABLE_SINGLE_TRACK     = #0    ; Enabled Saves 26 bytes Rom 2 - 7 Bytes of Ram
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; TODO: Optimize
 ; TODO: Documentation
-; TODO: Configure Options
 
+ IF [ ENABLE_SINGLE_TRACK ]
+        ldx #0
+JukeboxProcessTracks
+ ELSE
         ldx #1
 JukeboxProcessTracks
         
@@ -222,7 +250,7 @@ JukeboxSelectTrack
         sty JukeboxNotePtrCh0+1                 ; 3
         sta JukeboxNotePtrCh1+1                 ; 3
 
- IF [ !TRACKS_SHARE_DURATION ]
+  IF [ !TRACKS_SHARE_DURATION ]
         lda JukeboxNoteDurationsTrk0Ptr         ; 3
         ldy JukeboxNoteDurationsTrk1Ptr         ; 3
         sty JukeboxNoteDurationsTrk0Ptr         ; 3
@@ -231,11 +259,12 @@ JukeboxSelectTrack
         ldy JukeboxNoteDurationsTrk1Ptr+1       ; 3
         sty JukeboxNoteDurationsTrk0Ptr+1       ; 3
         sta JukeboxNoteDurationsTrk1Ptr+1       ; 3
+  ENDIF
  ENDIF
-
         echo "----"
         echo "Rom Total Handle Both Tracks:"
-        echo "----",([(.-JukeboxProcessTracks)+2+(JukeboxDoneProcessingTracks-IncrementTrack0FrameCounter)-2]d), "bytes used to Handle Both Tracks"
+JukeboxSelectTrackBytes=(.-JukeboxProcessTracks)+2+(JukeboxDoneProcessingTracks-IncrementTrack0FrameCounter)-2
+        echo "----",([JukeboxSelectTrackBytes]d), "bytes used to Handle Both Tracks"
 JukeboxRomMusicPlayer
 ; Track 0
         ; Each frame check if the duration of the current note playing
@@ -285,18 +314,18 @@ JukeboxSetupRepeatAllTrack0
    IF [ ALL_TRACKS_SAME_LENGTH ]
         lda JukeboxTrack0End-JukeboxTrack0-#2
    ELSE
-        cpx #0
-        bne LoadTrack1Length
-        lda JukeboxTrack0End-JukeboxTrack0-#2 ; Length of Track0(58) -#2 - #1 for carry
-        jmp LoadTrack0Length
-LoadTrack1Length
-        lda JukeboxTrack1End-JukeboxTrack1-#2
-LoadTrack0Length
+        lda TrackLengths,x
    ENDIF
   ENDIF
         bne JukeboxRepeatAllTrack0         ; Won't ever be 0
  ELSE
   IF [ ENABLE_MULTIPLE_SONGS ]
+   IF [ ENABLE_SINGLE_TRACK ]
+        lda JukeboxSongPtrTrk0          ; Initialize Note Pointer 0 to the
+        sta JukeboxNotePtrCh0           ; beginning of Title Music Track 0 in
+        lda JukeboxSongPtrTrk0+1        ; Rom for the Music Player
+        sta JukeboxNotePtrCh0+1         ;
+   ELSE
         cpx #0
         bne ResetTrack1Ptr
         lda JukeboxSongPtrTrk0          ; Initialize Note Pointer 0 to the
@@ -310,7 +339,14 @@ ResetTrack1Ptr
         lda JukeboxSongPtrTrk1+1        ; Rom for the Music Player
         sta JukeboxNotePtrCh0+1         ;
 ResetTrack0Ptr
+   ENDIF
   ELSE
+   IF [ ENABLE_SINGLE_TRACK ]
+        lda #<JukeboxTrack0             ; Initialize Note Pointer 0 to the
+        sta JukeboxNotePtrCh0           ; beginning of Title Music Track 0 in
+        lda #>JukeboxTrack0             ; Rom for the Music Player
+        sta JukeboxNotePtrCh0+1         ;
+   ELSE
         cpx #0
         bne ResetTrack1Ptr
         lda #<JukeboxTrack0             ; Initialize Note Pointer 0 to the
@@ -323,9 +359,9 @@ ResetTrack1Ptr
         sta JukeboxNotePtrCh0           ; beginning of Title Music Track 0 in
         lda #>JukeboxTrack1             ; Rom for the Music Player
         sta JukeboxNotePtrCh0+1         ;
+   ENDIF
 ResetTrack0Ptr
   ENDIF
-
         jmp JukeboxTrack0ProcessNote
  ENDIF
 
@@ -446,10 +482,11 @@ IncrementTrack0FrameCounter
         echo "----"
         echo "Rom Total Music Player:"
         echo "----",([(.-Reset)-(JukeboxRomMusicPlayer-Reset)]d), "bytes used for Music Player"
-
+ IF [ !ENABLE_SINGLE_TRACK ]
         dex
         bmi JukeboxDoneProcessingTracks
         jmp JukeboxProcessTracks
+ ENDIF
 JukeboxDoneProcessingTracks
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Rom Music Player ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -489,18 +526,24 @@ EndOfOverscan
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Song List ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ IF [ !ENABLE_MULTIPLE_SONGS && !ALL_TRACKS_SAME_LENGTH ]
+TrackLengths    .byte JukeboxTrack0End-JukeboxTrack0-#2,JukeboxTrack1End-JukeboxTrack1-#2
+ ENDIF
+
+
 SongList
+ IF [ ENABLE_MULTIPLE_SONGS ]
 ; SongN             .word TrackAddress0(2bytes),TrackAddress1(2bytes)
 ;                   .word Track0NoteDurationsAddress(2bytes),Track1NoteDurationsAddress(2bytes)
 
 Song0             .word JukeboxTrack0,JukeboxTrack1,JukeboxNoteDurations,JukeboxNoteDurations
 ; Song1             .word $0000,$0000,$0000,$0000
-
+ ENDIF
 SongListEnd
-
+ 
         echo "----"
         echo "Rom Total Music Player Overhead:"
-        echo "----",([(JukeboxStartOfFrame-JukeBoxSongInit)+(SongListEnd-SongList)+(JukeboxRomMusicPlayer-JukeboxProcessTracks)+2+(JukeboxDoneProcessingTracks-IncrementTrack0FrameCounter)-2)]d), "bytes used for Music Player Overhead"
+        echo "----",([JukeboxInitBytes+JukeboxSelectTrackBytes]d), "bytes used for Music Player Overhead"
 
 JukeboxNoteDurations    .byte $0
                         .byte $3
@@ -512,7 +555,6 @@ JukeboxNoteDurations    .byte $0
                         .byte $87
                         .byte $7
 
-                        
         align 2
 JukeboxTrack0           .byte $14,$fc,$24,$d4,$34,$94,$14,$fc,$24,$d4,$34,$ac,$40,$0,$54,$dc,$64,$c4,$70,$0,$34,$9c
                         .byte $80,$0,$34,$d4,$80,$0,$34,$ac,$80,$0,$84,$d4,$34,$9c,$80,$0,$34,$9c,$34,$d4,$80,$0,$34
@@ -524,7 +566,7 @@ JukeboxTrack1           .byte $14,$fc,$24,$d4,$34,$94,$14,$fc,$24,$d4,$34,$ac,$4
                         .byte $ac,$80,$0,$34,$d4,$80,$0,%00000010,%10000011,%00000010,%10001010,$0,$0
 JukeboxTrack1End
         
-; JukeboxTrack1           .byte $0,$0,$0,$0
+; JukeboxTrack1           .byte $40,$0,$0,$0
 
 ; JukeboxTrack1End
 
