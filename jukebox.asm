@@ -12,15 +12,37 @@ REPEAT_TYPE_TEST_BIT            = #%00000001
 
         SEG.U vars
         ORG $80
-
+; The Note Pointers for each track are always required. They will point to the
+; currently playing note and enable it to be played. If ENABLE_SINGLE_TRACK is
+; set to 1 then we do not need to allocate the memory for the pointer for track
+; 1.
 JukeboxNotePtrCh0               ds 2
  IF [ !ENABLE_SINGLE_TRACK ]
 JukeboxNotePtrCh1               ds 2
  ENDIF
+
+; The Frame Counters for each track are always required. They count how many
+; frames have elapsed since the note first started and are compared against the
+; the duration of how long a note should play to determine when to move the
+; Note Pointers to the next note. If ENABLE_SINGLE_TRACK is set to 1 then we do
+; not need to allocate the memory for the counter for track 1.
 JukeboxFrameCtrTrk0             ds 1
  IF [ !ENABLE_SINGLE_TRACK ]
 JukeboxFrameCtrTrk1             ds 1
  ENDIF
+
+; Our first option is the enablement of Repeats. The track will always repeat
+; from the beginning indefinitely once the end of the track is reached. However
+; ee have two repeat options to choose from. The first is enabling Normal
+; Repeats. Normal Repeats allow a certain number of notes(up to 32) to be 
+; repeated a certain number of times(up to 16). The second option is only
+; available if Normal Repeats are enabled and that's nested Repeats. Nested
+; Repeats work just like normal repeats allowing a certain number of notes
+; (up to 32) to be repeated a certain number of times(up to 16) but exist
+; within a Normal Repeat. Both of these repeats options are configured within
+; the track so each track can repeat indpendently of each other. Like other
+; configurations if ENABLE_SINGLE_TRACK is set to 1 then we don't need to track
+; the second counter in the Repeat memory.
  IF [ ENABLE_REPEATS ]
 JukeboxRepeatCtrTrk0            ds 1
   IF [ !ENABLE_SINGLE_TRACK ]
@@ -33,6 +55,18 @@ JukeboxNestedRepeatCtrTrk1      ds 1
    ENDIF
   ENDIF
  ENDIF
+ 
+; The Duration Pointers are used if the tracks don't use the same list of Note
+; Durations. By setting TRACKS_SHARE_DURATION to 1 all track will use the same 
+; list of Durations allowing up to 4 bytes of memory to be saved. If
+; ENABLE_SINGLE_TRACK is set to 1 we do not need the second Duration Pointer.
+ IF [ !TRACKS_SHARE_DURATION ]  
+JukeboxNoteDurationsTrk0Ptr     ds 2
+  IF [ !ENABLE_SINGLE_TRACK ]
+JukeboxNoteDurationsTrk1Ptr     ds 2
+  ENDIF
+ ENDIF
+
  IF [ ENABLE_MULTIPLE_SONGS ]
   IF [ !ALL_SONGS_LT_255_BYTES ]
 JukeboxSongPtrTrk0              ds 2
@@ -40,12 +74,7 @@ JukeboxSongPtrTrk0              ds 2
 JukeboxSongPtrTrk1              ds 2
    ENDIF
   ENDIF
-  IF [ !TRACKS_SHARE_DURATION ]  
-JukeboxNoteDurationsTrk0Ptr     ds 2
-   IF [ !ENABLE_SINGLE_TRACK ]
-JukeboxNoteDurationsTrk1Ptr     ds 2
-   ENDIF
-  ENDIF
+
   IF [ ALL_SONGS_LT_255_BYTES && !ALL_TRACKS_SAME_LENGTH]
 JukeboxLengthTrk0               ds 1
    IF [ !ENABLE_SINGLE_TRACK ]
@@ -78,54 +107,48 @@ Clear
 Jukebox
 
 JukeBoxSongInit
-        ; tax                             ; A=0
- IF [ ENABLE_MULTIPLE_SONGS ]
         ; Configure which song to play
-JukeboxInitPtrs
-        lda Song0,x                     ; X=0 
-  IF [ !ALL_SONGS_LT_255_BYTES ]
-        sta JukeboxSongPtrTrk0,x
-  ENDIF
-        sta JukeboxNotePtrCh0,x
-  IF [ !TRACKS_SHARE_DURATION ]
-   IF [ ENABLE_SINGLE_TRACK ]
-        lda Song0+2,x
-   ELSE
-        lda Song0+4,x
-   ENDIF
-        sta JukeboxNoteDurationsTrk0Ptr,x
-  ENDIF
-        inx
-   IF [ ENABLE_SINGLE_TRACK ]
-        cpx #2
-   ELSE 
-        cpx #4
-   ENDIF
-        bne JukeboxInitPtrs
-
-  IF [ !ALL_TRACKS_SAME_LENGTH && ALL_SONGS_LT_255_BYTES ]
-        lda JukeboxTrack0End-JukeboxTrack0-#2 ; Initialize Note Pointer 0 to the
-        sta JukeboxLengthTrk0           ; beginning of Title Music Track 0 in
-   IF [ !ENABLE_SINGLE_TRACK ]
-        lda JukeboxTrack1End-JukeboxTrack1-#2 ; Initialize Note Pointer 1 to the
-        sta JukeboxLengthTrk1           ; beginning of Title Music Track 1 in
-   ENDIF
-  ENDIF 
+ IF [ ENABLE_MULTIPLE_SONGS ]
+        ; SELECT_SONG #0
+        SELECT_SONG #1
+        ; SELECT_SONG #2
+        ; SELECT_SONG #3
  ELSE
         lda #<JukeboxTrack0             ; Initialize Note Pointer 0 to the
         sta JukeboxNotePtrCh0           ; beginning of Title Music Track 1 in
         lda #>JukeboxTrack0             ; Rom for the Music Player
         sta JukeboxNotePtrCh0+1         ;
+  IF [ !TRACKS_SHARE_DURATION ]
+        lda #<JukeboxNoteDurations
+        sta JukeboxNoteDurationsTrk0Ptr
+        lda #>JukeboxNoteDurations
+        sta JukeboxNoteDurationsTrk0Ptr+1
+  ENDIF
   IF [ !ENABLE_SINGLE_TRACK ]
         lda #<JukeboxTrack1             ; Initialize Note Pointer 1 to the
         sta JukeboxNotePtrCh1           ; beginning of Title Music Track 1 in
         lda #>JukeboxTrack1             ; Rom for the Music Player
         sta JukeboxNotePtrCh1+1         ;
+   IF [ !TRACKS_SHARE_DURATION ]
+        lda #<JukeboxNoteDurations
+        sta JukeboxNoteDurationsTrk1Ptr
+        lda #>JukeboxNoteDurations
+        sta JukeboxNoteDurationsTrk1Ptr+1
+   ENDIF
   ENDIF
+
+  IF [ !ALL_TRACKS_SAME_LENGTH && ALL_SONGS_LT_255_BYTES ]
+JUKEBOX_TRACK0_LENGTH=JukeboxTrack0End-JukeboxTrack0-#2
+JUKEBOX_TRACK1_LENGTH=JukeboxTrack1End-JukeboxTrack1-#2
+  ENDIF
+ ENDIF
+
+ IF [ ALL_TRACKS_SAME_LENGTH && ALL_SONGS_LT_255_BYTES]
+JUKEBOX_TRACK_LENGTH=JukeboxTrack0End-JukeboxTrack0-#2
  ENDIF
         echo "----"
         echo "Rom Total for Jukebox Init:"
-JukeboxInitBytes=(.-JukeBoxSongInit)+(SongListEnd-SongList)
+JukeboxInitBytes SET (.-JukeBoxSongInit)+(SongListEnd-SongList)+(EndJukeboxSelectSong-JukeboxSelectSong)
         echo "----",([(JukeboxInitBytes)]d), "bytes used for Jukebox Init"
 JukeboxStartOfFrame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -217,7 +240,7 @@ EndofViewableScreen
 ;
 
 ; Jukebox Configuration Flags
-ALL_SONGS_LT_255_BYTES  = #1    ; Disabled Costs 2 bytes of Ram and Costs 18 bytes of Rom
+ALL_SONGS_LT_255_BYTES  = #1   ; Disabled Costs 2 bytes of Ram and Costs 18 bytes of Rom
 ALL_TRACKS_SAME_LENGTH  = #0    ; Enabled Saves 2 bytes of Ram and Saves 6 bytes of Rom
 TRACKS_SHARE_DURATION   = #1    ; Enabled Saves 4 bytes of Ram and Costs 1 byte of Rom
 
@@ -265,8 +288,8 @@ JukeboxSelectTrack
         echo "Rom Total Handle Both Tracks:"
 JukeboxSelectTrackBytes=(.-JukeboxProcessTracks)+2+(JukeboxDoneProcessingTracks-IncrementTrack0FrameCounter)-2
         echo "----",([JukeboxSelectTrackBytes]d), "bytes used to Handle Both Tracks"
+
 JukeboxRomMusicPlayer
-; Track 0
         ; Each frame check if the duration of the current note playing
         ; is equal to the FrameCounter for it's respective track.
         ldy #0                          ; 2     Initialize Y-Index to 0
@@ -280,10 +303,10 @@ JukeboxRomMusicPlayer
         beq JukeboxRepeatNumNotesTrack0 ; 2/3   If Duration is 0 then jump to repeats
  ENDIF
         tay                             ; 2     Make A the Y index
- IF [ ENABLE_MULTIPLE_SONGS && !TRACKS_SHARE_DURATION ]
-        lda (JukeboxNoteDurationsTrk0Ptr),y      ; 4     Get the actual duration based on the duration setting
- ELSE
+ IF [ TRACKS_SHARE_DURATION ]
         lda JukeboxNoteDurations,y      ; 4     Get the actual duration based on the duration setting
+ ELSE
+        lda (JukeboxNoteDurationsTrk0Ptr),y      ; 4     Get the actual duration based on the duration setting
  ENDIF
         sec
         sbc JukeboxFrameCtrTrk0,x         ; 3     See if it equals the Frame Counter
@@ -312,7 +335,7 @@ JukeboxSetupRepeatAllTrack0
         lda JukeboxLengthTrk0,x
   ELSE
    IF [ ALL_TRACKS_SAME_LENGTH ]
-        lda JukeboxTrack0End-JukeboxTrack0-#2
+        lda #JUKEBOX_TRACK_LENGTH
    ELSE
         lda TrackLengths,x
    ENDIF
@@ -455,18 +478,46 @@ JukeboxSkipDecNotePtrCh0MSB
         sta JukeboxNotePtrCh0
         inc JukeboxNotePtrCh0
  ENDIF
-        ; If the duration of a note is not 0 then continue loading the rest of
-        ; the note's values into the correct channel's registers
+ 
+; Here is where we load the values of each note into the Audio Memory of the
+; system. Starting at 'JukeboxTrack0ProcessNote' we set the Note Pointer Offset
+; (Y) to 0 so we can load the full note. Using the Note Pointer Offset we then
+; load into A 'JukeboxNotePtrCh0' indirectly to obtain the Duration/Control
+; byte. Since AUDCX only uses the lower 4 bits of a byte we can store our value
+; in A directly to AUDCX to set the Note's Control. Note: We are using X as the
+; index to select which Channel we are setting the note values for.
+; 
+; After that we increment the Note Pointer Offset(Y) and then using it we load
+; into A 'JukeboxNotePtrCh0' indirectly to obtain the Frequency/Volume byte.
+; Volume is the lower 3 bits of this value so inorder to get a wider range of
+; choices for volume we shift the byte to left by 1 storing the most
+; significant bit into the Carry. Since AUDVX only uses the lower 4 bits of a 
+; byte we can store our value in A directly to AUDVX to set the Note's Volume.
+; We are still using X as the index to select which Channel we are setting the
+; note values for.
+;
+; From there we roll the Accumlator back to right to preserve the bit in the
+; carry. This places Frequency in the upper 5 bits of the byte. Then we perform
+; 3 logical shifts right to get the Frequency in the lower 5 bits. We can then
+; store A to AUDFX to set the notes Frequency. Using X as the index to select
+; which Channel we are setting.
 JukeboxTrack0ProcessNote
         ldy #0                          ; 2     Reset the Note Pointer Offset to 0
         lda (JukeboxNotePtrCh0),y       ; 5     Load Duration/Control to A
         sta AUDC0,x                     ; 3     and set the Note Control
 
-        iny                             ; 2     Increment Y (Y=1) to point to the Note Volume/Frequency
-        lda (JukeboxNotePtrCh0),y       ; 5     Load Volume to A
+        iny                             ; 2     Increment Y (Y=1) 
+        lda (JukeboxNotePtrCh0),y       ; 5     Load the Note Frequency/Volume to A
         asl                             ; 2     Shift left to get wider range of volume
+
+; If ENABLE_NOTE_SEPARATION is set to 1 we use this label to jump to when the
+; Frame Counter for a particular track is 1 less than its intended duration.
+; Before jumping we ensure teh Accumulator is set to 0. This effectively mutes
+; the note providing 1 frame of silence before playing the next note. Since the
+; note is muted setting the Frequency afterwards has no effect and allows for
+; more effecient code.
 JukeboxMuteTrack0NoteSeparation
-        sta AUDV0,x                     ; 3     and set the Note Control
+        sta AUDV0,x                     ; 3     and set the Note Volume
 
         ror                             ; 2     Roll right to get the correct placement
         lsr                             ; 2     Shift right to get the correct placement
@@ -474,10 +525,11 @@ JukeboxMuteTrack0NoteSeparation
         lsr                             ; 2     Shift right to get the correct placement
         sta AUDF0,x                     ; 3     and set the Note Frequency
 
-        ; Each Frame we need to increment the FrameCounter by 1 to continue to
-        ; count the duration of each note
+; Each Frame we need to increment the FrameCounter by 1 to continue to count
+; the duration of each note. Using X as the index to determine for which track
+; to increment the counter.
 IncrementTrack0FrameCounter
-        inc JukeboxFrameCtrTrk0,x         ; 5     Increment the Frame Counter to duration compare later
+        inc JukeboxFrameCtrTrk0,x         ; 5     Increment the Frame Counter
 
         echo "----"
         echo "Rom Total Music Player:"
@@ -504,12 +556,105 @@ EndOfOverscan
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Wait for Overscan Timer to Expire  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Macros ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
+;;;;;;;;;;;;;;;;;;;; Select Song to be Played Macro ;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 8 cycles
+; 5 bytes
+; 
+; Usage:
+; SELECT_SONG [N]
+; ex: SELECT_SONG 4 ; Loads Song4 to be played
+;
+; N - Index Number of the Song to Play From the Song List.
+;     Count Starts at 0. Defaults to Song0 if no selection is passed.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+ IF [ ENABLE_MULTIPLE_SONGS ]
+  MAC SELECT_SONG
+  IFNCONST {1}
+        ldy (!#ENABLE_SINGLE_TRACK*#2)+#1                                       ; Enabled: #1 or Disabled: #3
+  ELSE
+TRACK_INDEX SET #{1}*((!#ENABLE_SINGLE_TRACK*#5)+#5)    ; Get Initial Track Entry Length
+TRACK_INDEX SET #TRACK_INDEX-#{1}*(ALL_TRACKS_SAME_LENGTH*(ALL_TRACKS_SAME_LENGTH+!#ENABLE_SINGLE_TRACK))
+TRACK_INDEX SET #TRACK_INDEX-(#{1}*((TRACKS_SHARE_DURATION*(TRACKS_SHARE_DURATION+!#ENABLE_SINGLE_TRACK))*2))
+TRACK_OFFSET SET (!#ENABLE_SINGLE_TRACK*#2)+#1
+        ; echo [#TRACK_OFFSET]d
+        ; echo [#TRACK_INDEX]d
+        ldy #TRACK_OFFSET+#TRACK_INDEX                                           ; Enabled: #5,1 or Disabled: #10,3
+  ENDIF         ; Need to Handle Offset if all tracks are the same length
+                ; and TRACKS_SHARE_DURATION
+        jsr JukeboxSelectSong
+  ENDM
+ ENDIF
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
+;;;;;;;;;;;;;;;;;; End Select Song to be Played Macro ;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; End Macros ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Sub-Routines ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;; Select Song to be Played Sub-Routine ;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Min  67 cycles Not Single Track | 37 cycles Single Track
+; Max 121 cycles Not Single Track | 64 cycles Single Track
+;
+; Min 12 bytes
+; Options: 14,16,18,20 bytes
+; Max 24 bytes
+; 
+; Y - Offset of the Number of the Song to Play
+;     Offset=(SongNum*LengthOfSongEntry)+((NumTracks*2)-1)
+; A - Destroyed
+; X - Destroyed; Set to -1 on Return
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+JukeboxSelectSong  SUBROUTINE
+ IF [ ENABLE_MULTIPLE_SONGS ] 
+        ldx (!#ENABLE_SINGLE_TRACK*#2)+#1               ; 2 Enabled: #1 or Disabled: #3
+.JukeboxInitPtrs
+        lda Song0,y                                     ; 4
+  IF [ !ALL_SONGS_LT_255_BYTES ]
+        sta JukeboxSongPtrTrk0,x                        ; 4
+  ENDIF
+        sta JukeboxNotePtrCh0,x                         ; 4
+  IF [ !TRACKS_SHARE_DURATION ]
+        lda Song0+((!#ENABLE_SINGLE_TRACK*#2)+#2),y     ; 2 Enabled: #2 or Disabled: #4
+        sta JukeboxNoteDurationsTrk0Ptr,x               ; 4
+  ENDIF
+  
+  IF [ !ALL_TRACKS_SAME_LENGTH && ALL_SONGS_LT_255_BYTES ]
+        cpx ((!#ENABLE_SINGLE_TRACK*#1)+1)              ; 2 Enabled: #1 or Disabled: #2
+        bpl JukeboxSkipSetTrackLengths                  ; 2/3
+        lda Song0+((!#ENABLE_SINGLE_TRACK*#4)+#4),y     ; 2 Enabled: #4 or Disabled: #8
+        sta JukeboxLengthTrk0,x                         ; 4
+JukeboxSkipSetTrackLengths
+  ENDIF
+        dey                                             ; 2
+        dex                                             ; 2
+        bpl .JukeboxInitPtrs                            ; 2/3
+ 
+        rts                                             ; 6
+ ENDIF
+EndJukeboxSelectSong
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;; End Select Song to be Played Sub-Routine ;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -526,18 +671,36 @@ EndOfOverscan
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Song List ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
- IF [ !ENABLE_MULTIPLE_SONGS && !ALL_TRACKS_SAME_LENGTH ]
-TrackLengths    .byte JukeboxTrack0End-JukeboxTrack0-#2,JukeboxTrack1End-JukeboxTrack1-#2
- ENDIF
-
-
 SongList
  IF [ ENABLE_MULTIPLE_SONGS ]
+   IF [ ALL_TRACKS_SAME_LENGTH ]
 ; SongN             .word TrackAddress0(2bytes),TrackAddress1(2bytes)
 ;                   .word Track0NoteDurationsAddress(2bytes),Track1NoteDurationsAddress(2bytes)
 
 Song0             .word JukeboxTrack0,JukeboxTrack1,JukeboxNoteDurations,JukeboxNoteDurations
-; Song1             .word $0000,$0000,$0000,$0000
+Song1             .word JukeboxTrack1,JukeboxTrack0,JukeboxNoteDurations,JukeboxNoteDurations
+
+  ELSE
+; SongN             .word TrackAddress0(2bytes),TrackAddress1(2bytes)
+;                   .word Track0NoteDurationsAddress(2bytes),Track1NoteDurationsAddress(2bytes)
+;                   .byte Track0Length(1byte), Track1Length(1byte)
+   IF [ TRACKS_SHARE_DURATION ]
+Song0             .word JukeboxTrack0,JukeboxTrack1
+                  .byte JukeboxTrack0End-JukeboxTrack0-#2,JukeboxTrack1End-JukeboxTrack1-#2
+Song1             .word JukeboxTrack1,JukeboxTrack0
+                  .byte JukeboxTrack1End-JukeboxTrack1-#2,JukeboxTrack0End-JukeboxTrack0-#2
+   ELSE
+Song0             .word JukeboxTrack0,JukeboxTrack1,JukeboxNoteDurations,JukeboxNoteDurations
+                  .byte JukeboxTrack0End-JukeboxTrack0-#2,JukeboxTrack1End-JukeboxTrack1-#2
+Song1             .word JukeboxTrack1,JukeboxTrack0,JukeboxNoteDurations,JukeboxNoteDurations
+                  .byte JukeboxTrack1End-JukeboxTrack1-#2,JukeboxTrack0End-JukeboxTrack0-#2
+   ENDIF
+
+  ENDIF
+ ELSE ; Single Song
+  IF [ !ALL_TRACKS_SAME_LENGTH && ALL_SONGS_LT_255_BYTES ]
+TrackLengths    .byte #JUKEBOX_TRACK0_LENGTH,#JUKEBOX_TRACK1_LENGTH
+  ENDIF
  ENDIF
 SongListEnd
  
